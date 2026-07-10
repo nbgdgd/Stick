@@ -46,6 +46,8 @@ object TikTokSourceFactory {
             .readTimeout(40, TimeUnit.SECONDS)
             .followRedirects(true)
             .addInterceptor(defaultHeaders())
+            // tikwm free tier: 1 req/s. Space API calls out so pagination works.
+            .addInterceptor(RateLimitInterceptor(minIntervalMs = 1_200, hostMatch = "tikwm"))
 
         if (enableLogging) {
             builder.addInterceptor(

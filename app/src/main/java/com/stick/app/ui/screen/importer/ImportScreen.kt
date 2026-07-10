@@ -136,9 +136,31 @@ fun ImportScreen(
                     Text(stringResource(R.string.import_download_selected, state.selectedCount))
                 }
             } else if (!state.isScanning && !state.isResolving) {
-                ImportHint()
+                // Distinguish "haven't scanned yet" from "scanned, found nothing".
+                if (state.resolved != null && state.error == null) {
+                    EmptyResult()
+                } else {
+                    ImportHint()
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyResult() {
+    Column(
+        Modifier.fillMaxSize().padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            "No animated stickers were found in this video's comments. " +
+                "Try another video — not every video has sticker comments.",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

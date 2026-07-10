@@ -1,5 +1,7 @@
 package com.stick.app.ui.screen.importer
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,6 +48,14 @@ fun ImportScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    // System document picker for "Import a file". OpenDocument shows the file
+    // browser and returns a content:// Uri the ViewModel copies into app storage.
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) viewModel.importLocalFile(uri) { savedId -> onOpenSticker(savedId) }
+    }
+
     // Auto-start when the app was opened from a shared TikTok link.
     LaunchedEffect(initialLink) {
         if (!initialLink.isNullOrBlank()) {
@@ -71,6 +82,16 @@ fun ImportScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             ) {
                 Text(stringResource(R.string.import_from_link))
+            }
+
+            OutlinedButton(
+                onClick = {
+                    // Any image plus common animation containers.
+                    filePicker.launch(arrayOf("image/*", "video/mp4", "application/octet-stream"))
+                },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(stringResource(R.string.import_from_file))
             }
 
             if (state.isResolving || state.isScanning) {

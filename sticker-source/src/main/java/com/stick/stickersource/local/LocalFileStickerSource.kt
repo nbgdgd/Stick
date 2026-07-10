@@ -32,8 +32,9 @@ class LocalFileStickerSource : StickerSource {
     fun fromFile(path: String): StickResult<RemoteSticker> {
         val file = File(path)
         if (!file.exists()) return StickResult.Failure(StickError.NotFound("No such file: $path"))
-        val format = StickerFormat.fromExtension(file.extension)
-            ?: return StickResult.Failure(StickError.Unsupported("Unsupported file type: .${file.extension}"))
+        // Tolerate unknown extensions — decoders sniff content anyway — so import
+        // never fails on an odd file name.
+        val format = StickerFormat.fromExtension(file.extension) ?: StickerFormat.PNG
 
         return StickResult.Success(
             RemoteSticker(

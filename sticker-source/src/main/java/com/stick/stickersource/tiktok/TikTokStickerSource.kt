@@ -8,23 +8,26 @@ import com.stick.core.result.StickResult
 import com.stick.stickersource.StickerSource
 import com.stick.stickersource.StickerSource.Capability
 import com.stick.stickersource.model.DownloadedAsset
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
- * Acquires animated stickers from TikTok comments via the tikwm proxy.
+ * Acquires stickers from TikTok comments via TikTok's own web comment endpoint.
  *
- * Catalog search is intentionally NOT a capability here — TikTok exposes no public
- * sticker-catalog API, so that capability is served by a different registered
- * source (Giphy). This class stays focused on the one thing TikTok can do:
- * comment stickers.
+ * The endpoint returns comments without signing and has no aggressive rate limit,
+ * so pagination is fast and finds far more comment stickers than the previous
+ * proxy. Every image attached to a comment (static photo or animated sticker) is
+ * surfaced. Catalog search is served by a different source (Giphy).
  */
 class TikTokStickerSource(
     private val api: TikTokApi,
     private val downloader: AssetDownloader,
-    /** Safety cap so a viral video doesn't page comments forever. */
-    private val maxCommentPages: Int = 12,
+    private val httpClient: OkHttpClient,
+    private val maxCommentPages: Int = 15,
     private val pageSize: Int = 50,
 ) : StickerSource {
 
@@ -36,28 +39,30 @@ class TikTokStickerSource(
         Capability.DOWNLOAD,
     )
 
-    override suspend fun resolveVideo(rawInput: String): StickResult<TikTokVideoRef> = try {
-        val response = api.resolve(extractUrl(rawInput))
-        val data = response.data
-        if (response.code != 0 || data == null || data.id.isBlank()) {
-            StickResult.Failure(StickError.NotFound(response.msg ?: "Could not resolve link"))
-        } else {
-            val author = data.author?.uniqueId.orEmpty()
-            StickResult.Success(
-                TikTokVideoRef(
-                    videoId = data.id,
-                    authorId = author,
-                    canonicalUrl = if (author.isNotBlank()) {
-                        "https://www.tiktok.com/@$author/video/${data.id}"
-                    } else {
-                        "https://www.tiktok.com/video/${data.id}"
-                    },
-                ),
-            )
+    override suspend fun resolveVideo(rawInput: String): StickResult<TikTokVideoRef> {
+        val url = extractUrl(rawInput)
+        parseId(url)?.let { return StickResult.Success(refFor(it, url)) }
+
+        // Short share link (vm./vt.tiktok.com) — follow the redirect to the real URL.
+        if (SHORT_LINK_REGEX.containsMatchIn(url)) {
+            return resolveShortLink(url)
         }
-    } catch (t: Throwable) {
-        StickResult.Failure(StickError.from(t))
+        return StickResult.Failure(StickError.Unsupported("Unrecognised TikTok link"))
     }
+
+    private suspend fun resolveShortLink(url: String): StickResult<TikTokVideoRef> =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder().url(url).header("User-Agent", BROWSER_UA).get().build()
+                httpClient.newCall(request).execute().use { response ->
+                    val finalUrl = response.request.url.toString()
+                    parseId(finalUrl)?.let { StickResult.Success(refFor(it, finalUrl)) }
+                        ?: StickResult.Failure(StickError.NotFound("Link did not resolve to a video"))
+                }
+            } catch (t: Throwable) {
+                StickResult.Failure(StickError.Network("Failed to resolve short link", t))
+            }
+        }
 
     override fun stickersFromComments(
         video: TikTokVideoRef,
@@ -68,22 +73,18 @@ class TikTokStickerSource(
         val seen = HashSet<String>()
         while (page < maxCommentPages) {
             val response = try {
-                fetchWithRateLimitRetry(video.videoId, cursor)
+                api.comments(awemeId = video.videoId, count = pageSize, cursor = cursor)
             } catch (t: Throwable) {
-                // Network error: only surface it if we haven't already found stickers.
                 if (!emittedAny) emit(StickResult.Failure(StickError.from(t)))
                 return@flow
             }
 
-            val data = response?.data
-            if (response == null || response.code != 0 || data == null) {
-                if (!emittedAny) {
-                    emit(StickResult.Failure(StickError.NotFound(response?.msg ?: "No comments")))
-                }
+            if (response.comments.isEmpty() && !emittedAny && response.statusCode != 0) {
+                emit(StickResult.Failure(StickError.NotFound(response.statusMsg.ifBlank { "No comments" })))
                 return@flow
             }
 
-            for (comment in data.comments) {
+            for (comment in response.comments) {
                 for (sticker in TikTokMapper.stickersFromComment(comment, video.canonicalUrl)) {
                     if (seen.add(sticker.downloadUrl)) {
                         emittedAny = true
@@ -92,40 +93,10 @@ class TikTokStickerSource(
                 }
             }
 
-            val more = data.hasMore && data.comments.isNotEmpty() && data.cursor > cursor
-            if (!more) break
-            cursor = data.cursor
+            if (response.hasMore != 1 || response.comments.isEmpty()) break
+            cursor = response.cursor
             page++
         }
-    }
-
-    /**
-     * Fetch one comment page, retrying on tikwm's `code:-1` rate-limit response.
-     * The client already spaces requests, but a burst can still trip the limit;
-     * a short backoff recovers instead of aborting the whole scan.
-     */
-    private suspend fun fetchWithRateLimitRetry(
-        awemeId: String,
-        cursor: Long,
-    ): com.stick.stickersource.tiktok.dto.TikwmCommentResponse? {
-        var attempt = 0
-        while (attempt < RATE_LIMIT_RETRIES) {
-            val response = api.comments(awemeId = awemeId, count = pageSize, cursor = cursor)
-            val rateLimited = response.code == -1 &&
-                response.msg?.contains("limit", ignoreCase = true) == true
-            if (!rateLimited) return response
-            attempt++
-            delay(1_300)
-        }
-        return null
-    }
-
-    /** Pull the first usable TikTok link (or bare id) out of pasted share text. */
-    private fun extractUrl(rawInput: String): String {
-        val input = rawInput.trim()
-        URL_REGEX.find(input)?.let { return it.value }
-        if (BARE_ID_REGEX.matches(input)) return "https://www.tiktok.com/video/$input"
-        return input
     }
 
     override suspend fun searchCatalog(query: CatalogQuery): StickResult<List<RemoteSticker>> =
@@ -136,12 +107,31 @@ class TikTokStickerSource(
         onProgress: (Float) -> Unit,
     ): StickResult<DownloadedAsset> = downloader.download(sticker, onProgress)
 
+    // --- URL helpers --------------------------------------------------------
+
+    private fun extractUrl(rawInput: String): String {
+        val input = rawInput.trim()
+        URL_REGEX.find(input)?.let { return it.value }
+        if (BARE_ID_REGEX.matches(input)) return "https://www.tiktok.com/video/$input"
+        return input
+    }
+
+    private fun parseId(url: String): String? =
+        VIDEO_ID_REGEX.find(url)?.groupValues?.getOrNull(1)
+
+    private fun refFor(id: String, url: String): TikTokVideoRef =
+        TikTokVideoRef(videoId = id, authorId = "", canonicalUrl = url)
+
     private companion object {
-        const val RATE_LIMIT_RETRIES = 3
+        const val BROWSER_UA =
+            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/120.0.0.0 Mobile Safari/537.36"
         val URL_REGEX = Regex(
             """https?://(?:www\.|m\.|vm\.|vt\.)?tiktok\.com/\S+""",
             RegexOption.IGNORE_CASE,
         )
-        val BARE_ID_REGEX = Regex("""^\d{6,25}$""")
+        val VIDEO_ID_REGEX = Regex("""(?:/video/|/v/)(\d{6,25})""")
+        val SHORT_LINK_REGEX = Regex("""(?:vm|vt)\.tiktok\.com/""", RegexOption.IGNORE_CASE)
+        val BARE_ID_REGEX = Regex("""\d{6,25}""")
     }
 }

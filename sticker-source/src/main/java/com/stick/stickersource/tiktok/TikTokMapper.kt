@@ -3,31 +3,28 @@ package com.stick.stickersource.tiktok
 import com.stick.core.model.RemoteSticker
 import com.stick.core.model.StickerFormat
 import com.stick.core.model.StickerOrigin
-import com.stick.stickersource.tiktok.dto.TikwmComment
+import com.stick.stickersource.tiktok.dto.CommentDto
 
 /**
- * The single translation layer from tikwm DTOs to the app's stable domain model.
- * A proxy/payload change is absorbed here without touching feature code.
+ * The single translation layer from TikTok comment DTOs to the domain model.
+ * Includes every attached image — static photo comments *and* animated stickers —
+ * since both are things a user may want to save.
  */
 internal object TikTokMapper {
 
     const val SOURCE_ID = "tiktok-comment"
 
-    /**
-     * Turn a comment into one sticker per attached image. Text-only comments
-     * produce nothing. Returns a list because a single comment may carry several
-     * images.
-     */
-    fun stickersFromComment(comment: TikwmComment, videoUrl: String): List<RemoteSticker> {
-        if (comment.images.isEmpty()) return emptyList()
+    fun stickersFromComment(comment: CommentDto, videoUrl: String): List<RemoteSticker> {
+        if (comment.imageList.isEmpty()) return emptyList()
         val author = comment.user?.nickname.orEmpty()
-        return comment.images.mapIndexed { index, url ->
+        return comment.imageList.mapIndexedNotNull { index, image ->
+            val url = image.originUrl?.primary ?: image.cropUrl?.primary ?: return@mapIndexedNotNull null
             RemoteSticker(
-                id = if (comment.images.size == 1) comment.id else "${comment.id}_$index",
+                id = if (comment.imageList.size == 1) comment.id else "${comment.id}_$index",
                 sourceId = SOURCE_ID,
                 name = comment.text.ifBlank { "Sticker ${comment.id}" }.take(40),
                 downloadUrl = url,
-                previewUrl = url,
+                previewUrl = image.cropUrl?.primary ?: url,
                 format = formatFor(url),
                 origin = StickerOrigin.Comment(videoUrl, comment.id, author),
             )
@@ -36,12 +33,13 @@ internal object TikTokMapper {
 
     /** Best-effort container detection from the CDN URL. */
     private fun formatFor(url: String): StickerFormat {
-        val lower = url.substringBefore('?').lowercase()
+        val base = url.substringBefore('?').lowercase()
         return when {
-            lower.endsWith(".webp") -> StickerFormat.WEBP_ANIMATED
-            lower.endsWith(".gif") -> StickerFormat.GIF
-            lower.endsWith(".png") -> StickerFormat.PNG
-            else -> StickerFormat.WEBP_ANIMATED
+            base.endsWith(".webp") -> StickerFormat.WEBP_ANIMATED
+            base.endsWith(".gif") -> StickerFormat.GIF
+            base.endsWith(".png") -> StickerFormat.PNG
+            // TikTok's `~tplv-…-image-origin.image` URLs are served as JPEG.
+            else -> StickerFormat.JPEG
         }
     }
 }

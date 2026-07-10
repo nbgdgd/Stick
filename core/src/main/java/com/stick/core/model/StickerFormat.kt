@@ -18,6 +18,7 @@ enum class StickerFormat(
     GIF("gif", "image/gif", isAnimated = true, supportsTransparency = true),
     APNG("png", "image/apng", isAnimated = true, supportsTransparency = true),
     PNG("png", "image/png", isAnimated = false, supportsTransparency = true),
+    JPEG("jpg", "image/jpeg", isAnimated = false, supportsTransparency = false),
 
     /** Telegram video sticker. VP9 in a WebM container, ≤ 3s, ≤ 256KB, 512px. */
     TELEGRAM_WEBM("webm", "video/webm", isAnimated = true, supportsTransparency = true),
@@ -34,7 +35,10 @@ enum class StickerFormat(
             TELEGRAM_WEBM, TELEGRAM_TGS, GIF, WEBP_ANIMATED, MP4, APNG,
         )
 
-        fun fromExtension(ext: String): StickerFormat? =
-            entries.firstOrNull { it.extension.equals(ext.removePrefix("."), ignoreCase = true) }
+        fun fromExtension(ext: String): StickerFormat? {
+            val clean = ext.removePrefix(".").lowercase()
+            if (clean == "jpeg") return JPEG
+            return entries.firstOrNull { it.extension.equals(clean, ignoreCase = true) }
+        }
     }
 }

@@ -31,6 +31,8 @@ data class CommentDto(
     val text: String = "",
     val user: CommentUserDto? = null,
     @SerialName("image_list") val imageList: List<CommentImageDto> = emptyList(),
+    /** Number of replies; comment stickers often live in replies. */
+    @SerialName("reply_comment_total") val replyCount: Int = 0,
 )
 
 @Serializable

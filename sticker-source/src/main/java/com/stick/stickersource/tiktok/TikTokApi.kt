@@ -19,6 +19,16 @@ interface TikTokApi {
         @Query("aid") appId: Int = DEFAULT_AID,
     ): CommentListResponse
 
+    /** Replies to a comment — where many comment stickers actually live. */
+    @GET("api/comment/list/reply/")
+    suspend fun replies(
+        @Query("comment_id") commentId: String,
+        @Query("item_id") awemeId: String,
+        @Query("count") count: Int = 50,
+        @Query("cursor") cursor: Long = 0,
+        @Query("aid") appId: Int = DEFAULT_AID,
+    ): CommentListResponse
+
     companion object {
         const val BASE_URL = "https://www.tiktok.com/"
         /** Web application id TikTok's own site sends. */

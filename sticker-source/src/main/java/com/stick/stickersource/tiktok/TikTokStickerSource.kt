@@ -27,7 +27,7 @@ class TikTokStickerSource(
     private val api: TikTokApi,
     private val downloader: AssetDownloader,
     private val httpClient: OkHttpClient,
-    private val maxCommentPages: Int = 15,
+    private val maxCommentPages: Int = 20,
     private val pageSize: Int = 50,
 ) : StickerSource {
 
@@ -70,7 +70,18 @@ class TikTokStickerSource(
         var cursor = 0L
         var page = 0
         var emittedAny = false
+        var replyThreads = 0
         val seen = HashSet<String>()
+
+        suspend fun emitStickers(comment: com.stick.stickersource.tiktok.dto.CommentDto) {
+            for (sticker in TikTokMapper.stickersFromComment(comment, video.canonicalUrl)) {
+                if (seen.add(sticker.downloadUrl)) {
+                    emittedAny = true
+                    emit(StickResult.Success(sticker))
+                }
+            }
+        }
+
         while (page < maxCommentPages) {
             val response = try {
                 api.comments(awemeId = video.videoId, count = pageSize, cursor = cursor)
@@ -85,11 +96,13 @@ class TikTokStickerSource(
             }
 
             for (comment in response.comments) {
-                for (sticker in TikTokMapper.stickersFromComment(comment, video.canonicalUrl)) {
-                    if (seen.add(sticker.downloadUrl)) {
-                        emittedAny = true
-                        emit(StickResult.Success(sticker))
-                    }
+                emitStickers(comment)
+                // Comment stickers frequently sit in replies — scan a bounded number.
+                if (comment.replyCount > 0 && replyThreads < MAX_REPLY_THREADS) {
+                    replyThreads++
+                    runCatching {
+                        api.replies(commentId = comment.id, awemeId = video.videoId, count = pageSize)
+                    }.getOrNull()?.comments?.forEach { emitStickers(it) }
                 }
             }
 
@@ -123,6 +136,7 @@ class TikTokStickerSource(
         TikTokVideoRef(videoId = id, authorId = "", canonicalUrl = url)
 
     private companion object {
+        const val MAX_REPLY_THREADS = 60
         const val BROWSER_UA =
             "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) " +
                 "Chrome/120.0.0.0 Mobile Safari/537.36"

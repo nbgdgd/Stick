@@ -52,18 +52,20 @@ class GiphyStickerSource(
 
     private fun toSticker(gif: GiphyGif): RemoteSticker? {
         val original = gif.images?.original ?: return null
-        val download = original.webp.ifBlank { original.url }.ifBlank { return null }
+        // Download the GIF (FFmpeg decodes it reliably; animated WebP does not
+        // always decode). Preview can still use the lighter WebP.
+        val download = original.url.ifBlank { original.webp }.ifBlank { return null }
         val preview = gif.images.fixedWidthSmall?.webp
             ?.ifBlank { null }
             ?: gif.images.fixedWidth?.webp?.ifBlank { null }
-            ?: download
+            ?: original.webp.ifBlank { download }
         return RemoteSticker(
             id = gif.id,
             sourceId = id,
             name = gif.title.ifBlank { "Sticker ${gif.id}" },
             downloadUrl = download,
             previewUrl = preview,
-            format = StickerFormat.WEBP_ANIMATED,
+            format = StickerFormat.GIF,
             info = MediaInfo(widthPx = original.widthPx, heightPx = original.heightPx),
             keywords = gif.title.split(' ').filter { it.isNotBlank() },
             origin = StickerOrigin.Catalog(collection = "giphy"),

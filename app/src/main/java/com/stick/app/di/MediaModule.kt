@@ -34,7 +34,6 @@ object MediaModule {
 
     @Provides
     @Singleton
-    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun provideMediaConverter(
         @ApplicationContext context: Context,
         frameFormatConverter: FrameFormatConverter,

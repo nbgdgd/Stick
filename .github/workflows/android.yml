@@ -24,8 +24,12 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # The GitHub ubuntu runner ships the Android SDK pre-installed. Just accept
+      # licenses (avoids the flaky setup-android emulator download that broke CI).
+      - name: Accept Android SDK licenses
+        run: |
+          SDKMGR=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -1)
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
 
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace

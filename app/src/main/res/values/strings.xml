@@ -1,0 +1,59 @@
+<resources>
+    <string name="app_name">Stick</string>
+
+    <!-- Navigation -->
+    <string name="nav_library">Library</string>
+    <string name="nav_import">Import</string>
+    <string name="nav_catalog">Catalog</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Import -->
+    <string name="import_title">Import stickers</string>
+    <string name="import_link_hint">Paste a TikTok link</string>
+    <string name="import_from_link">Find stickers in comments</string>
+    <string name="import_from_clipboard">Paste from clipboard</string>
+    <string name="import_from_file">Import a file</string>
+    <string name="import_scanning">Scanning comments…</string>
+    <string name="import_select_all">Select all</string>
+    <string name="import_download_selected">Download %1$d</string>
+
+    <!-- Viewer -->
+    <string name="viewer_fps">FPS</string>
+    <string name="viewer_resolution">Resolution</string>
+    <string name="viewer_size">Size</string>
+    <string name="viewer_duration">Duration</string>
+    <string name="viewer_frames">Frames</string>
+
+    <!-- Editor -->
+    <string name="editor_title">Edit</string>
+    <string name="editor_resize">Resize</string>
+    <string name="editor_speed">Speed</string>
+    <string name="editor_fps">FPS</string>
+    <string name="editor_rotate">Rotate</string>
+    <string name="editor_flip">Flip</string>
+    <string name="editor_crop">Crop</string>
+    <string name="editor_opacity">Opacity</string>
+    <string name="editor_remove_bg">Remove background</string>
+    <string name="editor_background">Background</string>
+
+    <!-- Export -->
+    <string name="export_title">Export</string>
+    <string name="export_estimated_size">Estimated size: %1$s</string>
+    <string name="export_save">Save</string>
+    <string name="export_send_telegram">Send to Telegram</string>
+    <string name="export_open_sticker_bot">Open @Stickers bot</string>
+
+    <!-- Settings -->
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_amoled">AMOLED</string>
+    <string name="settings_theme_system">Follow system</string>
+    <string name="settings_dynamic_color">Material You colors</string>
+    <string name="settings_layout">Layout</string>
+    <string name="settings_layout_grid">Grid</string>
+    <string name="settings_layout_list">List</string>
+    <string name="settings_card_size">Card size</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_preview_quality">Preview quality</string>
+</resources>

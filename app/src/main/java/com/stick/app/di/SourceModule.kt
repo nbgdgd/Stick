@@ -4,6 +4,7 @@ import android.content.Context
 import com.stick.stickersource.StickerSource
 import com.stick.stickersource.StickerSourceRegistry
 import com.stick.stickersource.clipboard.ClipboardStickerSource
+import com.stick.stickersource.giphy.GiphySourceFactory
 import com.stick.stickersource.local.LocalFileStickerSource
 import com.stick.stickersource.tiktok.TikTokSourceFactory
 import dagger.Module
@@ -36,8 +37,10 @@ object SourceModule {
             downloadDir = downloadDir,
             enableLogging = false,
         )
+        val giphy = GiphySourceFactory.create(downloadDir = downloadDir)
         val sources: List<StickerSource> = listOf(
-            tikTok,                      // primary: comments + catalog
+            tikTok,                      // comments from a TikTok link
+            giphy,                       // keyword catalog search
             LocalFileStickerSource(),    // import an existing file
             ClipboardStickerSource(),    // paste from clipboard
         )

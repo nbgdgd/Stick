@@ -2,8 +2,9 @@ package com.stick.app.di
 
 import android.content.Context
 import com.stick.app.domain.converter.MediaConverter
+import com.stick.app.media.AndroidFfmpegRunner
+import com.stick.app.media.AnimatedFrameExtractor
 import com.stick.app.media.FfmpegFrameFormatConverter
-import com.stick.app.media.FfmpegRunner
 import com.stick.app.media.FrameFormatConverter
 import com.stick.app.media.LottiePacker
 import com.stick.app.media.Media3MediaConverter
@@ -24,17 +25,19 @@ object MediaModule {
 
     @Provides
     @Singleton
-    fun provideFrameFormatConverter(): FrameFormatConverter =
-        // Bind a real FfmpegRunner / LottiePacker here to enable GIF/WebP/APNG/TGS.
-        // The defaults degrade gracefully with a clear message (WebM/MP4 still work).
+    fun provideFrameFormatConverter(
+        @ApplicationContext context: Context,
+    ): FrameFormatConverter =
+        // GIF/APNG/webm/mp4 encode via FFmpeg; animated WebP is pre-decoded to
+        // frames by Fresco first (FFmpeg can't read animated WebP).
         FfmpegFrameFormatConverter(
-            runner = FfmpegRunner.Unavailable,
+            runner = AndroidFfmpegRunner(),
             lottiePacker = LottiePacker.Unavailable,
+            frameExtractor = AnimatedFrameExtractor(context),
         )
 
     @Provides
     @Singleton
-    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun provideMediaConverter(
         @ApplicationContext context: Context,
         frameFormatConverter: FrameFormatConverter,

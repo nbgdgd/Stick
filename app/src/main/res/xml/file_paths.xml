@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Downloaded originals and exported outputs live under filesDir. -->
+    <files-path name="downloads" path="downloads/" />
+    <files-path name="exports" path="exports/" />
+    <cache-path name="cache" path="." />
+</paths>

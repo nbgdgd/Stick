@@ -31,9 +31,31 @@ data class CommentDto(
     val text: String = "",
     val user: CommentUserDto? = null,
     @SerialName("image_list") val imageList: List<CommentImageDto> = emptyList(),
+    /** Animated sticker-pack stickers (the ".awebp" ones) live here, NOT image_list. */
+    @SerialName("cmt_sticker_struct") val commentSticker: CommentStickerStruct? = null,
+    /** Some replies are inlined here; they can carry stickers too. */
+    @SerialName("reply_comment") val replyComment: List<CommentDto>? = null,
     /** Number of replies; comment stickers often live in replies. */
     @SerialName("reply_comment_total") val replyCount: Int = 0,
 )
+
+/** TikTok's animated comment-sticker (sticker pack) payload. */
+@Serializable
+data class CommentStickerStruct(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("animated_url") val animatedUrl: StickerUrlSet? = null,
+    @SerialName("static_url") val staticUrl: StickerUrlSet? = null,
+)
+
+@Serializable
+data class StickerUrlSet(
+    @SerialName("high_resolution_url") val high: UrlListDto? = null,
+    @SerialName("mid_resolution_url") val mid: UrlListDto? = null,
+    @SerialName("low_resolution_url") val low: UrlListDto? = null,
+) {
+    val best: String? get() = high?.primary ?: mid?.primary ?: low?.primary
+}
 
 @Serializable
 data class CommentUserDto(

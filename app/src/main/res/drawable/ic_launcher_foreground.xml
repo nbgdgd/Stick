@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Simple "sticker peel" glyph, tinted for the monochrome/themed icon. -->
+    <group android:scaleX="0.55" android:scaleY="0.55" android:translateX="24.3" android:translateY="24.3">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,14C31.9,14 14,31.9 14,54C14,76.1 31.9,94 54,94L54,64C54,58.5 58.5,54 64,54L94,54C94,31.9 76.1,14 54,14Z" />
+        <path
+            android:fillColor="#EADDFF"
+            android:pathData="M60,60L60,90C74,86 86,74 90,60Z" />
+    </group>
+</vector>

@@ -101,6 +101,12 @@ dependencies {
     // (animated GIF/WebP/APNG). Bound in di/MediaModule.
     implementation(libs.ffmpeg.kit)
 
+    // Animated-WebP frame decoding (TikTok .awebp stickers) for the export pipeline.
+    implementation(libs.fresco.animated.webp)
+    implementation(libs.fresco.animated.gif)
+    implementation(libs.fresco.animated.base)
+    implementation(libs.soloader)
+
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 

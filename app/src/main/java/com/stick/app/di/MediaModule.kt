@@ -3,6 +3,7 @@ package com.stick.app.di
 import android.content.Context
 import com.stick.app.domain.converter.MediaConverter
 import com.stick.app.media.AndroidFfmpegRunner
+import com.stick.app.media.AnimatedFrameExtractor
 import com.stick.app.media.FfmpegFrameFormatConverter
 import com.stick.app.media.FrameFormatConverter
 import com.stick.app.media.LottiePacker
@@ -24,12 +25,15 @@ object MediaModule {
 
     @Provides
     @Singleton
-    fun provideFrameFormatConverter(): FrameFormatConverter =
-        // GIF / animated WebP / APNG now encode through the bundled FFmpeg backend.
-        // .tgs still needs a vector source, so its packer stays a graceful stub.
+    fun provideFrameFormatConverter(
+        @ApplicationContext context: Context,
+    ): FrameFormatConverter =
+        // GIF/APNG/webm/mp4 encode via FFmpeg; animated WebP is pre-decoded to
+        // frames by Fresco first (FFmpeg can't read animated WebP).
         FfmpegFrameFormatConverter(
             runner = AndroidFfmpegRunner(),
             lottiePacker = LottiePacker.Unavailable,
+            frameExtractor = AnimatedFrameExtractor(context),
         )
 
     @Provides

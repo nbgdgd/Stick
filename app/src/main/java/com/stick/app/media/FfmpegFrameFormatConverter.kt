@@ -22,6 +22,7 @@ import java.io.File
 class FfmpegFrameFormatConverter(
     private val runner: FfmpegRunner,
     private val lottiePacker: LottiePacker,
+    private val frameExtractor: AnimatedFrameExtractor? = null,
 ) : FrameFormatConverter {
 
     override suspend fun convert(
@@ -37,8 +38,12 @@ class FfmpegFrameFormatConverter(
             return StickResult.Failure(StickError.NotFound("Source file missing"))
         }
 
-        val args = buildArgs(pipeline, options, outputPath)
-        return when (val res = runner.run(args, onProgress)) {
+        // FFmpeg can't decode animated WebP — pre-decode those to a PNG sequence.
+        val ext = pipeline.sourcePath.substringAfterLast('.', "").lowercase()
+        val frames = if (ext == "webp" || ext == "awebp") frameExtractor?.extract(pipeline.sourcePath) else null
+
+        val args = buildArgs(pipeline, options, outputPath, frames)
+        return when (val res = runner.run(args, onProgress).also { frames?.dir?.deleteRecursively() }) {
             is StickResult.Failure -> res
             is StickResult.Success -> {
                 val file = File(outputPath)
@@ -67,20 +72,30 @@ class FfmpegFrameFormatConverter(
         pipeline: EditPipeline,
         options: ExportOptions,
         outputPath: String,
+        frames: AnimatedFrameExtractor.Frames? = null,
     ): List<String> {
         val ext = pipeline.sourcePath.substringAfterLast('.', "").lowercase()
-        val isStatic = ext !in ANIMATED_EXTS
+        val isStatic = frames == null && ext !in ANIMATED_EXTS
         val trim = pipeline.operations.filterIsInstance<EditOperation.Trim>().firstOrNull()
         val durationSec = trim?.let { (it.endMs - it.startMs) / 1000.0 }?.coerceAtLeast(0.1) ?: 3.0
 
         val args = mutableListOf("-y")
-        if (isStatic) {
-            // A single image must be looped into a short clip to produce an animation.
-            args += listOf("-loop", "1", "-t", durationSec.toString())
-        } else if (trim != null) {
-            args += listOf("-ss", (trim.startMs / 1000.0).toString(), "-t", durationSec.toString())
+        when {
+            frames != null -> {
+                // Pre-decoded PNG sequence (animated WebP path).
+                args += listOf("-framerate", frames.fps.toString(), "-i", "${frames.dir}/f_%05d.png")
+            }
+            isStatic -> {
+                // A single image must be looped into a short clip to produce an animation.
+                args += listOf("-loop", "1", "-t", durationSec.toString(), "-i", pipeline.sourcePath)
+            }
+            else -> {
+                if (trim != null) {
+                    args += listOf("-ss", (trim.startMs / 1000.0).toString(), "-t", durationSec.toString())
+                }
+                args += listOf("-i", pipeline.sourcePath)
+            }
         }
-        args += listOf("-i", pipeline.sourcePath)
 
         // --- video filter chain ---
         val vf = mutableListOf<String>()

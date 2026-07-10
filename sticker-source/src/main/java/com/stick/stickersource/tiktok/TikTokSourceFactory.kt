@@ -11,8 +11,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Assembles a fully-wired [TikTokStickerSource]. Isolating construction here keeps
- * the app's DI module trivial and makes it obvious what a "TikTok backend swap"
- * touches: this factory and the classes it references.
+ * the app's DI module trivial and makes it obvious what a backend swap touches:
+ * this factory and the classes it references.
  */
 object TikTokSourceFactory {
 
@@ -36,15 +36,14 @@ object TikTokSourceFactory {
         val api = retrofit.create(TikTokApi::class.java)
         return TikTokStickerSource(
             api = api,
-            urlResolver = TikTokUrlResolver(client),
             downloader = AssetDownloader(client, downloadDir),
         )
     }
 
     private fun buildHttpClient(enableLogging: Boolean): OkHttpClient {
         val builder = OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(40, TimeUnit.SECONDS)
             .followRedirects(true)
             .addInterceptor(defaultHeaders())
 
@@ -58,11 +57,6 @@ object TikTokSourceFactory {
         return builder.build()
     }
 
-    /**
-     * TikTok's web endpoints reject requests that don't look like a browser.
-     * Centralising the headers here means a change in their bot-checks is a
-     * one-line edit.
-     */
     private fun defaultHeaders() = Interceptor { chain ->
         val request = chain.request().newBuilder()
             .header(
@@ -70,7 +64,6 @@ object TikTokSourceFactory {
                 "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 " +
                     "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
             )
-            .header("Referer", "https://www.tiktok.com/")
             .header("Accept", "application/json, text/plain, */*")
             .build()
         chain.proceed(request)

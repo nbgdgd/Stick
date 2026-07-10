@@ -1,59 +1,42 @@
 package com.stick.stickersource.tiktok
 
-import com.stick.stickersource.tiktok.dto.CommentDto
-import com.stick.stickersource.tiktok.dto.CommentImageDto
-import com.stick.stickersource.tiktok.dto.StickerDto
-import com.stick.stickersource.tiktok.dto.UrlListDto
-import com.stick.stickersource.tiktok.dto.UserDto
+import com.stick.stickersource.tiktok.dto.TikwmComment
+import com.stick.stickersource.tiktok.dto.TikwmCommentUser
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Guards the one place TikTok DTOs are mapped to the domain model. */
+/** Guards the one place tikwm comments are mapped to the domain model. */
 class TikTokMapperTest {
 
     @Test
-    fun `maps explicit sticker object`() {
-        val comment = CommentDto(
+    fun `maps each comment image to a sticker`() {
+        val comment = TikwmComment(
             id = "c1",
-            user = UserDto(nickname = "alice"),
-            sticker = StickerDto(
-                id = "s1",
-                name = "cat",
-                animateUrl = UrlListDto(urlList = listOf("https://cdn/animate.webp")),
-                staticUrl = UrlListDto(urlList = listOf("https://cdn/static.webp")),
-                width = 128, height = 128,
-                keywords = listOf("cat", "cute"),
-            ),
+            text = "so cute",
+            images = listOf("https://cdn/a.webp", "https://cdn/b.webp"),
+            user = TikwmCommentUser(nickname = "alice"),
         )
 
-        val sticker = TikTokMapper.stickerFromComment(comment, "https://video")
+        val stickers = TikTokMapper.stickersFromComment(comment, "https://video")
 
-        assertNotNull(sticker)
-        assertEquals("s1", sticker!!.id)
-        assertEquals("https://cdn/animate.webp", sticker.downloadUrl)
-        assertEquals("https://cdn/static.webp", sticker.previewUrl)
-        assertEquals(listOf("cat", "cute"), sticker.keywords)
+        assertEquals(2, stickers.size)
+        assertEquals("https://cdn/a.webp", stickers[0].downloadUrl)
+        assertEquals("c1_1", stickers[1].id)
+        assertTrue(stickers.all { it.sourceId == TikTokMapper.SOURCE_ID })
     }
 
     @Test
-    fun `falls back to image_list gif`() {
-        val comment = CommentDto(
-            id = "c2",
-            imageList = listOf(
-                CommentImageDto(gifUrl = UrlListDto(urlList = listOf("https://cdn/x.gif"))),
-            ),
-        )
-
-        val sticker = TikTokMapper.stickerFromComment(comment, "https://video")
-
-        assertNotNull(sticker)
-        assertEquals("https://cdn/x.gif", sticker!!.downloadUrl)
+    fun `text-only comment yields nothing`() {
+        val comment = TikwmComment(id = "c2", text = "hello", images = emptyList())
+        assertTrue(TikTokMapper.stickersFromComment(comment, "https://video").isEmpty())
     }
 
     @Test
-    fun `returns null when no sticker present`() {
-        assertNull(TikTokMapper.stickerFromComment(CommentDto(id = "c3", text = "hi"), "https://video"))
+    fun `single image keeps the plain comment id`() {
+        val comment = TikwmComment(id = "c3", images = listOf("https://cdn/x.gif"))
+        val stickers = TikTokMapper.stickersFromComment(comment, "https://video")
+        assertEquals(1, stickers.size)
+        assertEquals("c3", stickers[0].id)
     }
 }

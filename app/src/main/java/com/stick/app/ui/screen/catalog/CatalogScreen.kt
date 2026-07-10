@@ -47,7 +47,7 @@ fun CatalogScreen(
             TextField(
                 value = state.query,
                 onValueChange = viewModel::onQueryChange,
-                placeholder = { Text("Search TikTok stickers") },
+                placeholder = { Text("Search animated stickers") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )

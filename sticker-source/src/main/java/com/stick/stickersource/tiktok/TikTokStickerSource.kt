@@ -12,33 +12,51 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 /**
- * The primary [StickerSource]: acquires animated stickers from TikTok comments
- * and the comment-sticker catalog.
+ * Acquires animated stickers from TikTok comments via the tikwm proxy.
  *
- * It composes small, independently testable collaborators — [TikTokUrlResolver],
- * [TikTokApi], [TikTokMapper] and [AssetDownloader] — so that a TikTok change
- * touches only the relevant collaborator. This whole class can also be replaced
- * wholesale by registering a different [StickerSource] in the registry.
+ * Catalog search is intentionally NOT a capability here — TikTok exposes no public
+ * sticker-catalog API, so that capability is served by a different registered
+ * source (Giphy). This class stays focused on the one thing TikTok can do:
+ * comment stickers.
  */
 class TikTokStickerSource(
     private val api: TikTokApi,
-    private val urlResolver: TikTokUrlResolver,
     private val downloader: AssetDownloader,
     /** Safety cap so a viral video doesn't page comments forever. */
-    private val maxCommentPages: Int = 20,
+    private val maxCommentPages: Int = 12,
+    private val pageSize: Int = 50,
 ) : StickerSource {
 
-    override val id: String = TikTokMapper.COMMENT_SOURCE_ID
+    override val id: String = TikTokMapper.SOURCE_ID
     override val displayName: String = "TikTok"
     override val capabilities: Set<Capability> = setOf(
         Capability.RESOLVE_VIDEO,
         Capability.SCRAPE_COMMENTS,
-        Capability.SEARCH_CATALOG,
         Capability.DOWNLOAD,
     )
 
-    override suspend fun resolveVideo(rawInput: String): StickResult<TikTokVideoRef> =
-        urlResolver.resolve(rawInput)
+    override suspend fun resolveVideo(rawInput: String): StickResult<TikTokVideoRef> = try {
+        val response = api.resolve(rawInput.trim())
+        val data = response.data
+        if (response.code != 0 || data == null || data.id.isBlank()) {
+            StickResult.Failure(StickError.NotFound(response.msg ?: "Could not resolve link"))
+        } else {
+            val author = data.author?.uniqueId.orEmpty()
+            StickResult.Success(
+                TikTokVideoRef(
+                    videoId = data.id,
+                    authorId = author,
+                    canonicalUrl = if (author.isNotBlank()) {
+                        "https://www.tiktok.com/@$author/video/${data.id}"
+                    } else {
+                        "https://www.tiktok.com/video/${data.id}"
+                    },
+                ),
+            )
+        }
+    } catch (t: Throwable) {
+        StickResult.Failure(StickError.from(t))
+    }
 
     override fun stickersFromComments(
         video: TikTokVideoRef,
@@ -48,38 +66,33 @@ class TikTokStickerSource(
         val seen = HashSet<String>()
         while (page < maxCommentPages) {
             val response = try {
-                api.comments(awemeId = video.videoId, cursor = cursor)
+                api.comments(awemeId = video.videoId, count = pageSize, cursor = cursor)
             } catch (t: Throwable) {
                 emit(StickResult.Failure(StickError.from(t)))
                 return@flow
             }
 
-            for (comment in response.comments) {
-                val sticker = TikTokMapper.stickerFromComment(comment, video.canonicalUrl) ?: continue
-                // De-duplicate identical stickers reused across many comments.
-                if (seen.add(sticker.downloadUrl)) {
-                    emit(StickResult.Success(sticker))
+            val data = response.data
+            if (response.code != 0 || data == null) {
+                emit(StickResult.Failure(StickError.NotFound(response.msg ?: "No comments")))
+                return@flow
+            }
+
+            for (comment in data.comments) {
+                for (sticker in TikTokMapper.stickersFromComment(comment, video.canonicalUrl)) {
+                    if (seen.add(sticker.downloadUrl)) emit(StickResult.Success(sticker))
                 }
             }
 
-            if (response.hasMore != 1 || response.comments.isEmpty()) break
-            cursor = response.cursor
+            val more = data.hasMore && data.comments.isNotEmpty() && data.cursor > cursor
+            if (!more) break
+            cursor = data.cursor
             page++
         }
     }
 
     override suspend fun searchCatalog(query: CatalogQuery): StickResult<List<RemoteSticker>> =
-        try {
-            val dto = api.catalog(
-                keyword = query.text,
-                cursor = (query.page.toLong() * query.pageSize),
-                count = query.pageSize,
-            )
-            val stickers = dto.stickers.mapNotNull(TikTokMapper::stickerFromCatalog)
-            StickResult.Success(stickers)
-        } catch (t: Throwable) {
-            StickResult.Failure(StickError.from(t))
-        }
+        StickResult.Success(emptyList())
 
     override suspend fun download(
         sticker: RemoteSticker,

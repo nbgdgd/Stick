@@ -55,13 +55,20 @@ class ImportViewModel @Inject constructor(
         if (rawInput.isBlank()) return@launch
         _state.update { it.copy(isResolving = true, error = null, discovered = emptyList(), savedCount = 0) }
 
-        when (val resolved = importStickers.resolve(rawInput)) {
-            is StickResult.Failure -> _state.update {
-                it.copy(isResolving = false, error = resolved.error.message)
+        // Any surprise here becomes a visible error instead of crashing the app.
+        try {
+            when (val resolved = importStickers.resolve(rawInput)) {
+                is StickResult.Failure -> _state.update {
+                    it.copy(isResolving = false, error = resolved.error.message)
+                }
+                is StickResult.Success -> {
+                    _state.update { it.copy(isResolving = false, isScanning = true, resolved = resolved.value) }
+                    scan(resolved.value, rawInput)
+                }
             }
-            is StickResult.Success -> {
-                _state.update { it.copy(isResolving = false, isScanning = true, resolved = resolved.value) }
-                scan(resolved.value, rawInput)
+        } catch (t: Throwable) {
+            _state.update {
+                it.copy(isResolving = false, isScanning = false, error = t.message ?: "Unexpected error")
             }
         }
     }

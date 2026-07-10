@@ -2,8 +2,8 @@ package com.stick.app.di
 
 import android.content.Context
 import com.stick.app.domain.converter.MediaConverter
+import com.stick.app.media.AndroidFfmpegRunner
 import com.stick.app.media.FfmpegFrameFormatConverter
-import com.stick.app.media.FfmpegRunner
 import com.stick.app.media.FrameFormatConverter
 import com.stick.app.media.LottiePacker
 import com.stick.app.media.Media3MediaConverter
@@ -25,10 +25,10 @@ object MediaModule {
     @Provides
     @Singleton
     fun provideFrameFormatConverter(): FrameFormatConverter =
-        // Bind a real FfmpegRunner / LottiePacker here to enable GIF/WebP/APNG/TGS.
-        // The defaults degrade gracefully with a clear message (WebM/MP4 still work).
+        // GIF / animated WebP / APNG now encode through the bundled FFmpeg backend.
+        // .tgs still needs a vector source, so its packer stays a graceful stub.
         FfmpegFrameFormatConverter(
-            runner = FfmpegRunner.Unavailable,
+            runner = AndroidFfmpegRunner(),
             lottiePacker = LottiePacker.Unavailable,
         )
 

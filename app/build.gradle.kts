@@ -20,6 +20,12 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        // FFmpeg ships large native libraries per ABI. Limit to the two ABIs that
+        // cover essentially all real devices to keep the APK a sane size.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildTypes {
@@ -90,6 +96,10 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
     implementation(libs.media3.transformer)
+
+    // FFmpeg backend for frame-container encoders the platform codecs can't write
+    // (animated GIF/WebP/APNG). Bound in di/MediaModule.
+    implementation(libs.ffmpeg.kit)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

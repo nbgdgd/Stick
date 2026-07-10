@@ -3,9 +3,10 @@ package com.stick.stickersource.tiktok
 import com.stick.core.model.TikTokVideoRef
 import com.stick.core.result.StickError
 import com.stick.core.result.StickResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
 
 /**
  * Turns any of the many shapes a TikTok link can take into a canonical
@@ -68,21 +69,31 @@ class TikTokUrlResolver(private val httpClient: OkHttpClient) {
         return null
     }
 
-    private fun resolveShortLink(input: String): StickResult<TikTokVideoRef> {
-        val url = if (input.startsWith("http")) input else "https://$input"
-        return try {
-            // Follow redirects (OkHttpClient defaults to followRedirects = true)
-            // and read the final URL, which is the canonical video URL.
-            val request = Request.Builder().url(url).head().build()
-            httpClient.newCall(request).execute().use { response ->
-                val finalUrl = response.request.url.toString()
-                parseKnownShapes(finalUrl)?.let { StickResult.Success(it) }
-                    ?: StickResult.Failure(
-                        StickError.NotFound("Short link did not resolve to a video: $finalUrl"),
-                    )
+    // The redirect hop is a blocking network call, so it MUST run off the main
+    // thread — otherwise Android throws NetworkOnMainThreadException and the app
+    // crashes the moment a `vm.tiktok.com` share link is pasted.
+    private suspend fun resolveShortLink(input: String): StickResult<TikTokVideoRef> =
+        withContext(Dispatchers.IO) {
+            val url = if (input.startsWith("http")) input else "https://$input"
+            try {
+                // Follow redirects (OkHttpClient defaults to followRedirects = true)
+                // and read the final URL, which is the canonical video URL.
+                val request = Request.Builder().url(url).header("User-Agent", BROWSER_UA).get().build()
+                httpClient.newCall(request).execute().use { response ->
+                    val finalUrl = response.request.url.toString()
+                    parseKnownShapes(finalUrl)?.let { StickResult.Success(it) }
+                        ?: StickResult.Failure(
+                            StickError.NotFound("Short link did not resolve to a video: $finalUrl"),
+                        )
+                }
+            } catch (e: Exception) {
+                StickResult.Failure(StickError.Network("Failed to resolve short link", e))
             }
-        } catch (e: IOException) {
-            StickResult.Failure(StickError.Network("Failed to resolve short link", e))
         }
+
+    private companion object {
+        const val BROWSER_UA =
+            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/120.0.0.0 Mobile Safari/537.36"
     }
 }

@@ -17,6 +17,7 @@ retrofitSerialization = "1.0.0"
 coil = "2.7.0"
 media3 = "1.5.1"
 datastore = "1.1.1"
+ffmpegKit = "2.1.0"
 coroutines = "1.9.0"
 junit = "4.13.2"
 androidxJunit = "1.2.1"
@@ -60,6 +61,10 @@ media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "medi
 media3-transformer = { group = "androidx.media3", name = "media3-transformer", version.ref = "media3" }
 
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# Maintained republish of ffmpeg-kit (arthenica retired the originals). The
+# "full" variant bundles libwebp/libvpx/x264 → GIF, animated WebP and APNG encode.
+ffmpeg-kit = { group = "com.antonkarpenko", name = "ffmpeg-kit-full", version.ref = "ffmpegKit" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }

@@ -4,13 +4,16 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Simple "sticker peel" glyph, tinted for the monochrome/themed icon. -->
-    <group android:scaleX="0.55" android:scaleY="0.55" android:translateX="24.3" android:translateY="24.3">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M54,14C31.9,14 14,31.9 14,54C14,76.1 31.9,94 54,94L54,64C54,58.5 58.5,54 64,54L94,54C94,31.9 76.1,14 54,14Z" />
-        <path
-            android:fillColor="#EADDFF"
-            android:pathData="M60,60L60,90C74,86 86,74 90,60Z" />
-    </group>
+    <!-- A gift tag: the "trial" badge used throughout the app. -->
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M36,40h36a4,4 0,0 1,4 4v26a4,4 0,0 1,-4 4h-36a4,4 0,0 1,-4 -4v-26a4,4 0,0 1,4 -4z" />
+    <path
+        android:fillColor="#0E0E12"
+        android:pathData="M51,40h6v34h-6z" />
+    <path
+        android:strokeColor="#8B5CF6"
+        android:strokeWidth="4"
+        android:fillColor="#00000000"
+        android:pathData="M54,40c-2,-8 -6,-11 -10,-9c-4,2 -3,7 3,9M54,40c2,-8 6,-11 10,-9c4,2 3,7 -3,9" />
 </vector>

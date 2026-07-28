@@ -1,91 +1,123 @@
-# Stick
+# Триалы — трекер акций и пробных подписок
 
-A modern Android app for **saving animated stickers from TikTok comments** and
-converting them into **Telegram sticker formats** — as fast and frictionless as
-possible.
+Android-приложение, которое находит на устройстве приложения из своего каталога и
+показывает для них **пробные подписки (free trial)** и **скидки**. Пробные подписки
+всегда приоритетнее обычных акций.
 
-> Built with Kotlin, Jetpack Compose, Material 3 (Material You), MVVM,
-> Coroutines/Flow, Room, Hilt and Media3.
+Kotlin · Jetpack Compose · Material 3 · Room · WorkManager · OkHttp + kotlinx.serialization
 
-## Highlights
+<p align="center">
+  <img src="docs/home.png" width="30%" />
+  <img src="docs/trials.png" width="30%" />
+  <img src="docs/settings.png" width="30%" />
+</p>
 
-| Area | What's implemented |
-|------|--------------------|
-| **Import** | Paste a link · open via *Share* · deep-link `tiktok.com` URLs · resolve `vm.tiktok.com` short links · auto-scan comments · stream previews · multi-select · batch download · local-file & clipboard import |
-| **Catalog** | In-app search over TikTok's comment-sticker catalog — browse & save without opening a video |
-| **Viewer** | Play/pause · frame-step · FPS · resolution · size · duration · frame count |
-| **Editor** | Non-destructive pipeline: resize · speed · FPS · trim · opacity · crop · rotate · flip · center · background color · remove background · text · merge |
-| **Export** | Telegram `.webm` · `.tgs` · GIF · WebP · MP4 · APNG, with size/FPS/quality/bitrate controls and a **live size estimate** |
-| **Telegram** | One-tap share to Telegram · open @Stickers bot · multi-file export |
-| **Library** | Auto-save · favorites · collections · search · filter · sort · history · duplicate removal (content-hash) |
-| **UI** | Material You · light / dark / **AMOLED** themes · dynamic color · adjustable card size · grid/list |
+## APK
 
-## Architecture
+Готовый к установке APK лежит в [`artifacts/trial-tracker-1.0.0.apk`](artifacts/trial-tracker-1.0.0.apk)
+(minSdk 26, targetSdk 35). Подписан debug-ключом — для установки нужно разрешить
+установку из неизвестных источников. Перед публикацией в Play замените
+`signingConfig` на настоящий keystore и включите R8 (`isMinifyEnabled = true`).
 
-Clean, modular, MVVM. The dependency graph is strictly one-directional:
+## Что внутри
+
+### 1. Сканирование установленных приложений
+`data/PackageScanner.kt` — по одному пакету через `getApplicationInfo()` в try/catch.
+
+Разрешение **`QUERY_ALL_PACKAGES` не запрашивается**: Google Play строго проверяет
+его обоснование и может отклонить приложение. Вместо этого в манифесте объявлен
+блок `<queries>` с конкретными пакетами каталога — сопоставление всё равно идёт
+только по ним, так что полный список приложений устройства не нужен. Системные
+приложения по умолчанию скрыты, переключатель — в настройках.
+
+### 2. Каталог акций
+Единого API, который знает, у каких приложений сейчас есть триал, **не существует** —
+поэтому каталог ведётся вручную:
+
+* `catalog/deals.json` — источник, который отдаётся по HTTP и обновляется без релиза
+  приложения (GitHub Pages / raw.githubusercontent / Firebase Hosting);
+* `app/src/main/assets/deals_catalog.json` — та же копия внутри APK, чтобы первый
+  запуск работал офлайн;
+* адрес источника — в `BuildConfig.CATALOG_URL`, виден в настройках.
+
+Поля: `package_name`, `app_name`, `title`, `type` (`trial`/`discount`), `duration`,
+`description`, `price_after`, `discount_percent`, `deep_link`, `last_verified_date`,
+`brand_color`, `glyph`, `popularity`.
+
+**`last_verified_date` показывается в UI везде**, где видно предложение — условия
+акций отличаются по регионам и быстро устаревают.
+
+Стартовый набор — 20 популярных сервисов (Spotify, YouTube Premium, Netflix,
+Duolingo, Canva, CapCut, Notion, NordVPN, Adobe Lightroom, Picsart, Headspace,
+Яндекс Музыка, Кинопоиск, Coursera, Strava, Telegram Premium, Google One,
+Microsoft 365, Tinder, Grammarly). Условия внесены вручную и требуют перепроверки
+перед публикацией.
+
+Автоматический парсинг сторонних страниц **намеренно не реализован**: это
+нестабильно и может нарушать ToS сервисов. Место для него — `CatalogRemoteSource`,
+за той же suspend-функцией.
+
+### 3. Матчинг и приоритизация
+`DealsRepository` — сначала точное совпадение по `package_name`, затем нечёткое по
+названию (нормализованному: без регистра, пробелов и пунктуации).
+
+Порядок: триалы выше скидок; внутри триалов — установленные приложения, затем
+свежесть проверки, затем популярность (`ui/Categories.kt`).
+
+### 4. Разделы
+* **Главная** — приветствие, карточка анализа, 6 категорий, карусель рекомендаций,
+  список пробных подписок.
+* **Категории** — Free Trials · Лучшие предложения · Скидки · Персональные
+  предложения · Рекомендуемые приложения · Избранное, плюс **Все приложения** с
+  пометкой найдено / не установлено.
+* **Уведомления** — лента изменений каталога.
+* **Настройки** — периодичность проверки, системные приложения, приватность,
+  источник каталога.
+* **Онбординг** — что сканируется и что не уходит с устройства.
+
+### 5. Уведомления
+`work/CatalogSyncWorker.kt` — периодическая проверка каталога через WorkManager.
+Локальное уведомление приходит только про предложения для **установленных**
+приложений, и только один раз на предложение (таблица `seen_deals`).
+
+## Приватность
+Список установленных приложений обрабатывается только на устройстве и никуда не
+отправляется. Запрос каталога — обычный GET публичного JSON, без данных о
+пользователе; сопоставление происходит уже локально. Это объяснено в онбординге и
+в настройках.
+
+## Архитектура
 
 ```
-                ┌────────────────────────────┐
-   :app  ─────▶ │ :sticker-source (swappable) │ ─┐
-   (UI, Room,   └────────────────────────────┘  │
-    Hilt,          TikTok / clipboard / local     ├──▶ :core
-    Media3)     ┌────────────────────────────┐   │   (pure-Kotlin
-        └─────▶ │  MediaConverter (pluggable) │ ──┘    models + Result)
-                └────────────────────────────┘
-                 Media3 (HW)  +  FFmpeg backend
+ui/            Compose-экраны, тема, ViewModel
+ ├ screens/    Home · Categories · DealList · Apps · Search · Notifications · Settings · Onboarding
+ └ components/ SurfaceCard · DealCardCompact · DealRow · Pill · IconTile
+data/
+ ├ model/      Deal · DealCatalog · InstalledApp · DealUi
+ ├ local/      Room: deals · installed_apps · favorites · seen_deals
+ ├ remote/     CatalogRemoteSource (OkHttp)
+ ├ PackageScanner.kt
+ ├ DealsRepository.kt   матчинг + кэш
+ └ SettingsRepository.kt (DataStore)
+work/          CatalogSyncWorker
 ```
 
-Two deliberate seams make the app resilient and testable:
+Зависимости собираются вручную в `ServiceLocator` — граф маленький, DI-фреймворк
+здесь только добавил бы время сборки.
 
-1. **`:sticker-source`** — *where stickers come from*. The whole app depends only
-   on the `StickerSource` interface + `StickerSourceRegistry`. When TikTok changes
-   its API, **only this module changes**. See
-   [`sticker-source/README.md`](sticker-source/README.md) for the research on
-   TikTok's endpoints and the swap playbook.
-2. **`MediaConverter` / `FrameFormatConverter`** — *how media is encoded*.
-   Hardware-accelerated Media3 handles WebM/MP4; a swappable FFmpeg backend covers
-   GIF/WebP/APNG and a Lottie packer covers `.tgs`.
+## Дизайн
+Тёмная тема, один акцент (`#8B5CF6`). Фон `#08080B`, карточки `#131317` на тон
+светлее, вместо теней — граница 1px `#232329`, скругления 15–18dp. Цветная на
+карточке только иконка приложения: у установленного — настоящая иконка из
+`PackageManager`, иначе плитка в фирменном цвете из каталога.
 
-### Modules
-
-| Module | Type | Responsibility |
-|--------|------|----------------|
-| `:core` | Kotlin/JVM | Domain models (`RemoteSticker`, `MediaInfo`, `StickerFormat`), `StickResult` |
-| `:sticker-source` | Android lib | Acquisition: TikTok comments + catalog, clipboard, local files |
-| `:app` | Android app | Compose UI, Room library, Hilt DI, Media3 pipeline, navigation |
-
-### Layering inside `:app`
-
-`ui/` (Compose screens + ViewModels) → `domain/` (use cases, converter contracts)
-→ `data/` (Room, DataStore repositories). ViewModels never touch Room or a
-`StickerSource` directly.
-
-## Performance
-
-- Hardware-accelerated encoding via Media3 `Transformer` / `MediaCodec`.
-- Coroutines + `Flow` throughout; comment scanning streams previews incrementally.
-- Coil memory+disk cache for preview thumbnails.
-- Batch downloads report aggregate progress and run off the main thread.
-
-## Build
+## Сборка
 
 ```bash
-./gradlew :app:assembleDebug     # build the APK
-./gradlew test                   # run JVM unit tests
+echo "sdk.dir=/path/to/android-sdk" > local.properties
+./gradlew :app:assembleRelease          # APK -> app/build/outputs/apk/release/
+./gradlew :app:testDebugUnitTest        # рендерит экраны в app/build/screenshots/
 ```
 
-Requires the Android SDK (compileSdk 35, minSdk 26) and JDK 17.
-
-## Status & notes
-
-This repository is a complete, documented architecture with the full feature
-surface wired end-to-end. A few encoders that the Android platform cannot provide
-(animated GIF/WebP/APNG, `.tgs`) are routed through the `FrameFormatConverter`
-seam and ship with safe "backend not bundled" fallbacks — drop in an FFmpeg build
-to enable them (see `di/MediaModule.kt`). WebM and MP4 export work out of the box.
-
-## Legal
-
-Stick fetches stickers a user can already view in TikTok. Respect TikTok's Terms
-of Service, rate-limit requests, and use it only for content you're entitled to
-save.
+Скриншоты в `docs/` сняты не эмулятором, а Robolectric + Roborazzi на JVM
+(`app/src/test/.../HomeScreenRenderTest.kt`) — layout можно проверять без устройства.

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- The installed-app cache never leaves the device, so it is excluded from backups. -->
+    <exclude domain="database" path="trial_tracker.db" />
+</full-backup-content>

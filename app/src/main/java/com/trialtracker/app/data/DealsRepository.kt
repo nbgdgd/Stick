@@ -1,6 +1,7 @@
 package com.trialtracker.app.data
 
 import android.content.Context
+import android.util.Log
 import com.trialtracker.app.data.local.SeenDealEntity
 import com.trialtracker.app.data.local.TrialDatabase
 import com.trialtracker.app.data.local.toEntity
@@ -18,11 +19,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 
 class DealsRepository(
@@ -50,6 +53,11 @@ class DealsRepository(
     /** How many trials the last run confirmed against the service's own page. */
     @Volatile
     var autoVerifiedTrials: Int = 0
+        private set
+
+    /** Why the last refresh was incomplete, or null when everything succeeded. */
+    @Volatile
+    var lastError: String? = null
         private set
 
     /** Services the catalog tracks but has no confirmed offer for yet. */
@@ -132,66 +140,113 @@ class DealsRepository(
     /**
      * Refreshes every source, then rescans the device.
      *
-     * Sources are independent: a feed that is down or rate-limited leaves its
-     * previously stored rows alone instead of wiping them, so the app degrades to
-     * "slightly stale" rather than "empty".
+     * Every stage is isolated: one failing source, or one failing write, must not
+     * discard the work the other stages already did. Earlier this was a single
+     * try/catch around the whole method, so any hiccup surfaced as "не удалось
+     * обновить каталог" and threw away results that had already been fetched.
      *
      * Returns the deals that are new *and* belong to an installed app — those are
-     * the ones worth notifying about.
+     * the ones worth notifying about. Failures are reported in [lastError] rather
+     * than swallowed.
      */
     suspend fun refresh(): Result<List<Deal>> = withContext(Dispatchers.IO) {
-        runCatching {
-            val remoteCatalog = remote.fetch().getOrNull()
-            if (remoteCatalog != null && remoteCatalog.deals.isNotEmpty()) {
+        val problems = mutableListOf<String>()
+
+        stage("каталог", problems) {
+            val remoteCatalog = remote.fetch().getOrElse { error(reasonOf(it)) }
+            if (remoteCatalog.deals.isNotEmpty()) {
                 notice = remoteCatalog.notice
                 if (remoteCatalog.watchlist.isNotEmpty()) watchlist = remoteCatalog.watchlist
-                val catalogDeals = remoteCatalog.deals.map {
-                    it.copy(source = Deal.SOURCE_CATALOG)
-                }
+                val catalogDeals = remoteCatalog.deals.map { it.copy(source = Deal.SOURCE_CATALOG) }
                 db.dealDao().upsert(catalogDeals.map { it.toEntity() })
                 db.dealDao().deleteMissing(Deal.SOURCE_CATALOG, catalogDeals.map { it.id })
             }
+        }
 
-            feedResults.clear()
-            for (feed in DealFeedSource.DEFAULT_FEEDS) {
-                val result = feeds.fetch(feed)
-                val parsed = result.getOrNull()
-                feedResults[feed.sourceKey] = when {
-                    parsed == null -> FeedStatus(feed.label, 0, result.exceptionOrNull()?.message)
-                    else -> FeedStatus(feed.label, parsed.size, null)
-                }
-                if (parsed.isNullOrEmpty()) continue
+        feedResults.clear()
+        DealFeedSource.DEFAULT_FEEDS.forEachIndexed { index, feed ->
+            if (index > 0) delay(DealFeedSource.FEED_SPACING_MS)
+            val result = feeds.fetch(feed)
+            val parsed = result.getOrNull()
+            feedResults[feed.sourceKey] = FeedStatus(
+                label = feed.label,
+                count = parsed?.size ?: 0,
+                error = result.exceptionOrNull()?.let { reasonOf(it) },
+            )
+            if (parsed.isNullOrEmpty()) return@forEachIndexed
+            stage(feed.label, problems) {
                 db.dealDao().upsert(parsed.map { it.toEntity() })
                 db.dealDao().deleteMissing(feed.sourceKey, parsed.map { it.id })
             }
+        }
 
+        var installedPackages: Set<String> = emptySet()
+        stage("сканирование", problems) {
             val catalogPackages = db.dealDao().all().map { it.packageName }
-            val showSystem = currentShowSystem()
             val found = scanner.scanCatalogPackages(catalogPackages)
-            val extra = if (showSystem) scanner.scanAll(includeSystem = true) else emptyList()
+            val extra = if (currentShowSystem()) {
+                scanner.scanAll(includeSystem = true)
+            } else {
+                emptyList()
+            }
             val merged = (found + extra).distinctBy { it.packageName }
-
             db.installedAppDao().clear()
             db.installedAppDao().upsert(
                 merged.map {
                     InstalledAppEntity(it.packageName, it.label, it.firstInstallTime, it.isSystem)
                 },
             )
-            settings.setLastSyncAt(System.currentTimeMillis())
+            installedPackages = merged.map { it.packageName }.toSet()
+        }
 
-            val installedPackages = merged.map { it.packageName }.toSet()
-            if (settings.settings.first().autoVerifyTrials) verifyTrials(installedPackages)
+        stage("автопроверка триалов", problems) {
+            if (settings.settings.first().autoVerifyTrials) {
+                // Hard cap. Each probe can walk up to four pages, so an unbounded
+                // pass could outlive a WorkManager job — whose cancellation then
+                // looked like a failed refresh.
+                withTimeoutOrNull(PROBE_BUDGET_MS) { verifyTrials(installedPackages) }
+            }
+        }
 
+        settings.setLastSyncAt(System.currentTimeMillis())
+        lastError = problems.firstOrNull()
+
+        // The user-visible outcome: what is new for an app they actually have.
+        try {
             val seen = db.seenDealDao().ids().toSet()
-            val fresh = db.dealDao().all()
+            val stored = db.dealDao().all()
+            val fresh = stored
                 .map { it.toDeal() }
                 .filter { it.packageName in installedPackages && it.id !in seen }
-            db.seenDealDao().mark(
-                db.dealDao().all().map { SeenDealEntity(it.id, System.currentTimeMillis()) },
-            )
-            fresh
+            db.seenDealDao().mark(stored.map { SeenDealEntity(it.id, System.currentTimeMillis()) })
+            Result.success(fresh)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            // Leaving the screen cancels the refresh. That is not a failure, and
+            // reporting it as one is what produced a spurious error toast.
+            throw cancellation
+        } catch (t: Throwable) {
+            Log.w(TAG, "refresh could not compute new deals", t)
+            Result.failure(t)
         }
     }
+
+    /**
+     * Runs one stage, recording why it failed instead of aborting the refresh.
+     * Cancellation is rethrown — a cancelled refresh is not a failed one.
+     */
+    private suspend fun stage(name: String, problems: MutableList<String>, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
+        } catch (t: Throwable) {
+            Log.w(TAG, "refresh stage '$name' failed", t)
+            problems += "$name: ${reasonOf(t)}"
+        }
+    }
+
+    private fun reasonOf(t: Throwable): String =
+        t.message?.takeIf { it.isNotBlank() } ?: t::class.java.simpleName
 
     /**
      * Confirms trials by reading each service's own pricing page.
@@ -257,7 +312,9 @@ class DealsRepository(
     }
 
     private companion object {
+        const val TAG = "DealsRepository"
         const val ASSET_CATALOG = "deals_catalog.json"
         const val MAX_PROBES_PER_RUN = 12
+        const val PROBE_BUDGET_MS = 90_000L
     }
 }

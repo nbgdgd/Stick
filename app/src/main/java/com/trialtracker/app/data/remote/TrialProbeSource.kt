@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.util.concurrent.TimeUnit
 
 /**
  * Checks a service's own pricing page for its current free-trial length.
@@ -20,7 +21,15 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  * in text a fetch can see. The rest render the number client-side, so they stay
  * hand-verified and are labelled as such in the UI.
  */
-class TrialProbeSource(private val client: OkHttpClient) {
+open class TrialProbeSource(client: OkHttpClient) {
+
+    // A pricing page is a nice-to-have, not worth waiting on: short timeouts keep
+    // one unresponsive host from consuming the whole probe budget.
+    private val client: OkHttpClient = client.newBuilder()
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .callTimeout(15, TimeUnit.SECONDS)
+        .build()
 
     data class Result(
         val days: Int,
@@ -28,7 +37,7 @@ class TrialProbeSource(private val client: OkHttpClient) {
         val sourceUrl: String,
     )
 
-    suspend fun probe(deal: Deal): Result? = withContext(Dispatchers.IO) {
+    open suspend fun probe(deal: Deal): Result? = withContext(Dispatchers.IO) {
         candidateUrls(deal.deepLink).firstNotNullOfOrNull { url ->
             val body = fetch(url) ?: return@firstNotNullOfOrNull null
             val finding = TrialTextExtractor.extract(TrialTextExtractor.htmlToText(body))

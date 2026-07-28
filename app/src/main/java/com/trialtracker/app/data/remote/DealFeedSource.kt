@@ -22,7 +22,7 @@ import okhttp3.Request
  * nothing publishes those in machine-readable form, and pretending otherwise
  * would just mean inventing data.
  */
-class DealFeedSource(private val client: OkHttpClient) {
+open class DealFeedSource(private val client: OkHttpClient) {
 
     data class Feed(
         val subreddit: String,
@@ -33,19 +33,10 @@ class DealFeedSource(private val client: OkHttpClient) {
         val url: String get() = "https://www.reddit.com/r/$subreddit/new/.rss?limit=$limit"
     }
 
-    suspend fun fetch(feed: Feed): Result<List<Deal>> = withContext(Dispatchers.IO) {
+    open suspend fun fetch(feed: Feed): Result<List<Deal>> = withContext(Dispatchers.IO) {
         runCatching {
-            val request = Request.Builder()
-                .url(feed.url)
-                // Reddit rejects generic clients; a descriptive UA is required.
-                .header("User-Agent", USER_AGENT)
-                .header("Accept", "application/atom+xml, application/xml;q=0.9")
-                .build()
-
-            val xml = client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) error("HTTP ${response.code} for r/${feed.subreddit}")
-                response.body?.string().orEmpty()
-            }
+            val xml = fetchXml(feed) ?: fetchXml(feed, afterRateLimit = true)
+                ?: error("лимит запросов Reddit")
 
             AtomFeedParser.parse(xml)
                 .mapIndexedNotNull { index, entry ->
@@ -56,8 +47,36 @@ class DealFeedSource(private val client: OkHttpClient) {
         }
     }
 
+    /**
+     * Returns null when Reddit rate-limits us. Two feeds fetched back to back trip
+     * its limiter often enough that a single spaced retry is worth it; anything
+     * beyond that is left for the next scheduled run, with the previously stored
+     * deals still on screen.
+     */
+    private fun fetchXml(feed: Feed, afterRateLimit: Boolean = false): String? {
+        if (afterRateLimit) Thread.sleep(RATE_LIMIT_BACKOFF_MS)
+        val request = Request.Builder()
+            .url(feed.url)
+            // Reddit rejects generic clients; a descriptive UA is required.
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "application/atom+xml, application/xml;q=0.9")
+            .build()
+        return client.newCall(request).execute().use { response ->
+            when {
+                response.code == HTTP_TOO_MANY_REQUESTS -> null
+                !response.isSuccessful -> error("HTTP ${response.code} для r/${feed.subreddit}")
+                else -> response.body?.string().orEmpty()
+            }
+        }
+    }
+
     companion object {
         const val USER_AGENT = "android:com.trialtracker.app:1.0.0 (deal aggregator)"
+        private const val HTTP_TOO_MANY_REQUESTS = 429
+        private const val RATE_LIMIT_BACKOFF_MS = 3_000L
+
+        /** Spacing between feeds, for the same reason. */
+        const val FEED_SPACING_MS = 1_500L
 
         val DEFAULT_FEEDS = listOf(
             Feed(

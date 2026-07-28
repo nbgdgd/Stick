@@ -125,10 +125,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             syncing.value = true
             val result = repo.refresh()
             syncing.value = false
-            message.value = result.fold(
-                onSuccess = { null },
-                onFailure = { "Не удалось обновить каталог. Показаны сохранённые данные." },
-            )
+            // Say what actually went wrong: "не удалось обновить" with no reason is
+            // impossible to act on, for the user or for a bug report.
+            message.value = when {
+                result.isFailure ->
+                    "Не удалось обновить: ${result.exceptionOrNull()?.message.orEmpty()}"
+                repo.lastError != null ->
+                    "Обновлено частично — ${repo.lastError}"
+                else -> null
+            }
         }
     }
 

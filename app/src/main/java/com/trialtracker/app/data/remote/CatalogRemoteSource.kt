@@ -20,13 +20,13 @@ import okhttp3.Request
  * It is unreliable and can violate the terms of the services being scraped, so it
  * stays out of the MVP.
  */
-class CatalogRemoteSource(
+open class CatalogRemoteSource(
     private val json: Json,
     private val client: OkHttpClient,
     private val url: String = BuildConfig.CATALOG_URL,
 ) {
 
-    suspend fun fetch(): Result<DealCatalog> = withContext(Dispatchers.IO) {
+    open suspend fun fetch(): Result<DealCatalog> = withContext(Dispatchers.IO) {
         runCatching {
             val request = Request.Builder().url(url).header("Accept", "application/json").build()
             client.newCall(request).execute().use { response ->

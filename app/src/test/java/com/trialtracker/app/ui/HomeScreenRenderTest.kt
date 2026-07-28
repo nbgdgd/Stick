@@ -21,6 +21,7 @@ import com.trialtracker.app.ui.theme.TrialTrackerTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
@@ -73,9 +74,14 @@ class HomeScreenRenderTest {
     }
 
     @Test
-    fun renderSettings() = capture("settings") {
+    fun renderSettings() = capture("settings", qualifiers = "w411dp-h2200dp-xxhdpi") {
         SettingsScreen(
             state = sampleState(),
+            sources = listOf(
+                SourceStatus("Проверенный каталог", "Пробные подписки, проверяются вручную", 20, true),
+                SourceStatus("r/googleplaydeals", "Скидки Google Play, разбор Atom-фида", 63, true),
+                SourceStatus("r/AppHookup", "Скидки Google Play, разбор Atom-фида", 4, true),
+            ),
             onNameChange = {},
             onShowSystemAppsChange = {},
             onNotificationsChange = {},
@@ -84,7 +90,14 @@ class HomeScreenRenderTest {
         )
     }
 
-    private fun capture(name: String, content: @androidx.compose.runtime.Composable () -> Unit) {
+    private fun capture(
+        name: String,
+        qualifiers: String? = null,
+        content: @androidx.compose.runtime.Composable () -> Unit,
+    ) {
+        // Settings is longer than a phone screen; render it tall so the whole
+        // screen lands in one image instead of only its first viewport.
+        if (qualifiers != null) RuntimeEnvironment.setQualifiers(qualifiers)
         // Drive the clock by hand so a screen with a running animation still settles.
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {

@@ -17,8 +17,12 @@ interface DealDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(deals: List<DealEntity>)
 
-    @Query("DELETE FROM deals WHERE id NOT IN (:keep)")
-    suspend fun deleteMissing(keep: List<String>)
+    @Query("SELECT * FROM deals WHERE source = :source")
+    suspend fun bySource(source: String): List<DealEntity>
+
+    /** Drops the rows of one source that are no longer in its latest response. */
+    @Query("DELETE FROM deals WHERE source = :source AND id NOT IN (:keep)")
+    suspend fun deleteMissing(source: String, keep: List<String>)
 }
 
 @Dao

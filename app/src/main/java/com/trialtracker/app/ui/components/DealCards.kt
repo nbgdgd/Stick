@@ -24,15 +24,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.trialtracker.app.data.model.DealUi
 import com.trialtracker.app.ui.badgeLabel
 import com.trialtracker.app.ui.parseColor
@@ -40,39 +41,66 @@ import com.trialtracker.app.ui.rememberAppIcon
 import com.trialtracker.app.ui.theme.TT
 
 /**
- * The app icon. For an installed app this is the real launcher icon — the only
- * coloured element on the card. For everything else it falls back to a tile tinted
- * with the brand colour from the catalog.
+ * The app icon — the only coloured element on a card.
+ *
+ * Three tiers, in order: the real launcher icon when the app is installed, the
+ * Play CDN icon when it is not (catalog entries carry the URL, feed entries reuse
+ * the post's preview image), and finally a brand-tinted letter tile so a card is
+ * never blank.
  */
 @Composable
 fun AppGlyph(deal: DealUi, size: Int = 52, corner: Int = 15) {
     val brand = parseColor(deal.deal.brandColor, TT.Accent)
-    val icon by rememberAppIcon(deal.deal.packageName, deal.installed)
+    val localIcon by rememberAppIcon(deal.deal.packageName, deal.installed)
     val shape = RoundedCornerShape(corner.dp)
+    val remoteUrl = remember(deal.deal.iconUrl, size) {
+        sizedIconUrl(deal.deal.iconUrl, size)
+    }
+
     Box(
         modifier = Modifier
             .size(size.dp)
             .clip(shape)
-            .background(if (icon != null) Color.Transparent else brand.copy(alpha = 0.18f)),
+            .background(brand.copy(alpha = 0.18f)),
         contentAlignment = Alignment.Center,
     ) {
-        val bitmap = icon
-        if (bitmap != null) {
-            Image(
+        // The letter sits underneath and shows through until (or unless) an image
+        // resolves, so there is no empty square while the icon downloads.
+        Text(
+            text = deal.deal.glyph.ifBlank { deal.deal.appName.take(1) },
+            color = brand,
+            fontSize = (size * 0.42f).sp,
+            fontWeight = FontWeight.Bold,
+        )
+
+        val bitmap = localIcon
+        when {
+            bitmap != null -> Image(
                 bitmap = bitmap,
                 contentDescription = deal.deal.appName,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.size(size.dp).clip(shape),
             )
-        } else {
-            Text(
-                text = deal.deal.glyph.ifBlank { deal.deal.appName.take(1) },
-                color = brand,
-                fontSize = (size * 0.42f).sp,
-                fontWeight = FontWeight.Bold,
+            remoteUrl != null -> AsyncImage(
+                model = remoteUrl,
+                contentDescription = deal.deal.appName,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(size.dp).clip(shape),
             )
         }
     }
+}
+
+/**
+ * Play's image CDN takes the size as a URL suffix, so we ask for exactly what the
+ * tile needs instead of downloading a full-resolution icon.
+ */
+private fun sizedIconUrl(url: String, sizeDp: Int): String? {
+    if (url.isBlank()) return null
+    if (!url.startsWith("http")) return null
+    val isPlayCdn = url.contains("googleusercontent.com")
+    if (!isPlayCdn || url.substringAfterLast('/').contains('=')) return url
+    return "$url=s${(sizeDp * 3).coerceAtMost(384)}"
 }
 
 @Composable

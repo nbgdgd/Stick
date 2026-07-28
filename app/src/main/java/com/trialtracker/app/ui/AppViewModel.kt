@@ -8,7 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.trialtracker.app.ServiceLocator
 import com.trialtracker.app.data.Settings
 import com.trialtracker.app.data.model.DealUi
+import com.trialtracker.app.data.model.Deal
 import com.trialtracker.app.data.model.InstalledApp
+import com.trialtracker.app.data.remote.DealFeedSource
 import com.trialtracker.app.work.CatalogSyncWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,6 +18,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+/** One data source as shown in Settings. */
+data class SourceStatus(
+    val label: String,
+    val detail: String,
+    val count: Int,
+    val ok: Boolean,
+)
 
 data class UiState(
     val deals: List<DealUi> = emptyList(),
@@ -56,6 +66,33 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState())
 
     val catalogNotice: String get() = repo.notice
+
+    /**
+     * Source health for the Settings screen: how many offers each source
+     * contributed on the last refresh, and why it produced none if it failed.
+     */
+    fun sourceStatuses(): List<SourceStatus> {
+        val deals = state.value.deals
+        val catalogCount = deals.count { it.deal.source == Deal.SOURCE_CATALOG }
+        val catalog = SourceStatus(
+            label = "Проверенный каталог",
+            detail = "Пробные подписки, проверяются вручную",
+            count = catalogCount,
+            ok = catalogCount > 0,
+        )
+        val live = DealFeedSource.DEFAULT_FEEDS.map { feed ->
+            val result = repo.feedResults[feed.sourceKey]
+            val stored = deals.count { it.deal.source == feed.sourceKey }
+            SourceStatus(
+                label = feed.label,
+                detail = result?.error?.let { error -> "Ошибка: " + error }
+                    ?: "Скидки Google Play, разбор Atom-фида",
+                count = stored,
+                ok = result?.error == null && stored > 0,
+            )
+        }
+        return listOf(catalog) + live
+    }
 
     init {
         viewModelScope.launch {

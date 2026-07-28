@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.trialtracker.app.data.model.DealUi
+import com.trialtracker.app.data.remote.DealFeedSource
 import com.trialtracker.app.ui.components.AppGlyph
 import com.trialtracker.app.ui.components.Pill
 import com.trialtracker.app.ui.components.formatVerified
@@ -112,6 +113,7 @@ fun DealSheet(
                 "Тип",
                 if (deal.deal.isTrial) "Пробная подписка" else "Скидка",
             )
+            InfoRow("Источник", DealFeedSource.labelFor(deal.deal.source))
 
             Spacer(Modifier.height(14.dp))
             Text(

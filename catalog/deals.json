@@ -15,6 +15,7 @@
       "deep_link": "https://www.spotify.com/premium/",
       "last_verified_date": "2026-07-18",
       "brand_color": "#1DB954",
+      "icon_url": "https://play-lh.googleusercontent.com/IzQgYCcnCFCD08GR-3bdtcT8xzOvrNkC84avGT5CwTX2VIqmTmKKJcP_Cd4JoBOdmCMlTndlOzV6hrthg2fOWA",
       "glyph": "S",
       "popularity": 98
     },
@@ -31,6 +32,7 @@
       "deep_link": "https://www.youtube.com/premium",
       "last_verified_date": "2026-07-18",
       "brand_color": "#FF0033",
+      "icon_url": "https://play-lh.googleusercontent.com/QNmuZQc9I6Zbe3mWnSr0hycnENqGFCI5p3yE29Hkxtf22T0IWS6zTrpxULLyyjWpB7ONAXDsDQXnXcVWokl3eg",
       "glyph": "▶",
       "popularity": 97
     },
@@ -46,6 +48,7 @@
       "deep_link": "https://www.netflix.com/signup",
       "last_verified_date": "2026-07-15",
       "brand_color": "#E50914",
+      "icon_url": "https://play-lh.googleusercontent.com/fXVS45nukV1x9PYVSKHkCQK0QGCOishIvAOxIZS3sgRem8HS7l9l94_Ggj-WZPrTLePRdNYN4pp4SPAQL7oS0PU",
       "glyph": "N",
       "popularity": 96
     },
@@ -61,6 +64,7 @@
       "deep_link": "https://www.duolingo.com/super",
       "last_verified_date": "2026-07-18",
       "brand_color": "#58CC02",
+      "icon_url": "https://play-lh.googleusercontent.com/Q-wEiKezZQEspFNNrWfKjcEgAqdWy_b98_tXTAZaXGgm9y1HZ1zi-JSZXA7Tmur9MjcM0xoIA0BdXEN0Bt54",
       "glyph": "D",
       "popularity": 92
     },
@@ -76,6 +80,7 @@
       "deep_link": "https://www.canva.com/pro/",
       "last_verified_date": "2026-07-16",
       "brand_color": "#00C4CC",
+      "icon_url": "https://play-lh.googleusercontent.com/52fzAlhKzDyZV8ttyQ_DHB-jOeLZAZEdKlgXnWL__YNMZuvsoRCshJX5mr_ArFZjK7rte4hqEJ4ucjtuKJK5",
       "glyph": "C",
       "popularity": 90
     },
@@ -91,6 +96,7 @@
       "deep_link": "https://www.capcut.com/pricing",
       "last_verified_date": "2026-07-12",
       "brand_color": "#00E5D0",
+      "icon_url": "https://play-lh.googleusercontent.com/M78HyakHaxKrjoeqYx41E9DXfVYYtx67nvc7Ks4G4zFQeaAJdGCi8gzzGSrHIwlrmnJS6zD9S4fAXqdEwfuHQAQ",
       "glyph": "✂",
       "popularity": 88
     },
@@ -107,6 +113,7 @@
       "deep_link": "https://www.notion.so/pricing",
       "last_verified_date": "2026-07-14",
       "brand_color": "#E8E8E8",
+      "icon_url": "https://play-lh.googleusercontent.com/-GY1Xv9hhhK_RFJCCb-rvDX8OMR8Fj68AgcRIFcD8zIXlOA8pG-L-cuOJbgSs_U6GGGyGs8qiiQsjIfEBazE8g",
       "glyph": "N",
       "popularity": 85
     },
@@ -123,6 +130,7 @@
       "deep_link": "https://nordvpn.com/pricing/",
       "last_verified_date": "2026-07-19",
       "brand_color": "#4687FF",
+      "icon_url": "https://play-lh.googleusercontent.com/8yhQejdntBkaku4Vt-HD9f8Ujcl1EJeE1WX2ypEMEzPxY-8AG9-rLjm8OVKmIpmmBC2uWhlqCzKI8be3XkFlIDQ",
       "glyph": "◈",
       "popularity": 84
     },
@@ -138,6 +146,7 @@
       "deep_link": "https://www.adobe.com/products/photoshop-lightroom.html",
       "last_verified_date": "2026-07-11",
       "brand_color": "#31A8FF",
+      "icon_url": "https://play-lh.googleusercontent.com/ALv_YzwUQTXc17qvu2oy7JTl8Qn-zm22M4FoZKVv2Ru541nDa2EltKPSlv_KyQGacLdpHLotR9Z98bamyEd9rKc",
       "glyph": "Lr",
       "popularity": 80
     },
@@ -153,6 +162,7 @@
       "deep_link": "https://picsart.com/gold",
       "last_verified_date": "2026-07-10",
       "brand_color": "#C209C1",
+      "icon_url": "https://play-lh.googleusercontent.com/wXk_X0uT6AeWv5TFfheHP8NrOmtz17BX-2uEZ7H4naTIzuFpSIfohvQTA4pKOCF71TmeUF3DfMAGq1SlK2hH7Qk",
       "glyph": "P",
       "popularity": 76
     },
@@ -168,6 +178,7 @@
       "deep_link": "https://www.headspace.com/subscriptions",
       "last_verified_date": "2026-07-09",
       "brand_color": "#FF7E1D",
+      "icon_url": "https://play-lh.googleusercontent.com/kp_QagG6AodramfhZ7-ErzFuA86QOUAZDIYl5KlBlnPr0Lb_ys98unvi5Ej_MWo5Kr8TRIkNz46IxISRyXot",
       "glyph": "H",
       "popularity": 72
     },
@@ -183,6 +194,7 @@
       "deep_link": "https://plus.yandex.ru/",
       "last_verified_date": "2026-07-17",
       "brand_color": "#FFCC00",
+      "icon_url": "https://play-lh.googleusercontent.com/Jk0Nrh3alWIZSCbkPqRJaDm5ewxiwfOuQdD1hcGs_bNm1Zi4t1LQrUiUSIHY8y6g-AzrRwdQC6ZBFMb7dZxuUCE",
       "glyph": "Я",
       "popularity": 86
     },
@@ -198,6 +210,7 @@
       "deep_link": "https://www.kinopoisk.ru/subscription/",
       "last_verified_date": "2026-07-17",
       "brand_color": "#FF6600",
+      "icon_url": "https://play-lh.googleusercontent.com/wKdRcSk5jof1YAV40mWZiZHRJdDRi-MMVuNOzuiQWHkITjDTbbg4CXpzpvJhYg5-duxH9Cpd9m2TKwd7fGpD",
       "glyph": "К",
       "popularity": 82
     },
@@ -213,6 +226,7 @@
       "deep_link": "https://www.coursera.org/courseraplus",
       "last_verified_date": "2026-07-08",
       "brand_color": "#0056D2",
+      "icon_url": "https://play-lh.googleusercontent.com/LbjoYTPK5ZlNO3GDMZsFoGoRXHLoA2iTAUvJF7ePRZzbRPu7En-Go3wWXPXEdCL6grpkPHHavvzalozZrbJi",
       "glyph": "C",
       "popularity": 65
     },
@@ -228,6 +242,7 @@
       "deep_link": "https://www.strava.com/subscribe",
       "last_verified_date": "2026-07-07",
       "brand_color": "#FC4C02",
+      "icon_url": "https://play-lh.googleusercontent.com/J4LN2qH2PQkZ3sFQonz-HWYkd7M38BtEO4Grzh1Xn7L2J6NUILHPkhYvPjdhMZQzrdm4BarUj547wfthyMz_vWM",
       "glyph": "S",
       "popularity": 68
     },
@@ -244,6 +259,7 @@
       "deep_link": "https://telegram.org/premium",
       "last_verified_date": "2026-07-13",
       "brand_color": "#2AABEE",
+      "icon_url": "https://play-lh.googleusercontent.com/PyZ3akMGXPV0tKKirKNwfO--PSQW3FHR6rD_H9mAaukZ8LiHyYFuBLeU8UZ2ok6r5SP79-3prkfybWKh98AZAD0",
       "glyph": "✈",
       "popularity": 89
     },
@@ -259,6 +275,7 @@
       "deep_link": "https://one.google.com/about",
       "last_verified_date": "2026-07-16",
       "brand_color": "#4285F4",
+      "icon_url": "https://play-lh.googleusercontent.com/pnaxOl9i4YnkYKGMYkH17y_hA_FJOZRahlRGHQaaEGuLwPme68AfPShN2na5dEGOsem3hEzFvWXMz62WPVx8",
       "glyph": "G",
       "popularity": 78
     },
@@ -274,6 +291,7 @@
       "deep_link": "https://www.microsoft.com/microsoft-365/buy/compare-all-microsoft-365-products",
       "last_verified_date": "2026-07-06",
       "brand_color": "#F25022",
+      "icon_url": "https://play-lh.googleusercontent.com/dq5TBOyIdEEXJkJADfH07pPh8afZhR6kCTdfNd511qa5dl0nGM9wnlRSHqFa9glAtUBk-LIwsDcTdgKgsbLYdAA",
       "glyph": "M",
       "popularity": 70
     },
@@ -290,6 +308,7 @@
       "deep_link": "https://tinder.com/",
       "last_verified_date": "2026-07-05",
       "brand_color": "#FE3C72",
+      "icon_url": "https://play-lh.googleusercontent.com/VaExVMyjnrd9PkIAKchSBK6Eo7zb4A2rriDbD3pUvmveAy46StPS-Hs5mYVIP9upZV4YCJxRoQRnj77FAaQd2A",
       "glyph": "T",
       "popularity": 66
     },
@@ -306,6 +325,7 @@
       "deep_link": "https://www.grammarly.com/premium",
       "last_verified_date": "2026-07-04",
       "brand_color": "#15C39A",
+      "icon_url": "https://play-lh.googleusercontent.com/HEXOyemb8fZ1MKGaqKLtrVEsX3fx2We5HeLyY1X2WG37LEiI6EgXNaik6lJ8qi1AoIuXB4QBUtPE5SvQ4u_q",
       "glyph": "G",
       "popularity": 60
     }

@@ -10,6 +10,7 @@ import com.trialtracker.app.data.model.DealUi
 import com.trialtracker.app.data.model.InstalledApp
 import com.trialtracker.app.data.local.InstalledAppEntity
 import com.trialtracker.app.data.remote.CatalogRemoteSource
+import com.trialtracker.app.data.remote.DealFeedSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -25,12 +26,19 @@ class DealsRepository(
     private val settings: SettingsRepository,
     private val json: Json,
     private val remote: CatalogRemoteSource,
+    private val feeds: DealFeedSource,
 ) {
+
+    /** Outcome of the last fetch of one source, surfaced in Settings. */
+    data class FeedStatus(val label: String, val count: Int, val error: String?)
 
     /** Catalog notice text, filled in after the first load. */
     @Volatile
     var notice: String = ""
         private set
+
+    /** Per-source result of the most recent [refresh], keyed by source key. */
+    val feedResults: MutableMap<String, FeedStatus> = java.util.concurrent.ConcurrentHashMap()
 
     val deals: Flow<List<Deal>> = db.dealDao().observeAll().map { list ->
         list.map { it.toDeal() }
@@ -102,7 +110,12 @@ class DealsRepository(
             .getOrDefault(DealCatalog())
 
     /**
-     * Pulls the remote catalog and rescans the device.
+     * Refreshes every source, then rescans the device.
+     *
+     * Sources are independent: a feed that is down or rate-limited leaves its
+     * previously stored rows alone instead of wiping them, so the app degrades to
+     * "slightly stale" rather than "empty".
+     *
      * Returns the deals that are new *and* belong to an installed app — those are
      * the ones worth notifying about.
      */
@@ -111,8 +124,24 @@ class DealsRepository(
             val remoteCatalog = remote.fetch().getOrNull()
             if (remoteCatalog != null && remoteCatalog.deals.isNotEmpty()) {
                 notice = remoteCatalog.notice
-                db.dealDao().upsert(remoteCatalog.deals.map { it.toEntity() })
-                db.dealDao().deleteMissing(remoteCatalog.deals.map { it.id })
+                val catalogDeals = remoteCatalog.deals.map {
+                    it.copy(source = Deal.SOURCE_CATALOG)
+                }
+                db.dealDao().upsert(catalogDeals.map { it.toEntity() })
+                db.dealDao().deleteMissing(Deal.SOURCE_CATALOG, catalogDeals.map { it.id })
+            }
+
+            feedResults.clear()
+            for (feed in DealFeedSource.DEFAULT_FEEDS) {
+                val result = feeds.fetch(feed)
+                val parsed = result.getOrNull()
+                feedResults[feed.sourceKey] = when {
+                    parsed == null -> FeedStatus(feed.label, 0, result.exceptionOrNull()?.message)
+                    else -> FeedStatus(feed.label, parsed.size, null)
+                }
+                if (parsed.isNullOrEmpty()) continue
+                db.dealDao().upsert(parsed.map { it.toEntity() })
+                db.dealDao().deleteMissing(feed.sourceKey, parsed.map { it.id })
             }
 
             val catalogPackages = db.dealDao().all().map { it.packageName }

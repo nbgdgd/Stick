@@ -38,6 +38,18 @@
         <package android:name="com.tinder" />
         <package android:name="com.grammarly.android.keyboard" />
 
+        <!--
+          Deals also arrive from live feeds, so their package names are not known
+          at build time and cannot be listed above. Querying by the launcher intent
+          is the visibility mechanism Google documents as the alternative to
+          QUERY_ALL_PACKAGES: it exposes launchable apps only, and it is what makes
+          matching a freshly posted deal against the device possible at all.
+        -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+
         <!-- Needed to open store / deep links from a deal card. -->
         <intent>
             <action android:name="android.intent.action.VIEW" />

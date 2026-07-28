@@ -136,6 +136,7 @@ fun AppShell(state: UiState, viewModel: AppViewModel) {
             composable(Tab.SETTINGS.route) {
                 SettingsScreen(
                     state = state,
+                    sources = viewModel.sourceStatuses(),
                     onNameChange = viewModel::setUserName,
                     onShowSystemAppsChange = viewModel::setShowSystemApps,
                     onNotificationsChange = viewModel::setNotificationsEnabled,

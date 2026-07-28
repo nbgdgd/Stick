@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         FavoriteEntity::class,
         SeenDealEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class TrialDatabase : RoomDatabase() {

@@ -25,14 +25,22 @@ data class Deal(
     @SerialName("deep_link") val deepLink: String = "",
     @SerialName("last_verified_date") val lastVerifiedDate: String = "",
     @SerialName("brand_color") val brandColor: String = "#8B5CF6",
+    /**
+     * Play CDN base URL of the app icon, so an app that is not installed still
+     * shows its real icon. A size suffix is appended at load time.
+     */
+    @SerialName("icon_url") val iconUrl: String = "",
     val glyph: String = "",
     val popularity: Int = 0,
+    /** Which source produced this entry: the curated catalog or a live feed. */
+    val source: String = SOURCE_CATALOG,
 ) {
     val isTrial: Boolean get() = type.equals(TYPE_TRIAL, ignoreCase = true)
 
     companion object {
         const val TYPE_TRIAL = "trial"
         const val TYPE_DISCOUNT = "discount"
+        const val SOURCE_CATALOG = "catalog"
     }
 }
 

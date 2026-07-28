@@ -19,8 +19,10 @@ data class DealEntity(
     val deepLink: String,
     val lastVerifiedDate: String,
     val brandColor: String,
+    val iconUrl: String,
     val glyph: String,
     val popularity: Int,
+    val source: String,
 ) {
     fun toDeal() = Deal(
         id = id,
@@ -35,8 +37,10 @@ data class DealEntity(
         deepLink = deepLink,
         lastVerifiedDate = lastVerifiedDate,
         brandColor = brandColor,
+        iconUrl = iconUrl,
         glyph = glyph,
         popularity = popularity,
+        source = source,
     )
 }
 
@@ -53,8 +57,10 @@ fun Deal.toEntity() = DealEntity(
     deepLink = deepLink,
     lastVerifiedDate = lastVerifiedDate,
     brandColor = brandColor,
+    iconUrl = iconUrl,
     glyph = glyph,
     popularity = popularity,
+    source = source,
 )
 
 /** Local cache of the scan result. Cleared whenever the scan runs again. */

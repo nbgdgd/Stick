@@ -6,7 +6,10 @@ import com.trialtracker.app.data.PackageScanner
 import com.trialtracker.app.data.SettingsRepository
 import com.trialtracker.app.data.local.TrialDatabase
 import com.trialtracker.app.data.remote.CatalogRemoteSource
+import com.trialtracker.app.data.remote.DealFeedSource
 import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /**
  * Hand-rolled dependency graph. The object count here is small enough that a DI
@@ -20,6 +23,14 @@ object ServiceLocator {
             isLenient = true
             coerceInputValues = true
         }
+    }
+
+    /** One connection pool for the catalog, the deal feeds and Coil's icon loads. */
+    val httpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .build()
     }
 
     @Volatile
@@ -41,7 +52,8 @@ object ServiceLocator {
                 scanner = PackageScanner(app),
                 settings = settings(app),
                 json = json,
-                remote = CatalogRemoteSource(json = json),
+                remote = CatalogRemoteSource(json = json, client = httpClient),
+                feeds = DealFeedSource(httpClient),
             ).also { repository = it }
         }
     }

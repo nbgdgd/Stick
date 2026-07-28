@@ -7,7 +7,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.util.concurrent.TimeUnit
 
 /**
  * Downloads the deals catalog so offers can be updated without shipping a release.
@@ -22,13 +21,10 @@ import java.util.concurrent.TimeUnit
  * stays out of the MVP.
  */
 class CatalogRemoteSource(
-    private val url: String = BuildConfig.CATALOG_URL,
     private val json: Json,
+    private val client: OkHttpClient,
+    private val url: String = BuildConfig.CATALOG_URL,
 ) {
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
-        .build()
 
     suspend fun fetch(): Result<DealCatalog> = withContext(Dispatchers.IO) {
         runCatching {

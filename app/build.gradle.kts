@@ -98,6 +98,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.okhttp)
+    implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
 
@@ -116,4 +117,7 @@ dependencies {
 tasks.withType<Test>().configureEach {
     // The render test writes PNGs rather than comparing them, so it always records.
     systemProperty("roborazzi.test.record", "true")
+    // Robolectric's native graphics runtime can only be initialised once per JVM,
+    // and it clashes with the plain-JVM parser tests sharing the same fork.
+    setForkEvery(1)
 }

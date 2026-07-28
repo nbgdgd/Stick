@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.trialtracker.app.BuildConfig
+import com.trialtracker.app.ui.SourceStatus
 import com.trialtracker.app.ui.UiState
 import com.trialtracker.app.ui.components.SurfaceCard
 import com.trialtracker.app.ui.theme.TT
@@ -46,6 +47,7 @@ import java.util.Locale
 @Composable
 fun SettingsScreen(
     state: UiState,
+    sources: List<SourceStatus>,
     onNameChange: (String) -> Unit,
     onShowSystemAppsChange: (Boolean) -> Unit,
     onNotificationsChange: (Boolean) -> Unit,
@@ -158,10 +160,12 @@ fun SettingsScreen(
                         Spacer(Modifier.height(6.dp))
                         Text(
                             "Сканирование выполняется локально через PackageManager. " +
-                                "Приложение не запрашивает разрешение QUERY_ALL_PACKAGES: " +
-                                "в манифесте объявлены только пакеты из каталога.\n\n" +
-                                "Каталог акций — публичные данные. Он скачивается целиком " +
-                                "и не связан с тем, что установлено у вас: сопоставление " +
+                                "Разрешение QUERY_ALL_PACKAGES не запрашивается: в манифесте " +
+                                "перечислены пакеты каталога плюс запрос по launcher-интенту — " +
+                                "он нужен, чтобы сопоставлять свежие акции из фидов, пакеты " +
+                                "которых заранее неизвестны.\n\n" +
+                                "Каталог и фиды — публичные данные. Они скачиваются целиком " +
+                                "и не связаны с тем, что установлено у вас: сопоставление " +
                                 "происходит уже на устройстве.",
                             style = MaterialTheme.typography.bodySmall,
                             color = TT.TextSecondary,
@@ -172,17 +176,45 @@ fun SettingsScreen(
         }
 
         item {
-            SettingsGroup("Источник каталога") {
+            SettingsGroup("Источники данных") {
+                sources.forEachIndexed { index, source ->
+                    if (index > 0) Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (source.ok) TT.Green else TT.Red),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                source.label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TT.TextPrimary,
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                source.detail,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TT.TextSecondary,
+                            )
+                        }
+                        Text(
+                            text = if (source.count > 0) source.count.toString() else "—",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (source.ok) TT.TextPrimary else TT.TextTertiary,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
                 Text(
-                    text = BuildConfig.CATALOG_URL,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TT.TextSecondary,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Единого API с актуальными триалами не существует, поэтому каталог " +
-                        "ведётся вручную. У каждого предложения есть дата проверки — " +
-                        "условия отличаются по регионам и быстро устаревают.",
+                    text = "Скидки читаются из публичных Atom-фидов Reddit и разбираются " +
+                        "на устройстве: из заголовка берутся цены, из ссылки — package name " +
+                        "приложения в Google Play, из времени поста — дата проверки.\n\n" +
+                        "Пробные подписки так получить нельзя: машиночитаемого источника " +
+                        "с триалами не существует, поэтому они остаются в каталоге, который " +
+                        "ведётся вручную.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TT.TextTertiary,
                 )

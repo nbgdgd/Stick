@@ -1,0 +1,482 @@
+[
+  {
+    "package_name": "com.spotify.music",
+    "pricing_url": "https://www.spotify.com/premium/",
+    "glyph": "S",
+    "brand_color": "#1DB954"
+  },
+  {
+    "package_name": "com.google.android.youtube",
+    "pricing_url": "https://www.youtube.com/premium",
+    "glyph": "▶",
+    "brand_color": "#FF0033"
+  },
+  {
+    "package_name": "com.netflix.mediaclient",
+    "pricing_url": "https://www.netflix.com/signup",
+    "glyph": "N",
+    "brand_color": "#E50914"
+  },
+  {
+    "package_name": "com.duolingo",
+    "pricing_url": "https://www.duolingo.com/super",
+    "glyph": "D",
+    "brand_color": "#58CC02"
+  },
+  {
+    "package_name": "com.canva.editor",
+    "pricing_url": "https://www.canva.com/pro/",
+    "glyph": "C",
+    "brand_color": "#00C4CC"
+  },
+  {
+    "package_name": "com.lemon.lvoverseas",
+    "pricing_url": "https://www.capcut.com/pricing",
+    "glyph": "✂",
+    "brand_color": "#00E5D0"
+  },
+  {
+    "package_name": "notion.id",
+    "pricing_url": "https://www.notion.so/pricing",
+    "glyph": "N",
+    "brand_color": "#E8E8E8"
+  },
+  {
+    "package_name": "com.nordvpn.android",
+    "pricing_url": "https://nordvpn.com/pricing/",
+    "glyph": "◈",
+    "brand_color": "#4687FF"
+  },
+  {
+    "package_name": "com.adobe.lrmobile",
+    "pricing_url": "https://www.adobe.com/products/photoshop-lightroom.html",
+    "glyph": "Lr",
+    "brand_color": "#31A8FF"
+  },
+  {
+    "package_name": "com.picsart.studio",
+    "pricing_url": "https://picsart.com/gold",
+    "glyph": "P",
+    "brand_color": "#C209C1"
+  },
+  {
+    "package_name": "com.getsomeheadspace.android",
+    "pricing_url": "https://www.headspace.com/subscriptions",
+    "glyph": "H",
+    "brand_color": "#FF7E1D"
+  },
+  {
+    "package_name": "ru.yandex.music",
+    "pricing_url": "https://plus.yandex.ru/",
+    "glyph": "Я",
+    "brand_color": "#FFCC00"
+  },
+  {
+    "package_name": "ru.kinopoisk",
+    "pricing_url": "https://www.kinopoisk.ru/subscription/",
+    "glyph": "К",
+    "brand_color": "#FF6600"
+  },
+  {
+    "package_name": "org.coursera.android",
+    "pricing_url": "https://www.coursera.org/courseraplus",
+    "glyph": "C",
+    "brand_color": "#0056D2"
+  },
+  {
+    "package_name": "com.strava",
+    "pricing_url": "https://www.strava.com/subscribe",
+    "glyph": "S",
+    "brand_color": "#FC4C02"
+  },
+  {
+    "package_name": "org.telegram.messenger",
+    "pricing_url": "https://telegram.org/premium",
+    "glyph": "✈",
+    "brand_color": "#2AABEE"
+  },
+  {
+    "package_name": "com.google.android.apps.subscriptions.red",
+    "pricing_url": "https://one.google.com/about",
+    "glyph": "G",
+    "brand_color": "#4285F4"
+  },
+  {
+    "package_name": "com.microsoft.office.officehubrow",
+    "pricing_url": "https://www.microsoft.com/microsoft-365/buy/compare-all-microsoft-365-products",
+    "glyph": "M",
+    "brand_color": "#F25022"
+  },
+  {
+    "package_name": "com.tinder",
+    "pricing_url": "https://tinder.com/",
+    "glyph": "T",
+    "brand_color": "#FE3C72"
+  },
+  {
+    "package_name": "com.grammarly.android.keyboard",
+    "pricing_url": "https://www.grammarly.com/pricing",
+    "glyph": "G",
+    "brand_color": "#15C39A"
+  },
+  {
+    "package_name": "deezer.android.app",
+    "pricing_url": "https://www.deezer.com/offers",
+    "glyph": "D",
+    "brand_color": "#A238FF"
+  },
+  {
+    "package_name": "com.soundcloud.android",
+    "pricing_url": "https://soundcloud.com/go",
+    "glyph": "S",
+    "brand_color": "#FF5500"
+  },
+  {
+    "package_name": "com.audible.application",
+    "pricing_url": "https://www.audible.com/ep/freetrial",
+    "glyph": "A",
+    "brand_color": "#F8991C"
+  },
+  {
+    "package_name": "com.apple.android.music",
+    "pricing_url": "https://www.apple.com/apple-music/",
+    "glyph": "♪",
+    "brand_color": "#FA243C"
+  },
+  {
+    "package_name": "com.amazon.mp3",
+    "pricing_url": "https://www.amazon.com/music/unlimited",
+    "glyph": "A",
+    "brand_color": "#25D1DA"
+  },
+  {
+    "package_name": "com.aspiro.tidal",
+    "pricing_url": "https://tidal.com/pricing",
+    "glyph": "T",
+    "brand_color": "#00FFFF"
+  },
+  {
+    "package_name": "com.pandora.android",
+    "pricing_url": "https://www.pandora.com/upgrade",
+    "glyph": "P",
+    "brand_color": "#3668FF"
+  },
+  {
+    "package_name": "com.disney.disneyplus",
+    "pricing_url": "https://www.disneyplus.com/",
+    "glyph": "D",
+    "brand_color": "#0063E5"
+  },
+  {
+    "package_name": "com.wbd.stream",
+    "pricing_url": "https://www.max.com/",
+    "glyph": "M",
+    "brand_color": "#0046FF"
+  },
+  {
+    "package_name": "com.hulu.plus",
+    "pricing_url": "https://www.hulu.com/welcome",
+    "glyph": "H",
+    "brand_color": "#1CE783"
+  },
+  {
+    "package_name": "com.cbs.app",
+    "pricing_url": "https://www.paramountplus.com/",
+    "glyph": "P",
+    "brand_color": "#0064FF"
+  },
+  {
+    "package_name": "com.peacocktv.peacockandroid",
+    "pricing_url": "https://www.peacocktv.com/plans",
+    "glyph": "P",
+    "brand_color": "#F5A623"
+  },
+  {
+    "package_name": "com.crunchyroll.crunchyroid",
+    "pricing_url": "https://www.crunchyroll.com/welcome",
+    "glyph": "C",
+    "brand_color": "#F47521"
+  },
+  {
+    "package_name": "com.plexapp.android",
+    "pricing_url": "https://www.plex.tv/plex-pass/",
+    "glyph": "P",
+    "brand_color": "#EBAF00"
+  },
+  {
+    "package_name": "ru.ivi.client",
+    "pricing_url": "https://www.ivi.ru/subscribe",
+    "glyph": "i",
+    "brand_color": "#FF0055"
+  },
+  {
+    "package_name": "tv.twitch.android.app",
+    "pricing_url": "https://www.twitch.tv/turbo",
+    "glyph": "T",
+    "brand_color": "#9146FF"
+  },
+  {
+    "package_name": "com.discord",
+    "pricing_url": "https://discord.com/nitro",
+    "glyph": "D",
+    "brand_color": "#5865F2"
+  },
+  {
+    "package_name": "com.reddit.frontpage",
+    "pricing_url": "https://www.reddit.com/premium",
+    "glyph": "R",
+    "brand_color": "#FF4500"
+  },
+  {
+    "package_name": "com.evernote",
+    "pricing_url": "https://evernote.com/compare-plans",
+    "glyph": "E",
+    "brand_color": "#00A82D"
+  },
+  {
+    "package_name": "com.todoist",
+    "pricing_url": "https://todoist.com/pricing",
+    "glyph": "T",
+    "brand_color": "#E44332"
+  },
+  {
+    "package_name": "com.trello",
+    "pricing_url": "https://trello.com/pricing",
+    "glyph": "T",
+    "brand_color": "#0079BF"
+  },
+  {
+    "package_name": "com.asana.app",
+    "pricing_url": "https://asana.com/pricing",
+    "glyph": "A",
+    "brand_color": "#F06A6A"
+  },
+  {
+    "package_name": "com.Slack",
+    "pricing_url": "https://slack.com/pricing",
+    "glyph": "S",
+    "brand_color": "#4A154B"
+  },
+  {
+    "package_name": "us.zoom.videomeetings",
+    "pricing_url": "https://zoom.us/pricing",
+    "glyph": "Z",
+    "brand_color": "#2D8CFF"
+  },
+  {
+    "package_name": "com.dropbox.android",
+    "pricing_url": "https://www.dropbox.com/plans",
+    "glyph": "D",
+    "brand_color": "#0061FF"
+  },
+  {
+    "package_name": "com.onepassword.android",
+    "pricing_url": "https://1password.com/sign-up",
+    "glyph": "1",
+    "brand_color": "#0572EC"
+  },
+  {
+    "package_name": "com.x8bit.bitwarden",
+    "pricing_url": "https://bitwarden.com/pricing/",
+    "glyph": "B",
+    "brand_color": "#175DDC"
+  },
+  {
+    "package_name": "com.lastpass.lpandroid",
+    "pricing_url": "https://www.lastpass.com/pricing",
+    "glyph": "L",
+    "brand_color": "#D32D27"
+  },
+  {
+    "package_name": "com.dashlane",
+    "pricing_url": "https://www.dashlane.com/plans",
+    "glyph": "D",
+    "brand_color": "#0E353D"
+  },
+  {
+    "package_name": "com.adobe.psmobile",
+    "pricing_url": "https://www.adobe.com/products/photoshop-express.html",
+    "glyph": "Ps",
+    "brand_color": "#31A8FF"
+  },
+  {
+    "package_name": "com.vsco.cam",
+    "pricing_url": "https://vsco.co/about/pricing",
+    "glyph": "V",
+    "brand_color": "#FFFFFF"
+  },
+  {
+    "package_name": "com.lightricks.facetune.free",
+    "pricing_url": "https://www.facetuneapp.com/",
+    "glyph": "F",
+    "brand_color": "#FF3366"
+  },
+  {
+    "package_name": "com.bigwinepot.nwdn.international",
+    "pricing_url": "https://remini.ai/",
+    "glyph": "R",
+    "brand_color": "#7B61FF"
+  },
+  {
+    "package_name": "com.camerasideas.instashot",
+    "pricing_url": "https://inshot.com/",
+    "glyph": "I",
+    "brand_color": "#FF4B4B"
+  },
+  {
+    "package_name": "com.nexstreaming.app.kinemasterfree",
+    "pricing_url": "https://www.kinemaster.com/pricing",
+    "glyph": "K",
+    "brand_color": "#FF3C6E"
+  },
+  {
+    "package_name": "com.babbel.mobile.android.en",
+    "pricing_url": "https://www.babbel.com/prices",
+    "glyph": "B",
+    "brand_color": "#FF6E00"
+  },
+  {
+    "package_name": "com.busuu.android.enc",
+    "pricing_url": "https://www.busuu.com/en/premium",
+    "glyph": "B",
+    "brand_color": "#00B0F0"
+  },
+  {
+    "package_name": "air.com.rosettastone.mobile.CoursePlayer",
+    "pricing_url": "https://www.rosettastone.com/pricing/",
+    "glyph": "R",
+    "brand_color": "#FFC800"
+  },
+  {
+    "package_name": "com.udemy.android",
+    "pricing_url": "https://www.udemy.com/personal-plan/",
+    "glyph": "U",
+    "brand_color": "#A435F0"
+  },
+  {
+    "package_name": "com.skillshare.Skillshare",
+    "pricing_url": "https://www.skillshare.com/membership",
+    "glyph": "S",
+    "brand_color": "#00FF84"
+  },
+  {
+    "package_name": "org.brilliant.android",
+    "pricing_url": "https://brilliant.org/premium/",
+    "glyph": "B",
+    "brand_color": "#FFB400"
+  },
+  {
+    "package_name": "com.blinkslabs.blinkist.android",
+    "pricing_url": "https://www.blinkist.com/en/nc/pricing/",
+    "glyph": "B",
+    "brand_color": "#2CE080"
+  },
+  {
+    "package_name": "com.calm.android",
+    "pricing_url": "https://www.calm.com/subscribe",
+    "glyph": "C",
+    "brand_color": "#2E5EAA"
+  },
+  {
+    "package_name": "com.myfitnesspal.android",
+    "pricing_url": "https://www.myfitnesspal.com/premium",
+    "glyph": "M",
+    "brand_color": "#0066EE"
+  },
+  {
+    "package_name": "com.nike.ntc",
+    "pricing_url": "https://www.nike.com/ntc-app",
+    "glyph": "N",
+    "brand_color": "#FFFFFF"
+  },
+  {
+    "package_name": "com.freeletics.lite",
+    "pricing_url": "https://www.freeletics.com/en/pricing/",
+    "glyph": "F",
+    "brand_color": "#FF5A00"
+  },
+  {
+    "package_name": "com.northcube.sleepcycle",
+    "pricing_url": "https://www.sleepcycle.com/premium/",
+    "glyph": "S",
+    "brand_color": "#5D3FD3"
+  },
+  {
+    "package_name": "com.onepeloton.callisto",
+    "pricing_url": "https://www.onepeloton.com/app",
+    "glyph": "P",
+    "brand_color": "#FF3347"
+  },
+  {
+    "package_name": "com.expressvpn.vpn",
+    "pricing_url": "https://www.expressvpn.com/order",
+    "glyph": "E",
+    "brand_color": "#DA3940"
+  },
+  {
+    "package_name": "com.surfshark.vpnclient.android",
+    "pricing_url": "https://surfshark.com/pricing",
+    "glyph": "S",
+    "brand_color": "#00D084"
+  },
+  {
+    "package_name": "ch.protonvpn.android",
+    "pricing_url": "https://protonvpn.com/pricing",
+    "glyph": "P",
+    "brand_color": "#6D4AFF"
+  },
+  {
+    "package_name": "ch.protonmail.android",
+    "pricing_url": "https://proton.me/mail/pricing",
+    "glyph": "P",
+    "brand_color": "#6D4AFF"
+  },
+  {
+    "package_name": "com.aisense.otter",
+    "pricing_url": "https://otter.ai/pricing",
+    "glyph": "O",
+    "brand_color": "#00B2FF"
+  },
+  {
+    "package_name": "com.cliffweitzman.speechify2",
+    "pricing_url": "https://speechify.com/pricing/",
+    "glyph": "S",
+    "brand_color": "#2F6BFF"
+  },
+  {
+    "package_name": "com.openai.chatgpt",
+    "pricing_url": "https://openai.com/chatgpt/pricing/",
+    "glyph": "AI",
+    "brand_color": "#10A37F"
+  },
+  {
+    "package_name": "ai.perplexity.app.android",
+    "pricing_url": "https://www.perplexity.ai/pro",
+    "glyph": "P",
+    "brand_color": "#20808D"
+  },
+  {
+    "package_name": "com.bumble.app",
+    "pricing_url": "https://bumble.com/premium",
+    "glyph": "B",
+    "brand_color": "#FFC629"
+  },
+  {
+    "package_name": "com.linkedin.android",
+    "pricing_url": "https://premium.linkedin.com/",
+    "glyph": "in",
+    "brand_color": "#0A66C2"
+  },
+  {
+    "package_name": "com.duolingo.literacy",
+    "pricing_url": "https://www.duolingo.com/abc",
+    "glyph": "A",
+    "brand_color": "#58CC02"
+  },
+  {
+    "package_name": "com.scribd.app.reader0",
+    "pricing_url": "https://www.everand.com/subscribe",
+    "glyph": "E",
+    "brand_color": "#1E7B85"
+  }
+]

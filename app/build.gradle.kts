@@ -21,10 +21,15 @@ android {
 
         // Remote catalog endpoint. Overridable per build type so a fork can point
         // at its own GitHub Pages / Firebase Hosting copy without touching code.
+        // Points at the branch that actually serves the file — `main` still holds
+        // the previous project, so this must move to `main` once the branch is
+        // merged, otherwise the remote channel silently 404s and every install is
+        // stuck on the copy bundled in the APK.
         buildConfigField(
             "String",
             "CATALOG_URL",
-            "\"https://raw.githubusercontent.com/nbgdgd/stick/main/catalog/deals.json\"",
+            "\"https://raw.githubusercontent.com/nbgdgd/stick/" +
+                "claude/new-repo-apk-3716b8/catalog/deals.json\"",
         )
     }
 

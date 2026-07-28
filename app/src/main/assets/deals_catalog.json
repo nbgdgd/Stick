@@ -759,19 +759,47 @@
       "icon_url": "https://play-lh.googleusercontent.com/1VdWpIILn32oDZ78WoLXSiYFqNvTe-sHnmGbL4PB1PFlRkubjkedJyhI3JV95shgpjs7b41SYx7qm4IsNGFrGw",
       "glyph": "S",
       "popularity": 70
-    }
-  ],
-  "watchlist": [
+    },
     {
+      "id": "deezer-android-app-trial",
       "package_name": "deezer.android.app",
       "app_name": "Deezer: музыка и подкасты",
+      "title": "1 месяц бесплатно",
+      "type": "trial",
+      "duration": "1 месяц",
       "description": "Слушайте избранное, используйте режим офлайн и следуйте девизу Live the Music.",
-      "pricing_url": "https://www.deezer.com/offers",
+      "price_after": "",
+      "deep_link": "https://www.deezer.com/offers",
+      "last_verified_date": "2026-07-28",
+      "verified_by": "auto",
+      "evidence": "1 month free",
+      "evidence_url": "https://www.deezer.com/offers",
       "brand_color": "#A238FF",
       "icon_url": "https://play-lh.googleusercontent.com/RFBXn4V0H8Zmi3_jViu73GTpQOmGmrvG7mdM1ynStAAYEd2aOLo5G0v9AHSUMwia1lQGI-c5oXMzZJCq0RMlJA",
       "glyph": "D",
-      "popularity": 60
+      "popularity": 70
     },
+    {
+      "id": "com-freeletics-lite-trial",
+      "package_name": "com.freeletics.lite",
+      "app_name": "Freeletics: Fitness Workouts",
+      "title": "45 дней бесплатно",
+      "type": "trial",
+      "duration": "45 дней",
+      "description": "Тренировки и персональные программы, которые помогут похудеть и накачать мышцы.",
+      "price_after": "",
+      "deep_link": "https://www.freeletics.com/en/pricing/",
+      "last_verified_date": "2026-07-28",
+      "verified_by": "auto",
+      "evidence": "45 days free",
+      "evidence_url": "https://www.freeletics.com/en/pricing/",
+      "brand_color": "#FF5A00",
+      "icon_url": "https://play-lh.googleusercontent.com/Z5MQrfdTFsSkYbiX95AjyjmwEhx4GXAuG8m5_VVTCV-XGf4yMFG_iIdwnYKZj7359A0ZzZHTRpFe-BOs7nE9Fw",
+      "glyph": "F",
+      "popularity": 70
+    }
+  ],
+  "watchlist": [
     {
       "package_name": "com.soundcloud.android",
       "app_name": "SoundCloud – музыка и звук",
@@ -1030,16 +1058,6 @@
       "brand_color": "#FFFFFF",
       "icon_url": "https://play-lh.googleusercontent.com/GQqY9v4zcMbf1JCmlKjlFjI-JAKFX3-ypQYiH8Ew_LuxrjLMZm3VtT-E2CyNFSCPdmjuNidHnyCrXyPFDBsE0g",
       "glyph": "N",
-      "popularity": 60
-    },
-    {
-      "package_name": "com.freeletics.lite",
-      "app_name": "Freeletics: Fitness Workouts",
-      "description": "Тренировки и персональные программы, которые помогут похудеть и накачать мышцы.",
-      "pricing_url": "https://www.freeletics.com/en/pricing/",
-      "brand_color": "#FF5A00",
-      "icon_url": "https://play-lh.googleusercontent.com/Z5MQrfdTFsSkYbiX95AjyjmwEhx4GXAuG8m5_VVTCV-XGf4yMFG_iIdwnYKZj7359A0ZzZHTRpFe-BOs7nE9Fw",
-      "glyph": "F",
       "popularity": 60
     },
     {

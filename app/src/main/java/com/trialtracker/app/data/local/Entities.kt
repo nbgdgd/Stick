@@ -23,6 +23,9 @@ data class DealEntity(
     val glyph: String,
     val popularity: Int,
     val source: String,
+    val verifiedBy: String,
+    val evidence: String,
+    val evidenceUrl: String,
 ) {
     fun toDeal() = Deal(
         id = id,
@@ -41,6 +44,9 @@ data class DealEntity(
         glyph = glyph,
         popularity = popularity,
         source = source,
+        verifiedBy = verifiedBy,
+        evidence = evidence,
+        evidenceUrl = evidenceUrl,
     )
 }
 
@@ -61,6 +67,9 @@ fun Deal.toEntity() = DealEntity(
     glyph = glyph,
     popularity = popularity,
     source = source,
+    verifiedBy = verifiedBy,
+    evidence = evidence,
+    evidenceUrl = evidenceUrl,
 )
 
 /** Local cache of the scan result. Cleared whenever the scan runs again. */

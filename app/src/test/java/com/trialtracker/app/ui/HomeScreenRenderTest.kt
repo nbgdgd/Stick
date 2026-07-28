@@ -79,12 +79,14 @@ class HomeScreenRenderTest {
             state = sampleState(),
             sources = listOf(
                 SourceStatus("Проверенный каталог", "Пробные подписки, проверяются вручную", 20, true),
+                SourceStatus("Автопроверка триалов", "Читает срок триала со страниц сервисов", 8, true),
                 SourceStatus("r/googleplaydeals", "Скидки Google Play, разбор Atom-фида", 63, true),
                 SourceStatus("r/AppHookup", "Скидки Google Play, разбор Atom-фида", 4, true),
             ),
             onNameChange = {},
             onShowSystemAppsChange = {},
             onNotificationsChange = {},
+            onAutoVerifyChange = {},
             onIntervalChange = {},
             contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp),
         )

@@ -7,6 +7,7 @@ import com.trialtracker.app.data.SettingsRepository
 import com.trialtracker.app.data.local.TrialDatabase
 import com.trialtracker.app.data.remote.CatalogRemoteSource
 import com.trialtracker.app.data.remote.DealFeedSource
+import com.trialtracker.app.data.remote.TrialProbeSource
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -54,6 +55,7 @@ object ServiceLocator {
                 json = json,
                 remote = CatalogRemoteSource(json = json, client = httpClient),
                 feeds = DealFeedSource(httpClient),
+                trialProbe = TrialProbeSource(httpClient),
             ).also { repository = it }
         }
     }

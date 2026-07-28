@@ -20,6 +20,7 @@ data class Settings(
     val showSystemApps: Boolean = false,
     val notificationsEnabled: Boolean = true,
     val checkIntervalHours: Int = 24,
+    val autoVerifyTrials: Boolean = true,
     val lastSyncAt: Long = 0L,
 )
 
@@ -31,6 +32,7 @@ class SettingsRepository(private val context: Context) {
         val showSystemApps = booleanPreferencesKey("show_system_apps")
         val notifications = booleanPreferencesKey("notifications_enabled")
         val interval = intPreferencesKey("check_interval_hours")
+        val autoVerify = booleanPreferencesKey("auto_verify_trials")
         val lastSync = longPreferencesKey("last_sync_at")
     }
 
@@ -41,6 +43,7 @@ class SettingsRepository(private val context: Context) {
             showSystemApps = prefs[Keys.showSystemApps] ?: false,
             notificationsEnabled = prefs[Keys.notifications] ?: true,
             checkIntervalHours = prefs[Keys.interval] ?: 24,
+            autoVerifyTrials = prefs[Keys.autoVerify] ?: true,
             lastSyncAt = prefs[Keys.lastSync] ?: 0L,
         )
     }
@@ -50,6 +53,7 @@ class SettingsRepository(private val context: Context) {
     suspend fun setShowSystemApps(value: Boolean) = edit { it[Keys.showSystemApps] = value }
     suspend fun setNotificationsEnabled(value: Boolean) = edit { it[Keys.notifications] = value }
     suspend fun setCheckIntervalHours(value: Int) = edit { it[Keys.interval] = value }
+    suspend fun setAutoVerifyTrials(value: Boolean) = edit { it[Keys.autoVerify] = value }
     suspend fun setLastSyncAt(value: Long) = edit { it[Keys.lastSync] = value }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {

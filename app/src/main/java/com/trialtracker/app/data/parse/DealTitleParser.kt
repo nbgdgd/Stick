@@ -47,7 +47,7 @@ object DealTitleParser {
 
     private val arrowSplit = Regex(ARROWS)
 
-    private val freeWord = Regex("""(?i)\bfree\b|\bбесплатно\b""")
+    private val freeWord = Regex("""(?iU)\bfree\b|\bбесплатно\b""")
 
     private val amount = Regex("""(\d*[.,]?\d+)""")
 

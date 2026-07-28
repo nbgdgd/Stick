@@ -11,6 +11,11 @@ import com.trialtracker.app.data.model.InstalledApp
 import com.trialtracker.app.data.local.InstalledAppEntity
 import com.trialtracker.app.data.remote.CatalogRemoteSource
 import com.trialtracker.app.data.remote.DealFeedSource
+import com.trialtracker.app.data.remote.TrialProbeSource
+import com.trialtracker.app.data.parse.TrialTextExtractor
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -27,6 +32,7 @@ class DealsRepository(
     private val json: Json,
     private val remote: CatalogRemoteSource,
     private val feeds: DealFeedSource,
+    private val trialProbe: TrialProbeSource,
 ) {
 
     /** Outcome of the last fetch of one source, surfaced in Settings. */
@@ -39,6 +45,11 @@ class DealsRepository(
 
     /** Per-source result of the most recent [refresh], keyed by source key. */
     val feedResults: MutableMap<String, FeedStatus> = java.util.concurrent.ConcurrentHashMap()
+
+    /** How many trials the last run confirmed against the service's own page. */
+    @Volatile
+    var autoVerifiedTrials: Int = 0
+        private set
 
     val deals: Flow<List<Deal>> = db.dealDao().observeAll().map { list ->
         list.map { it.toDeal() }
@@ -144,6 +155,8 @@ class DealsRepository(
                 db.dealDao().deleteMissing(feed.sourceKey, parsed.map { it.id })
             }
 
+            if (settings.settings.first().autoVerifyTrials) verifyTrials()
+
             val catalogPackages = db.dealDao().all().map { it.packageName }
             val showSystem = currentShowSystem()
             val found = scanner.scanCatalogPackages(catalogPackages)
@@ -170,6 +183,44 @@ class DealsRepository(
         }
     }
 
+    /**
+     * Re-reads the trial length from each service's own pricing page and writes
+     * back what it finds, with today's date and the phrase it came from.
+     *
+     * Bounded on purpose: only trials, only entries not confirmed in the last
+     * week, and at most [MAX_PROBES_PER_RUN] pages per run, checked one at a time.
+     * A page that says nothing leaves the hand-written value untouched — it stays
+     * marked as manually verified rather than being silently invalidated.
+     */
+    private suspend fun verifyTrials() {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val stale = db.dealDao().all()
+            .map { it.toDeal() }
+            .filter { it.isTrial && it.deepLink.isNotBlank() }
+            .filter { it.verifiedBy != Deal.VERIFIED_AUTO || it.lastVerifiedDate < today }
+            .sortedBy { it.lastVerifiedDate }
+            .take(MAX_PROBES_PER_RUN)
+
+        var confirmed = 0
+        for (deal in stale) {
+            val result = trialProbe.probe(deal) ?: continue
+            confirmed++
+            db.dealDao().upsert(
+                listOf(
+                    deal.copy(
+                        title = TrialTextExtractor.humanize(result.days),
+                        duration = TrialTextExtractor.humanize(result.days).removeSuffix(" бесплатно"),
+                        lastVerifiedDate = today,
+                        verifiedBy = Deal.VERIFIED_AUTO,
+                        evidence = result.phrase,
+                        evidenceUrl = result.sourceUrl,
+                    ).toEntity(),
+                ),
+            )
+        }
+        autoVerifiedTrials = confirmed
+    }
+
     private suspend fun currentShowSystem(): Boolean = settings.settings.first().showSystemApps
 
     suspend fun toggleFavorite(dealId: String, favorite: Boolean) {
@@ -182,5 +233,6 @@ class DealsRepository(
 
     private companion object {
         const val ASSET_CATALOG = "deals_catalog.json"
+        const val MAX_PROBES_PER_RUN = 8
     }
 }

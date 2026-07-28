@@ -51,6 +51,7 @@ fun SettingsScreen(
     onNameChange: (String) -> Unit,
     onShowSystemAppsChange: (Boolean) -> Unit,
     onNotificationsChange: (Boolean) -> Unit,
+    onAutoVerifyChange: (Boolean) -> Unit,
     onIntervalChange: (Int) -> Unit,
     contentPadding: PaddingValues,
 ) {
@@ -124,6 +125,27 @@ fun SettingsScreen(
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = "Последнее обновление: ${formatSync(state.settings.lastSyncAt)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TT.TextTertiary,
+                )
+            }
+        }
+
+        item {
+            SettingsGroup("Пробные подписки") {
+                ToggleRow(
+                    title = "Автопроверка триалов",
+                    subtitle = "Считывать срок триала со страницы сервиса при обновлении",
+                    checked = state.settings.autoVerifyTrials,
+                    onChange = onAutoVerifyChange,
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Сроки триалов нигде не публикуются в машиночитаемом виде, " +
+                        "но сервисы пишут их словами на своих страницах тарифов " +
+                        "(«7-day Free Trial», «30 дней бесплатно») — приложение читает " +
+                        "именно их. Что удалось подтвердить, помечено как проверенное " +
+                        "автоматически; остальное остаётся из каталога с ручной датой.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TT.TextTertiary,
                 )
@@ -212,9 +234,10 @@ fun SettingsScreen(
                     text = "Скидки читаются из публичных Atom-фидов Reddit и разбираются " +
                         "на устройстве: из заголовка берутся цены, из ссылки — package name " +
                         "приложения в Google Play, из времени поста — дата проверки.\n\n" +
-                        "Пробные подписки так получить нельзя: машиночитаемого источника " +
-                        "с триалами не существует, поэтому они остаются в каталоге, который " +
-                        "ведётся вручную.",
+                        "Триалы в машиночитаемом виде не публикует никто, поэтому их срок " +
+                        "считывается словами со страниц тарифов самих сервисов. " +
+                        "Подтверждается так не всё: остальные записи остаются из каталога " +
+                        "с ручной датой, и на карточке видно, как именно она проверена.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TT.TextTertiary,
                 )

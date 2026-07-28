@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.trialtracker.app.data.model.Deal
 import com.trialtracker.app.data.model.DealUi
 import com.trialtracker.app.data.remote.DealFeedSource
 import com.trialtracker.app.ui.components.AppGlyph
@@ -114,6 +115,18 @@ fun DealSheet(
                 if (deal.deal.isTrial) "Пробная подписка" else "Скидка",
             )
             InfoRow("Источник", DealFeedSource.labelFor(deal.deal.source))
+            InfoRow(
+                "Проверка",
+                if (deal.deal.verifiedBy == Deal.VERIFIED_AUTO) "автоматически" else "вручную",
+            )
+            if (deal.deal.evidence.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = "Найдено на странице сервиса: «${deal.deal.evidence}»",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TT.Green,
+                )
+            }
 
             Spacer(Modifier.height(14.dp))
             Text(

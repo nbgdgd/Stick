@@ -140,6 +140,7 @@ fun AppShell(state: UiState, viewModel: AppViewModel) {
                     onNameChange = viewModel::setUserName,
                     onShowSystemAppsChange = viewModel::setShowSystemApps,
                     onNotificationsChange = viewModel::setNotificationsEnabled,
+                    onAutoVerifyChange = viewModel::setAutoVerifyTrials,
                     onIntervalChange = viewModel::setCheckInterval,
                     contentPadding = contentPadding,
                 )

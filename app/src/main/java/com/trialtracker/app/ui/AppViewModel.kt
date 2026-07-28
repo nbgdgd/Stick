@@ -91,7 +91,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 ok = result?.error == null && stored > 0,
             )
         }
-        return listOf(catalog) + live
+        val trialsTotal = deals.count { it.deal.isTrial }
+        val autoTrials = deals.count { it.deal.isTrial && it.deal.verifiedBy == Deal.VERIFIED_AUTO }
+        val probe = SourceStatus(
+            label = "Автопроверка триалов",
+            detail = if (state.value.settings.autoVerifyTrials) {
+                "Читает срок триала со страниц сервисов"
+            } else {
+                "Выключена — сроки только из каталога"
+            },
+            count = autoTrials,
+            ok = state.value.settings.autoVerifyTrials && autoTrials > 0,
+        )
+        return listOf(catalog, probe) + live
     }
 
     init {
@@ -149,6 +161,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 CatalogSyncWorker.cancel(getApplication())
             }
+        }
+    }
+
+    fun setAutoVerifyTrials(value: Boolean) {
+        viewModelScope.launch {
+            settingsRepo.setAutoVerifyTrials(value)
+            if (value) refresh()
         }
     }
 

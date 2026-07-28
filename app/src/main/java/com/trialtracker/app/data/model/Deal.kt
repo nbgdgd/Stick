@@ -34,6 +34,11 @@ data class Deal(
     val popularity: Int = 0,
     /** Which source produced this entry: the curated catalog or a live feed. */
     val source: String = SOURCE_CATALOG,
+    /** How [lastVerifiedDate] was established — by hand, or by a live check. */
+    val verifiedBy: String = VERIFIED_MANUAL,
+    /** The phrase a trial length was read from, shown as evidence in the UI. */
+    val evidence: String = "",
+    val evidenceUrl: String = "",
 ) {
     val isTrial: Boolean get() = type.equals(TYPE_TRIAL, ignoreCase = true)
 
@@ -41,6 +46,8 @@ data class Deal(
         const val TYPE_TRIAL = "trial"
         const val TYPE_DISCOUNT = "discount"
         const val SOURCE_CATALOG = "catalog"
+        const val VERIFIED_MANUAL = "manual"
+        const val VERIFIED_AUTO = "auto"
     }
 }
 

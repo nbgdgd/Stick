@@ -85,6 +85,16 @@ class TrialTextExtractorTest {
     }
 
     @Test
+    fun `rejects long free periods that are bundled into an annual plan`() {
+        // Both were live false positives: a bonus on a yearly plan, not a trial.
+        assertNull(TrialTextExtractor.extract("Get 3 months of free service with a 12-month plan"))
+        assertNull(TrialTextExtractor.extract("6 months FREE when you sign up for a year"))
+        // A long period the page actually calls a trial still counts.
+        assertEquals(90, TrialTextExtractor.extract("90-day free trial")!!.days)
+        assertEquals(60, TrialTextExtractor.extract("60 дней бесплатно")!!.days)
+    }
+
+    @Test
     fun `formats durations with the right Russian plural`() {
         assertEquals("1 день бесплатно", TrialTextExtractor.humanize(1))
         assertEquals("3 дня бесплатно", TrialTextExtractor.humanize(3))

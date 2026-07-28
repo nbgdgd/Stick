@@ -72,6 +72,7 @@ object TrialTextExtractor {
                 val amount = match.groupValues[1].toIntOrNull() ?: return@forEach
                 val days = toDays(amount, match.groupValues[2]) ?: return@forEach
                 if (days !in 1..MAX_DAYS) return@forEach
+                if (!isTrialish(days, match.value)) return@forEach
                 counts[days] = (counts[days] ?: 0) + 1
                 phrases.putIfAbsent(days, match.value.trim())
             }
@@ -86,6 +87,17 @@ object TrialTextExtractor {
             phrase = phrases[winner.key].orEmpty(),
             occurrences = winner.value,
         )
+    }
+
+    /**
+     * "3 months of free", "6 months FREE" — months bundled into an annual plan,
+     * not a trial. Past a couple of months, only accept a match the page itself
+     * calls a trial.
+     */
+    private fun isTrialish(days: Int, phrase: String): Boolean {
+        if (days <= LONG_OFFER_DAYS) return true
+        return phrase.contains("trial", ignoreCase = true) ||
+            phrase.contains("пробн", ignoreCase = true)
     }
 
     private fun toDays(amount: Int, unit: String): Int? {
@@ -119,4 +131,7 @@ object TrialTextExtractor {
 
     /** Anything longer is a yearly plan being described, not a trial. */
     private const val MAX_DAYS = 190
+
+    /** Above this, a bare "free" period needs the word "trial" to count. */
+    private const val LONG_OFFER_DAYS = 62
 }

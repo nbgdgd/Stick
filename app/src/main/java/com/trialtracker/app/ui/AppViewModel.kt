@@ -103,7 +103,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             count = autoTrials,
             ok = state.value.settings.autoVerifyTrials && autoTrials > 0,
         )
-        return listOf(catalog, probe) + live
+        val watched = SourceStatus(
+            label = "Сервисы под наблюдением",
+            detail = "Проверяются по очереди, подтверждённые попадают в триалы",
+            count = repo.watchlist.count { w -> deals.none { it.deal.packageName == w.packageName } },
+            ok = repo.watchlist.isNotEmpty(),
+        )
+        return listOf(catalog, probe, watched) + live
     }
 
     init {

@@ -73,7 +73,10 @@ class DealFeedSource(private val client: OkHttpClient) {
         )
 
         fun labelFor(sourceKey: String): String =
-            DEFAULT_FEEDS.firstOrNull { it.sourceKey == sourceKey }?.label
-                ?: if (sourceKey == Deal.SOURCE_CATALOG) "Проверенный каталог" else sourceKey
+            DEFAULT_FEEDS.firstOrNull { it.sourceKey == sourceKey }?.label ?: when (sourceKey) {
+                Deal.SOURCE_CATALOG -> "Проверенный каталог"
+                Deal.SOURCE_PROBE -> "Страница тарифов сервиса"
+                else -> sourceKey
+            }
     }
 }

@@ -35,10 +35,10 @@ data class Deal(
     /** Which source produced this entry: the curated catalog or a live feed. */
     val source: String = SOURCE_CATALOG,
     /** How [lastVerifiedDate] was established — by hand, or by a live check. */
-    val verifiedBy: String = VERIFIED_MANUAL,
+    @SerialName("verified_by") val verifiedBy: String = VERIFIED_MANUAL,
     /** The phrase a trial length was read from, shown as evidence in the UI. */
     val evidence: String = "",
-    val evidenceUrl: String = "",
+    @SerialName("evidence_url") val evidenceUrl: String = "",
 ) {
     val isTrial: Boolean get() = type.equals(TYPE_TRIAL, ignoreCase = true)
 
@@ -46,6 +46,8 @@ data class Deal(
         const val TYPE_TRIAL = "trial"
         const val TYPE_DISCOUNT = "discount"
         const val SOURCE_CATALOG = "catalog"
+        /** Trials the app confirmed itself by reading a service's pricing page. */
+        const val SOURCE_PROBE = "probe"
         const val VERIFIED_MANUAL = "manual"
         const val VERIFIED_AUTO = "auto"
     }
@@ -57,4 +59,38 @@ data class DealCatalog(
     @SerialName("generated_at") val generatedAt: String = "",
     val notice: String = "",
     val deals: List<Deal> = emptyList(),
+    /**
+     * Services the catalog tracks but has no confirmed offer for. The app probes
+     * their pricing pages itself, so an entry here becomes a real trial the moment
+     * the service advertises one — the catalog grows without a release.
+     */
+    val watchlist: List<WatchedApp> = emptyList(),
 )
+
+@Serializable
+data class WatchedApp(
+    @SerialName("package_name") val packageName: String,
+    @SerialName("app_name") val appName: String,
+    val description: String = "",
+    @SerialName("pricing_url") val pricingUrl: String = "",
+    @SerialName("brand_color") val brandColor: String = "#8B5CF6",
+    @SerialName("icon_url") val iconUrl: String = "",
+    val glyph: String = "",
+    val popularity: Int = 0,
+) {
+    /** The shape the probe needs: a deal that has everything but a confirmed offer. */
+    fun asProbeTarget() = Deal(
+        id = "probe:$packageName",
+        packageName = packageName,
+        appName = appName,
+        title = "",
+        type = Deal.TYPE_TRIAL,
+        description = description,
+        deepLink = pricingUrl,
+        brandColor = brandColor,
+        iconUrl = iconUrl,
+        glyph = glyph,
+        popularity = popularity,
+        source = Deal.SOURCE_PROBE,
+    )
+}

@@ -8,6 +8,7 @@ import com.trialtracker.app.data.model.Deal
 import com.trialtracker.app.data.model.DealCatalog
 import com.trialtracker.app.data.model.DealUi
 import com.trialtracker.app.data.model.InstalledApp
+import com.trialtracker.app.data.model.WatchedApp
 import com.trialtracker.app.data.local.InstalledAppEntity
 import com.trialtracker.app.data.remote.CatalogRemoteSource
 import com.trialtracker.app.data.remote.DealFeedSource
@@ -49,6 +50,11 @@ class DealsRepository(
     /** How many trials the last run confirmed against the service's own page. */
     @Volatile
     var autoVerifiedTrials: Int = 0
+        private set
+
+    /** Services the catalog tracks but has no confirmed offer for yet. */
+    @Volatile
+    var watchlist: List<WatchedApp> = emptyList()
         private set
 
     val deals: Flow<List<Deal>> = db.dealDao().observeAll().map { list ->
@@ -106,11 +112,14 @@ class DealsRepository(
     /** Loads the bundled catalog on first run so the app is never empty. */
     suspend fun seedFromAssetsIfEmpty() = withContext(Dispatchers.IO) {
         if (db.dealDao().all().isNotEmpty()) {
-            notice = readAssetCatalog().notice
+            val bundled = readAssetCatalog()
+            notice = bundled.notice
+            watchlist = bundled.watchlist
             return@withContext
         }
         val catalog = readAssetCatalog()
         notice = catalog.notice
+        watchlist = catalog.watchlist
         db.dealDao().upsert(catalog.deals.map { it.toEntity() })
     }
 
@@ -135,6 +144,7 @@ class DealsRepository(
             val remoteCatalog = remote.fetch().getOrNull()
             if (remoteCatalog != null && remoteCatalog.deals.isNotEmpty()) {
                 notice = remoteCatalog.notice
+                if (remoteCatalog.watchlist.isNotEmpty()) watchlist = remoteCatalog.watchlist
                 val catalogDeals = remoteCatalog.deals.map {
                     it.copy(source = Deal.SOURCE_CATALOG)
                 }
@@ -155,8 +165,6 @@ class DealsRepository(
                 db.dealDao().deleteMissing(feed.sourceKey, parsed.map { it.id })
             }
 
-            if (settings.settings.first().autoVerifyTrials) verifyTrials()
-
             val catalogPackages = db.dealDao().all().map { it.packageName }
             val showSystem = currentShowSystem()
             val found = scanner.scanCatalogPackages(catalogPackages)
@@ -172,6 +180,8 @@ class DealsRepository(
             settings.setLastSyncAt(System.currentTimeMillis())
 
             val installedPackages = merged.map { it.packageName }.toSet()
+            if (settings.settings.first().autoVerifyTrials) verifyTrials(installedPackages)
+
             val seen = db.seenDealDao().ids().toSet()
             val fresh = db.dealDao().all()
                 .map { it.toDeal() }
@@ -184,25 +194,39 @@ class DealsRepository(
     }
 
     /**
-     * Re-reads the trial length from each service's own pricing page and writes
-     * back what it finds, with today's date and the phrase it came from.
+     * Confirms trials by reading each service's own pricing page.
      *
-     * Bounded on purpose: only trials, only entries not confirmed in the last
-     * week, and at most [MAX_PROBES_PER_RUN] pages per run, checked one at a time.
-     * A page that says nothing leaves the hand-written value untouched — it stays
-     * marked as manually verified rather than being silently invalidated.
+     * Two kinds of target, in one budget: catalog trials whose terms have gone
+     * stale, and watchlist services that have no confirmed offer at all — the
+     * latter is how the catalog grows without a release. Apps the user actually
+     * has installed are probed first, so the budget is spent where it shows.
+     *
+     * A page that says nothing changes nothing: a catalog entry keeps its
+     * hand-written value and its manual label, and a watchlist entry simply is
+     * not promoted.
      */
-    private suspend fun verifyTrials() {
+    private suspend fun verifyTrials(installedPackages: Set<String>) {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        val stale = db.dealDao().all()
+
+        val staleTrials = db.dealDao().all()
             .map { it.toDeal() }
             .filter { it.isTrial && it.deepLink.isNotBlank() }
             .filter { it.verifiedBy != Deal.VERIFIED_AUTO || it.lastVerifiedDate < today }
-            .sortedBy { it.lastVerifiedDate }
+
+        val known = db.dealDao().all().map { it.packageName }.toSet()
+        val watched = watchlist
+            .filter { it.packageName !in known && it.pricingUrl.isNotBlank() }
+            .map { it.asProbeTarget() }
+
+        val targets = (staleTrials + watched)
+            .sortedWith(
+                compareByDescending<Deal> { it.packageName in installedPackages }
+                    .thenBy { it.lastVerifiedDate },
+            )
             .take(MAX_PROBES_PER_RUN)
 
         var confirmed = 0
-        for (deal in stale) {
+        for (deal in targets) {
             val result = trialProbe.probe(deal) ?: continue
             confirmed++
             db.dealDao().upsert(
@@ -210,6 +234,7 @@ class DealsRepository(
                     deal.copy(
                         title = TrialTextExtractor.humanize(result.days),
                         duration = TrialTextExtractor.humanize(result.days).removeSuffix(" бесплатно"),
+                        deepLink = result.sourceUrl,
                         lastVerifiedDate = today,
                         verifiedBy = Deal.VERIFIED_AUTO,
                         evidence = result.phrase,
@@ -233,6 +258,6 @@ class DealsRepository(
 
     private companion object {
         const val ASSET_CATALOG = "deals_catalog.json"
-        const val MAX_PROBES_PER_RUN = 8
+        const val MAX_PROBES_PER_RUN = 12
     }
 }

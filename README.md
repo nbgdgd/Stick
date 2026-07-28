@@ -94,22 +94,35 @@ Kotlin · Jetpack Compose · Material 3 · Room · WorkManager · OkHttp · Coil
 * отсеиваются шаблоны (`{{number}}-day trial`), напоминания
   («2 days before trial ends») и годовые планы.
 
-**Покрытие — 8 из 20** сервисов каталога. Остальные рисуют число на клиенте,
-поэтому остаются с ручной датой. Подтверждённое автоматически помечается в
-карточке (`Проверка: автоматически`) вместе с фразой, из которой взят срок, —
-видно, чему верить. Проверка ограничена: только триалы, не чаще раза в сутки на
-запись, максимум 8 страниц за запуск.
+Отдельное правило против самого частого ложного срабатывания: «3 months of
+free», «6 months FREE» — это бонус к годовой подписке, а не триал. Всё длиннее
+62 дней принимается, только если страница сама называет это trial / пробным
+периодом. На живом прогоне это отсеяло ExpressVPN (90 дней) и Freeletics (180).
+
+**Покрытие — 27 из 80** сервисов базы подтверждаются автоматически. Остальные
+рисуют число на клиенте, поэтому остаются с ручной датой или ждут в watchlist.
+Подтверждённое помечается в карточке зелёной галочкой и `Проверка:
+автоматически` вместе с фразой, из которой взят срок, — видно, чему верить.
+Проверка ограничена: не чаще раза в сутки на запись, максимум 12 страниц за
+запуск, и в первую очередь проверяются приложения, установленные у пользователя.
 
 Тесты гоняются на реальном тексте страниц
 (`app/src/test/resources/vendor_page_snippets.json`), включая два сервиса без
 триала — чтобы ловить ложные срабатывания.
 
-#### 2c. Каталог (то, что не подтвердилось автоматически)
+#### 2c. Каталог и watchlist
 
-Каталог ведётся вручную:
+**80 сервисов**: 41 предложение (37 триалов + 6 скидок) и 39 сервисов в
+`watchlist` — тех, у кого предложение пока не подтверждено.
 
-* `catalog/deals.json` — источник, который отдаётся по HTTP и обновляется без релиза
-  приложения (GitHub Pages / raw.githubusercontent / Firebase Hosting);
+Watchlist — это то, как база растёт без релиза: приложение само проверяет эти
+страницы тарифов на устройстве и переводит сервис в триалы, как только тот
+объявит предложение. Установленные у пользователя приложения проверяются первыми.
+
+Каталог отдаётся по HTTP и обновляется без релиза:
+
+* `catalog/deals.json` — источник (GitHub Pages / raw.githubusercontent /
+  Firebase Hosting);
 * `app/src/main/assets/deals_catalog.json` — та же копия внутри APK, чтобы первый
   запуск работал офлайн;
 * адрес источника — в `BuildConfig.CATALOG_URL`, виден в настройках.
@@ -122,11 +135,25 @@ Kotlin · Jetpack Compose · Material 3 · Room · WorkManager · OkHttp · Coil
 **`last_verified_date` показывается в UI везде**, где видно предложение — условия
 акций отличаются по регионам и быстро устаревают.
 
-Стартовый набор — 20 популярных сервисов (Spotify, YouTube Premium, Netflix,
-Duolingo, Canva, CapCut, Notion, NordVPN, Adobe Lightroom, Picsart, Headspace,
-Яндекс Музыка, Кинопоиск, Coursera, Strava, Telegram Premium, Google One,
-Microsoft 365, Tinder, Grammarly). Условия внесены вручную и требуют перепроверки
-перед публикацией.
+Состав: музыка и видео (Spotify, YouTube, Netflix, Disney+, Max, Hulu,
+Paramount+, Peacock, Crunchyroll, Plex, Apple Music, Amazon Music, Tidal,
+Deezer, SoundCloud, Audible, Яндекс Музыка, Кинопоиск, Иви), продуктивность
+(Notion, Evernote, Todoist, Trello, Asana, Slack, Zoom, Dropbox, Google One,
+Microsoft 365), пароли и VPN (1Password, Bitwarden, LastPass, Dashlane,
+NordVPN, ExpressVPN, Surfshark, Proton), обучение (Duolingo, Babbel, Busuu,
+Rosetta Stone, Coursera, Udemy, Skillshare, Brilliant, Blinkist), дизайн и фото
+(Canva, Picsart, Lightroom, VSCO, Facetune, Remini, CapCut, InShot, KineMaster),
+спорт и здоровье (Strava, Headspace, Calm, MyFitnessPal, Nike, Freeletics,
+Peloton, Sleep Cycle), AI и прочее (ChatGPT, Perplexity, Speechify, Otter,
+Grammarly, Telegram, Discord, Twitch, Reddit, Tinder, Bumble, LinkedIn).
+
+Все package name и иконки проверены обращением к листингу Play; названия и
+описания взяты оттуда же. Записи с `verified_by: manual` требуют перепроверки
+перед публикацией — автопроверка их не подтвердила.
+
+Целостность каталога проверяется тестом (`data/CatalogTest.kt`): обязательные
+поля, уникальность id и package, наличие evidence у автоматических записей,
+отсутствие пересечения watchlist с подтверждёнными предложениями.
 
 ### 2d. Иконки
 
@@ -174,7 +201,7 @@ ui/            Compose-экраны, тема, ViewModel
  ├ screens/    Home · Categories · DealList · Apps · Search · Notifications · Settings · Onboarding
  └ components/ SurfaceCard · DealCardCompact · DealRow · Pill · IconTile
 data/
- ├ model/      Deal · DealCatalog · InstalledApp · DealUi
+ ├ model/      Deal · DealCatalog · WatchedApp · InstalledApp · DealUi
  ├ local/      Room: deals · installed_apps · favorites · seen_deals
  ├ remote/     CatalogRemoteSource · DealFeedSource · TrialProbeSource (OkHttp)
  ├ parse/      AtomFeedParser · DealTitleParser · RedditDealMapper · TrialTextExtractor

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.trialtracker.app.data.model.Deal
 import com.trialtracker.app.data.model.DealUi
 import com.trialtracker.app.ui.badgeLabel
 import com.trialtracker.app.ui.parseColor
@@ -128,20 +130,21 @@ private fun FavoriteButton(deal: DealUi, onToggle: () -> Unit) {
 }
 
 @Composable
-private fun VerifiedLine(date: String) {
-    // Always visible: promo terms go stale fast and the user needs to see how old
-    // the information is.
+private fun VerifiedLine(date: String, verifiedBy: String) {
+    // Always visible: promo terms go stale fast and the user needs to see both how
+    // old the information is and whether the app confirmed it itself.
+    val auto = verifiedBy == Deal.VERIFIED_AUTO
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            imageVector = Icons.Rounded.Schedule,
+            imageVector = if (auto) Icons.Rounded.Verified else Icons.Rounded.Schedule,
             contentDescription = null,
-            tint = TT.TextTertiary,
+            tint = if (auto) TT.Green else TT.TextTertiary,
             modifier = Modifier.size(11.dp),
         )
         Spacer(Modifier.width(4.dp))
         Text(
             text = "проверено ${formatVerified(date)}",
-            color = TT.TextTertiary,
+            color = if (auto) TT.Green.copy(alpha = 0.8f) else TT.TextTertiary,
             fontSize = 10.5.sp,
         )
     }
@@ -195,22 +198,24 @@ fun DealCardCompact(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.weight(1f))
-            VerifiedLine(deal.deal.lastVerifiedDate)
-            Spacer(Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(TT.SurfaceHigh)
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-            ) {
-                Text(
-                    text = if (deal.deal.isTrial) "После: ${deal.deal.priceAfter}" else deal.deal.priceAfter,
-                    color = TT.TextSecondary,
-                    fontSize = 11.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            VerifiedLine(deal.deal.lastVerifiedDate, deal.deal.verifiedBy)
+            if (deal.deal.priceAfter.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(TT.SurfaceHigh)
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                ) {
+                    Text(
+                        text = if (deal.deal.isTrial) "После: ${deal.deal.priceAfter}" else deal.deal.priceAfter,
+                        color = TT.TextSecondary,
+                        fontSize = 11.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -267,17 +272,19 @@ fun DealRow(
                         Pill("Установлено", TT.Green, bold = false)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text(
-                        text = if (deal.deal.isTrial) "После: ${deal.deal.priceAfter}" else deal.deal.priceAfter,
-                        color = TT.TextSecondary,
-                        fontSize = 11.5.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
+                    if (deal.deal.priceAfter.isNotBlank()) {
+                        Text(
+                            text = if (deal.deal.isTrial) "После: ${deal.deal.priceAfter}" else deal.deal.priceAfter,
+                            color = TT.TextSecondary,
+                            fontSize = 11.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    }
                 }
                 Spacer(Modifier.height(7.dp))
-                VerifiedLine(deal.deal.lastVerifiedDate)
+                VerifiedLine(deal.deal.lastVerifiedDate, deal.deal.verifiedBy)
             }
         }
     }

@@ -76,11 +76,16 @@ class FfmpegFrameFormatConverter(
     ): List<String> {
         val ext = pipeline.sourcePath.substringAfterLast('.', "").lowercase()
         val isStatic = frames == null && ext !in ANIMATED_EXTS
+        // PNG/JPEG are single-frame targets: never loop the input, just grab a frame.
+        val stillTarget = options.format == StickerFormat.PNG || options.format == StickerFormat.JPEG
         val trim = pipeline.operations.filterIsInstance<EditOperation.Trim>().firstOrNull()
         val durationSec = trim?.let { (it.endMs - it.startMs) / 1000.0 }?.coerceAtLeast(0.1) ?: 3.0
 
+        val input = if (frames != null) "${frames.dir}/f_%05d.png" else pipeline.sourcePath
         val args = mutableListOf("-y")
         when {
+            // Still export: read the input once and take a single frame.
+            stillTarget -> args += listOf("-i", input)
             frames != null -> {
                 // Pre-decoded PNG sequence (animated WebP path).
                 args += listOf("-framerate", frames.fps.toString(), "-i", "${frames.dir}/f_%05d.png")
@@ -104,7 +109,7 @@ class FfmpegFrameFormatConverter(
                 vf += "setpts=${1f / it.factor}*PTS"
             }
         }
-        vf += "fps=${options.fps}"
+        if (!stillTarget) vf += "fps=${options.fps}"
         pipeline.operations.filterIsInstance<EditOperation.Crop>().firstOrNull()?.let {
             vf += "crop=${it.right - it.left}:${it.bottom - it.top}:${it.left}:${it.top}"
         }
@@ -130,6 +135,16 @@ class FfmpegFrameFormatConverter(
                 )
             }
             StickerFormat.APNG -> args += listOf("-f", "apng", "-plays", "0")
+            StickerFormat.PNG -> {
+                // Single transparent still.
+                args += listOf("-frames:v", "1")
+            }
+            StickerFormat.JPEG -> {
+                // JPEG has no alpha — flatten to yuvj420p so transparency doesn't
+                // come out as garbage, and take one frame.
+                vf += "format=yuvj420p"
+                args += listOf("-frames:v", "1", "-q:v", jpegQualityScale(options.quality).toString())
+            }
             StickerFormat.TELEGRAM_WEBM -> {
                 // Telegram: VP9, ≤512px, ≤3s, alpha preserved, ≤256KB.
                 vf += "pad=${options.widthPx}:${options.heightPx}:-1:-1:color=0x00000000"
@@ -150,6 +165,12 @@ class FfmpegFrameFormatConverter(
         args += listOf("-vf", vf.joinToString(","))
         args += outputPath
         return args
+    }
+
+    /** Map 1..100 quality to FFmpeg's JPEG scale (2 = best, 31 = worst). */
+    private fun jpegQualityScale(quality: Int): Int {
+        val q = quality.coerceIn(1, 100)
+        return (31 - (q * 29 / 100)).coerceIn(2, 31)
     }
 
     /** Map 1..100 quality to a VP9 CRF (lower = better/bigger). */

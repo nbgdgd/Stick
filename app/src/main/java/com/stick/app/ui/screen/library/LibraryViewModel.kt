@@ -1,11 +1,16 @@
 package com.stick.app.ui.screen.library
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stick.app.data.database.entity.StickerEntity
 import com.stick.app.data.repository.SettingsRepository
 import com.stick.app.data.repository.StickerRepository
+import com.stick.app.domain.GallerySaver
+import com.stick.core.result.StickResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +32,9 @@ data class LibraryUiState(
     val gridLayout: Boolean = true,
     val cardScale: Float = 1f,
     val selectedIds: Set<String> = emptySet(),
+    /** Transient one-shot message shown in a snackbar (e.g. "Saved 5 to gallery"). */
+    val message: String? = null,
+    val isSaving: Boolean = false,
 ) {
     val inSelectionMode: Boolean get() = selectedIds.isNotEmpty()
 }
@@ -38,6 +46,7 @@ data class LibraryUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repository: StickerRepository,
     settingsRepository: SettingsRepository,
 ) : ViewModel() {
@@ -46,6 +55,8 @@ class LibraryViewModel @Inject constructor(
     private val filter = MutableStateFlow(LibraryFilter.ALL)
     private val sort = MutableStateFlow(LibrarySort.NEWEST)
     private val selectedIds = MutableStateFlow<Set<String>>(emptySet())
+    private val message = MutableStateFlow<String?>(null)
+    private val saving = MutableStateFlow(false)
 
     private val stickers = combine(query, filter) { q, f -> q to f }
         .flatMapLatest { (q, f) ->
@@ -68,6 +79,10 @@ class LibraryViewModel @Inject constructor(
         )
     }.combine(settingsRepository.settings) { state, settings ->
         state.copy(gridLayout = settings.gridLayout, cardScale = settings.cardScale)
+    }.combine(message) { state, msg ->
+        state.copy(message = msg)
+    }.combine(saving) { state, isSaving ->
+        state.copy(isSaving = isSaving)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
     fun onQueryChange(value: String) { query.value = value }
@@ -83,6 +98,30 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun clearSelection() { selectedIds.value = emptySet() }
+
+    /** Tick every currently visible sticker (respects search/filter). */
+    fun selectAllVisible() {
+        selectedIds.value = uiState.value.stickers.map { it.id }.toSet()
+    }
+
+    /**
+     * Copy the ticked stickers into the device gallery (Pictures/Stick) so they
+     * can be picked from any gallery-aware app.
+     */
+    fun saveSelectedToGallery() = viewModelScope.launch {
+        val chosen = uiState.value.stickers.filter { it.id in selectedIds.value }
+        if (chosen.isEmpty()) return@launch
+        saving.value = true
+        val files = chosen.map { File(it.localPath) }
+        message.value = when (val result = GallerySaver.saveAll(context, files)) {
+            is StickResult.Success -> "Saved ${result.value} to gallery"
+            is StickResult.Failure -> result.error.message
+        }
+        saving.value = false
+        selectedIds.value = emptySet()
+    }
+
+    fun consumeMessage() { message.value = null }
 
     fun deleteSelected() = viewModelScope.launch {
         selectedIds.value.forEach { repository.delete(it) }

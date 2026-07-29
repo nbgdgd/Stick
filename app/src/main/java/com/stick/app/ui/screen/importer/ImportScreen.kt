@@ -138,6 +138,9 @@ fun ImportScreen(
                             onClick = { viewModel.toggle(index) },
                             onLongClick = { viewModel.toggle(index) },
                             onToggleFavorite = { viewModel.toggle(index) },
+                            // No favourite state before a sticker is saved — the
+                            // tick is what matters here.
+                            showFavorite = false,
                         )
                     }
                 }

@@ -32,7 +32,7 @@ enum class StickerFormat(
     companion object {
         /** Formats that make sense as an export target, in UI display order. */
         val exportTargets: List<StickerFormat> = listOf(
-            TELEGRAM_WEBM, TELEGRAM_TGS, GIF, WEBP_ANIMATED, MP4, APNG,
+            TELEGRAM_WEBM, TELEGRAM_TGS, GIF, WEBP_ANIMATED, MP4, APNG, PNG, JPEG,
         )
 
         fun fromExtension(ext: String): StickerFormat? {

@@ -30,6 +30,7 @@ data class ExportUiState(
     val progress: Float = 0f,
     val outputPath: String? = null,
     val error: String? = null,
+    val savedToGallery: Boolean = false,
 )
 
 /**
@@ -67,6 +68,17 @@ class ExportViewModel @Inject constructor(
         }
         _state.update { it.copy(options = options) }
         recomputeEstimate()
+    }
+
+    /** Copy the exported file into the device gallery (Pictures/Stick). */
+    fun saveToGallery() = viewModelScope.launch {
+        val path = _state.value.outputPath ?: return@launch
+        _state.update {
+            when (val r = com.stick.app.domain.GallerySaver.saveAll(context, listOf(File(path)))) {
+                is StickResult.Success -> it.copy(error = null, savedToGallery = true)
+                is StickResult.Failure -> it.copy(error = r.error.message)
+            }
+        }
     }
 
     fun setFps(fps: Int) = updateOptions { it.copy(fps = fps) }

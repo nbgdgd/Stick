@@ -78,6 +78,10 @@ fun CatalogScreen(
                             onClick = { viewModel.save(sticker) },
                             onLongClick = { viewModel.save(sticker) },
                             onToggleFavorite = { viewModel.save(sticker) },
+                            // Tapping saves straight to the library; neither a
+                            // heart nor a tick box applies here.
+                            showFavorite = false,
+                            showSelection = false,
                         )
                     }
                 }

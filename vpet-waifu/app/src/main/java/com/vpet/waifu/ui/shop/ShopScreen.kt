@@ -87,7 +87,10 @@ private fun LazyListScope.section(
     onBuy: (ShopItem) -> Unit,
 ) {
     item { SectionHeaderRow(emoji, titleRes) }
-    items(items, key = { it.id }) { item -> ShopCard(item, snapshot, onBuy) }
+    items(items, key = { it.id }) { item ->
+        // Cards slide into place when a level-up unlocks one mid-list.
+        ShopCard(item, snapshot, onBuy, modifier = Modifier.animateItem())
+    }
 }
 
 @Composable
@@ -96,13 +99,18 @@ private fun SectionHeaderRow(emoji: String, titleRes: Int) {
 }
 
 @Composable
-private fun ShopCard(item: ShopItem, snapshot: PetSnapshot, onBuy: (ShopItem) -> Unit) {
+private fun ShopCard(
+    item: ShopItem,
+    snapshot: PetSnapshot,
+    onBuy: (ShopItem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val unlocked = item.isUnlocked(snapshot.level)
     val affordable = snapshot.progress.canAfford(item.price)
     val enabled = snapshot.canBuy(item)
     val tint = if (item.category == ShopCategory.PILL) Accents.Danger else Accents.Primary
 
-    PanelCard(modifier = Modifier.fillMaxWidth()) {
+    PanelCard(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -122,13 +130,21 @@ private fun ShopCard(item: ShopItem, snapshot: PetSnapshot, onBuy: (ShopItem) ->
                 )
                 Spacer(Modifier.height(7.dp))
                 EffectChips(item)
-                if (!unlocked) {
+                // Why the button is dead, said once, in the column that has the
+                // room for it — the button itself always shows the price so
+                // that a scrolled list of them stays a straight edge.
+                val blocker = when {
+                    !unlocked -> stringResource(R.string.unlocks_at_level, item.requiredLevel)
+                    !affordable -> stringResource(R.string.not_enough_money)
+                    else -> null
+                }
+                if (blocker != null) {
                     Spacer(Modifier.height(7.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🔒", style = MaterialTheme.typography.labelSmall)
+                        Text(if (unlocked) "💰" else "🔒", style = MaterialTheme.typography.labelSmall)
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = stringResource(R.string.unlocks_at_level, item.requiredLevel),
+                            text = blocker,
                             style = MaterialTheme.typography.labelMedium,
                             color = Accents.Danger,
                         )
@@ -138,13 +154,11 @@ private fun ShopCard(item: ShopItem, snapshot: PetSnapshot, onBuy: (ShopItem) ->
 
             Spacer(Modifier.width(10.dp))
             OutlineButton(
-                text = if (affordable || !unlocked) {
-                    "${item.price} ¥"
-                } else {
-                    stringResource(R.string.not_enough_money)
-                },
+                text = "${item.price} ¥",
                 onClick = { onBuy(item) },
                 enabled = enabled,
+                tint = if (affordable) StatColors.Money else Accents.Danger,
+                minWidth = 84.dp,
             )
         }
     }

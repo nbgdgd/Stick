@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -84,12 +86,12 @@ fun ActivitiesScreen(
 
         item { SectionHeader("💼", stringResource(R.string.section_work)) }
         items(Occupations.WORK, key = { it.id }) { occupation ->
-            OccupationCard(occupation, snapshot, simulation, tuning, onStart)
+            OccupationCard(occupation, snapshot, simulation, tuning, onStart, Modifier.animateItem())
         }
 
         item { SectionHeader("📚", stringResource(R.string.section_study)) }
         items(Occupations.STUDY, key = { it.id }) { occupation ->
-            OccupationCard(occupation, snapshot, simulation, tuning, onStart)
+            OccupationCard(occupation, snapshot, simulation, tuning, onStart, Modifier.animateItem())
         }
     }
 }
@@ -98,7 +100,7 @@ fun ActivitiesScreen(
 private fun Notice(text: String) {
     PanelCard(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.errorContainer,
+        color = Accents.Danger.copy(alpha = 0.12f),
         border = Accents.Danger.copy(alpha = 0.4f),
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -107,7 +109,7 @@ private fun Notice(text: String) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = Accents.Text,
             )
         }
     }
@@ -163,6 +165,15 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
     }
 }
 
+/**
+ * One job.
+ *
+ * The chips live on their own full-width row under the title rather than
+ * beside it: three of them plus a button in a single row left barely forty
+ * points for the last chip, so "−16" was clipped mid-character on a narrow
+ * phone. Below the title they get the whole card and wrap if they need to.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun OccupationCard(
     occupation: Occupation,
@@ -170,61 +181,72 @@ private fun OccupationCard(
     simulation: PetSimulation,
     tuning: PetTuning,
     onStart: (Occupation) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val unlocked = occupation.isUnlocked(snapshot.level)
     val canStart = snapshot.canStart(occupation, tuning)
     val payout = simulation.projectedPayout(snapshot, occupation)
     val isWork = occupation.kind == OccupationKind.WORK
 
-    PanelCard(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            EmojiTile(
-                emoji = if (unlocked) occupationEmoji(occupation.id) else "🔒",
-                tint = if (isWork) StatColors.Money else StatColors.Exp,
-            )
-            Spacer(Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(occupationNameRes(occupation.id)),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Accents.Text,
+    PanelCard(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                EmojiTile(
+                    emoji = if (unlocked) occupationEmoji(occupation.id) else "🔒",
+                    tint = if (isWork) StatColors.Money else StatColors.Exp,
+                    size = 54.dp,
                 )
-                Spacer(Modifier.height(7.dp))
-                if (unlocked) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        EffectChip(
-                            emoji = if (isWork) "💰" else "⭐",
-                            text = "+$payout",
-                            tint = if (isWork) StatColors.Money else StatColors.Exp,
-                        )
-                        EffectChip(
-                            emoji = "⏱",
-                            text = "${occupation.durationMinutes} мин",
-                            tint = Accents.TextMuted,
-                        )
-                        EffectChip(
-                            emoji = "⚡",
-                            text = "−${occupation.energyCost.toInt()}",
-                            tint = StatColors.Energy,
-                        )
-                    }
-                } else {
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.unlocks_at_level, occupation.requiredLevel),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Accents.Danger,
+                        text = stringResource(occupationNameRes(occupation.id)),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Accents.Text,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (unlocked) {
+                            stringResource(R.string.duration_minutes, occupation.durationMinutes)
+                        } else {
+                            stringResource(R.string.unlocks_at_level, occupation.requiredLevel)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (unlocked) Accents.TextMuted else Accents.Danger,
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                PrimaryButton(
+                    text = stringResource(R.string.action_send),
+                    onClick = { onStart(occupation) },
+                    enabled = canStart,
+                    minWidth = 96.dp,
+                )
+            }
+
+            if (unlocked) {
+                Spacer(Modifier.height(12.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    EffectChip(
+                        emoji = if (isWork) "💰" else "⭐",
+                        text = "+$payout",
+                        tint = if (isWork) StatColors.Money else StatColors.Exp,
+                    )
+                    EffectChip(
+                        emoji = "⚡",
+                        text = "−${occupation.energyCost.toInt()}",
+                        tint = StatColors.Energy,
+                    )
+                    EffectChip(
+                        emoji = "💜",
+                        text = stringResource(R.string.pay_scales_with_mood),
+                        tint = StatColors.Mood,
                     )
                 }
             }
-
-            Spacer(Modifier.width(10.dp))
-            PrimaryButton(
-                text = stringResource(R.string.action_send),
-                onClick = { onStart(occupation) },
-                enabled = canStart,
-            )
         }
     }
 }

@@ -100,19 +100,32 @@ class PetWidget : GlanceAppWidget() {
         val stageHeightDp = layout.stageHeight(size)
         val stageWidthDp = stageHeightDp * (ART_WIDTH / ART_HEIGHT)
         val tempo = FlipTempo.forState(state)
-        val frames = renderFrames(state, tempo, stageWidthDp, stageHeightDp, density)
+
+        // Both bitmaps depend only on what is in their keys, and neither
+        // depends on a stat. Without the cache a wage landing every minute of a
+        // shift re-encoded the entire loop every minute.
+        val roomWidthPx = (size.width.value * density).roundToInt().coerceAtMost(MAX_ROOM_PX)
+        val roomHeightPx = (size.height.value * density).roundToInt().coerceAtMost(MAX_ROOM_PX)
+        val floorFraction = (layout.padding + stageHeightDp * FEET_FRACTION) / size.height.value
+        val detail = if (layout == WidgetLayout.PORTRAIT_ONLY) RoomDetail.NONE else RoomDetail.WALL
+
+        val frames = FRAMES.getOrPut("$state|$tempo|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density") {
+            renderFrames(state, tempo, stageWidthDp, stageHeightDp, density)
+        }
         val flipper = buildFlipper(context, tempo, frames)
-        val room = PetRasterizer.roomPng(
-            widthPx = (size.width.value * density).roundToInt().coerceAtMost(MAX_ROOM_PX),
-            heightPx = (size.height.value * density).roundToInt().coerceAtMost(MAX_ROOM_PX),
-            density = density,
-            colors = palette.room,
-            cornerRadiusPx = CARD_CORNER_DP * density,
-            // Put the wall/floor junction just behind her feet, wherever the
-            // character happens to sit in this size of widget.
-            floorFraction = (layout.padding + stageHeightDp * FEET_FRACTION) / size.height.value,
-            detail = if (layout == WidgetLayout.PORTRAIT_ONLY) RoomDetail.NONE else RoomDetail.WALL,
-        )
+        val room = ROOMS.getOrPut("${roomWidthPx}x$roomHeightPx|${palette.room.night}|${floorFraction.round3()}|$detail") {
+            PetRasterizer.roomPng(
+                widthPx = roomWidthPx,
+                heightPx = roomHeightPx,
+                density = density,
+                colors = palette.room,
+                cornerRadiusPx = CARD_CORNER_DP * density,
+                // Put the wall/floor junction just behind her feet, wherever the
+                // character happens to sit in this size of widget.
+                floorFraction = floorFraction,
+                detail = detail,
+            )
+        }
 
         provideContent {
             GlanceTheme {
@@ -333,6 +346,22 @@ class PetWidget : GlanceAppWidget() {
         private const val PAYLOAD_BUDGET_BYTES = 400 * 1024
         private const val SHRUNK_SCALE = 0.7f
 
+        /**
+         * Rasterised art, reused across redraws.
+         *
+         * A loop can approach [PAYLOAD_BUDGET_BYTES], so three of them is
+         * already about a megabyte; rooms are a single frame each and cost far
+         * less, so a few more of those are affordable.
+         */
+        private val FRAMES = WidgetArtCache<List<ByteArray>>(maxEntries = 3)
+        private val ROOMS = WidgetArtCache<ByteArray>(maxEntries = 4)
+
+        /** Frees the cached art — for tests, and for onTrimMemory. */
+        fun releaseArt() {
+            FRAMES.clear()
+            ROOMS.clear()
+        }
+
         /** Redraws every placed widget. Cheap, and safe to call from anywhere. */
         suspend fun refresh(context: Context) {
             PetWidget().updateAll(context)
@@ -480,6 +509,9 @@ private fun widgetSize(context: Context, id: GlanceId): DpSize {
 }
 
 private val DEFAULT_WIDGET_SIZE = DpSize(250.dp, 180.dp)
+
+/** Keeps float rounding out of a cache key. */
+private fun Float.round3(): Int = (this * 1000f).roundToInt()
 
 private fun headlineFor(state: PetState): String = when (state) {
     PetState.WORKING -> "На работе"

@@ -204,12 +204,6 @@ fun GameScreen(
                 modifier = Modifier.align(Alignment.Center),
             )
         }
-
-        Text(
-            text = stringResource(R.string.game_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = Accents.TextDim,
-        )
     }
 }
 

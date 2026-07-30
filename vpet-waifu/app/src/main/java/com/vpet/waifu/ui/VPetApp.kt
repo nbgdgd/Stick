@@ -1,6 +1,18 @@
 package com.vpet.waifu.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -27,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -49,6 +61,7 @@ import com.vpet.waifu.domain.ActivityOutcome
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.ui.components.EffectChip
+import com.vpet.waifu.ui.components.PrimaryButton
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
 import com.vpet.waifu.ui.theme.Surfaces
@@ -82,11 +95,14 @@ fun VPetApp(
     val snapshot = state.snapshot ?: return
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
 
+    // Once a second, not twice: this drives every countdown and emote timeout in
+    // the app, and a change here recomposes the whole visible tab. The shortest
+    // thing it has to expire is a three-and-a-half-second emote.
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
             nowMillis = System.currentTimeMillis()
-            delay(500)
+            delay(1_000)
         }
     }
 
@@ -95,8 +111,25 @@ fun VPetApp(
         containerColor = Surfaces.Screen,
         bottomBar = { PetNavBar(tab) { tab = it } },
     ) { insets ->
-        Box(modifier = Modifier.padding(insets)) {
-            when (tab) {
+        // Tabs slide in the direction they sit in the bar, so the four screens
+        // feel like places rather than a single view swapping its contents.
+        AnimatedContent(
+            targetState = tab,
+            modifier = Modifier.padding(insets),
+            transitionSpec = {
+                val forward = targetState.ordinal > initialState.ordinal
+                val offset = if (forward) 1 else -1
+                (
+                    slideInHorizontally(tween(260)) { width -> offset * width / 5 } +
+                        fadeIn(tween(200))
+                    ) togetherWith (
+                    slideOutHorizontally(tween(260)) { width -> -offset * width / 5 } +
+                        fadeOut(tween(160))
+                    )
+            },
+            label = "tab",
+        ) { current ->
+            when (current) {
                 Tab.HOME -> HomeScreen(
                     snapshot = snapshot,
                     tuning = viewModel.tuning,
@@ -179,20 +212,35 @@ private fun NavItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tint = if (selected) Accents.Text else Accents.TextDim
+    // Everything that distinguishes the selected tab is animated, so the
+    // marker grows and the well lights up instead of the whole bar snapping.
+    val tint by animateColorAsState(
+        targetValue = if (selected) Accents.Text else Accents.TextDim,
+        label = "nav-tint",
+    )
+    val well by animateColorAsState(
+        targetValue = if (selected) Accents.Primary.copy(alpha = 0.16f) else Color.Transparent,
+        label = "nav-well",
+    )
+    val markerWidth by animateDpAsState(
+        targetValue = if (selected) 22.dp else 0.dp,
+        animationSpec = tween(220),
+        label = "nav-marker",
+    )
+
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(if (selected) Accents.Primary.copy(alpha = 0.16f) else Color.Transparent)
+            .background(well)
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
-                .size(width = 22.dp, height = 3.dp)
+                .size(width = markerWidth, height = 3.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(if (selected) Accents.Bright else Color.Transparent),
+                .background(Accents.Bright),
         )
         Spacer(Modifier.height(6.dp))
         Icon(entry.icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
@@ -201,6 +249,7 @@ private fun NavItem(
             text = stringResource(entry.labelRes),
             style = MaterialTheme.typography.labelSmall,
             color = tint,
+            maxLines = 1,
         )
     }
 }
@@ -208,15 +257,30 @@ private fun NavItem(
 /** The "she's back from her shift" card. Shown once, then acknowledged away. */
 @Composable
 private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
+    // The emoji lands a beat after the dialog does, which is the whole reward
+    // moment — everything else on this card is a number.
+    var landed by remember { mutableStateOf(false) }
+    val pop by animateFloatAsState(
+        targetValue = if (landed) 1f else 0.4f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "outcome-pop",
+    )
+    LaunchedEffect(Unit) { landed = true }
+
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Surfaces.Card,
+        titleContentColor = Accents.Text,
+        textContentColor = Accents.TextMuted,
+        shape = RoundedCornerShape(26.dp),
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_ok)) }
+            PrimaryButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
         },
         icon = {
             Text(
                 text = occupationEmoji(outcome.occupationId),
                 style = MaterialTheme.typography.headlineLarge,
+                modifier = Modifier.scale(pop),
             )
         },
         title = {
@@ -256,7 +320,7 @@ private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
                             },
                         ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Accents.TextMuted,
                     )
                 }
             }

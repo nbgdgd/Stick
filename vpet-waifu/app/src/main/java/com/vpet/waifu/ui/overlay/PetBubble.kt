@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,12 +42,15 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.accentFor
 import com.vpet.waifu.ui.character.AnimatedPet
+import com.vpet.waifu.ui.components.StatBarTrack
 import com.vpet.waifu.ui.components.StatRow
 import com.vpet.waifu.ui.formatRemaining
 import com.vpet.waifu.ui.occupationEmoji
 import com.vpet.waifu.ui.occupationNameRes
 import com.vpet.waifu.ui.stateLabelRes
+import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
+import com.vpet.waifu.ui.theme.Surfaces
 
 private val BUBBLE_SIZE = 84.dp
 private val PANEL_WIDTH = 232.dp
@@ -81,7 +83,7 @@ fun PetBubble(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+            color = Surfaces.Card.copy(alpha = 0.92f),
             border = BorderStroke(2.dp, accentFor(state)),
             shadowElevation = 6.dp,
             modifier = Modifier
@@ -142,7 +144,8 @@ private fun PetPanel(
 ) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        color = Surfaces.Card.copy(alpha = 0.97f),
+        border = BorderStroke(1.dp, Surfaces.CardBorder),
         shadowElevation = 8.dp,
         modifier = Modifier
             .padding(top = 6.dp)
@@ -159,12 +162,12 @@ private fun PetPanel(
                 Text(
                     text = stringResource(stateLabelRes(snapshot.state(nowMillis, tuning))),
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Accents.Text,
                 )
                 Text(
                     text = "Lv ${snapshot.level} · ${snapshot.progress.money}¥",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Accents.TextMuted,
                 )
             }
 
@@ -178,11 +181,13 @@ private fun PetPanel(
                             stringResource(occupationNameRes(occupation.id)) +
                             " · " + formatRemaining(session.remainingMillis(nowMillis)),
                         style = MaterialTheme.typography.labelSmall,
+                        color = Accents.Text,
                     )
-                    LinearProgressIndicator(
-                        progress = { session.progress(nowMillis) },
+                    StatBarTrack(
+                        fraction = session.progress(nowMillis),
+                        color = Accents.Bright,
                         modifier = Modifier.width(PANEL_WIDTH - 24.dp),
-                        drawStopIndicator = {},
+                        height = 5.dp,
                     )
                 }
             }

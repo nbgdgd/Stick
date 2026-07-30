@@ -1,10 +1,15 @@
 package com.vpet.waifu.ui.components
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -23,15 +29,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +51,40 @@ import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
 import com.vpet.waifu.ui.theme.Surfaces
 import kotlin.math.roundToInt
+
+/**
+ * Every button in the app dips under the finger.
+ *
+ * The scale replaces the ripple rather than joining it: a ripple on a dark,
+ * heavily rounded surface reads as a smudge, and it outlives a control that
+ * disappears on the same tap.
+ */
+@Composable
+private fun Modifier.pressable(
+    enabled: Boolean,
+    interactionSource: MutableInteractionSource,
+    onClick: () -> Unit,
+): Modifier {
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed && enabled) 0.955f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "press-scale",
+    )
+    return this
+        .scale(scale)
+        .then(
+            if (enabled) {
+                Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                )
+            } else {
+                Modifier
+            },
+        )
+}
 
 /** The card every panel in the app is made of: dark fill, hairline outline. */
 @Composable
@@ -121,40 +165,45 @@ fun SectionHeader(emoji: String, title: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** The wallet: gold text inside a gold-tinted, gold-outlined pill. */
+/**
+ * The wallet: gold text inside a gold-tinted, gold-outlined pill.
+ *
+ * The number counts rather than jumps, which matters now that wages land every
+ * minute of a shift — the pill ticking up is how the player notices she is
+ * being paid while the shift is still running.
+ */
 @Composable
-fun MoneyPill(amount: Int, modifier: Modifier = Modifier, onAdd: (() -> Unit)? = null) {
+fun MoneyPill(amount: Int, modifier: Modifier = Modifier) {
+    val shown by animateIntAsState(
+        targetValue = amount,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "wallet",
+    )
+    // A gentle flash on the way up, so a payout is visible even mid-scroll.
+    val glow by animateFloatAsState(
+        targetValue = if (shown == amount) 0.10f else 0.24f,
+        label = "wallet-glow",
+    )
+
     Surface(
         modifier = modifier,
-        color = StatColors.Money.copy(alpha = 0.10f),
+        color = StatColors.Money.copy(alpha = glow),
         shape = RoundedCornerShape(50),
         border = BorderStroke(1.dp, StatColors.Money.copy(alpha = 0.55f)),
     ) {
         Row(
-            modifier = Modifier.padding(start = 12.dp, end = if (onAdd != null) 6.dp else 14.dp, top = 7.dp, bottom = 7.dp),
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("💰", fontSize = 15.sp)
             Spacer(Modifier.width(7.dp))
             Text(
-                text = "$amount",
+                text = "$shown",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = StatColors.Money,
+                maxLines = 1,
             )
-            if (onAdd != null) {
-                Spacer(Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(StatColors.Money.copy(alpha = 0.18f))
-                        .clickable(onClick = onAdd),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("+", color = StatColors.Money, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
-            }
         }
     }
 }
@@ -311,7 +360,14 @@ fun StatBarTrack(
     }
 }
 
-/** An outlined action: coloured icon over coloured label. */
+/**
+ * A care action: coloured icon above a coloured label.
+ *
+ * Stacked rather than side by side. Three of these share one row, and the
+ * labels are words like "Погладить" — beside the icon they wrapped to two
+ * lines on a narrow phone and left the row visibly ragged, with each button a
+ * different height.
+ */
 @Composable
 fun ActionButton(
     icon: ImageVector,
@@ -322,46 +378,67 @@ fun ActionButton(
     modifier: Modifier = Modifier,
 ) {
     val alpha = if (enabled) 1f else 0.35f
-    Surface(
-        modifier = modifier.then(
-            if (enabled) Modifier.clickable(onClick = onClick) else Modifier,
-        ),
-        color = Surfaces.Card,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, tint.copy(alpha = 0.35f * alpha)),
+    val interaction = remember { MutableInteractionSource() }
+
+    Box(
+        modifier = modifier
+            .pressable(enabled, interaction, onClick)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Surfaces.Card)
+            .border(1.dp, tint.copy(alpha = 0.35f * alpha), RoundedCornerShape(18.dp))
+            .padding(vertical = 12.dp, horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Row(
-            modifier = Modifier.padding(vertical = 14.dp, horizontal = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint.copy(alpha = alpha),
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(7.dp))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(tint.copy(alpha = 0.14f * alpha)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = tint.copy(alpha = alpha),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Spacer(Modifier.height(7.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 color = tint.copy(alpha = alpha),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
             )
         }
     }
 }
 
-/** The filled, gradient call-to-action. */
+/**
+ * The filled, gradient call-to-action.
+ *
+ * [minWidth] exists so a column of these lines up: the label is a Russian verb
+ * whose length varies per card, and without a floor the buttons down a list
+ * each ended up a different width.
+ */
 @Composable
 fun PrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    minWidth: Dp = 0.dp,
 ) {
     val alpha = if (enabled) 1f else 0.4f
+    val interaction = remember { MutableInteractionSource() }
+
     Box(
         modifier = modifier
+            .widthIn(min = minWidth)
+            .pressable(enabled, interaction, onClick)
             .clip(RoundedCornerShape(50))
             .background(
                 Brush.horizontalGradient(
@@ -371,8 +448,7 @@ fun PrimaryButton(
                     ),
                 ),
             )
-            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 22.dp, vertical = 13.dp),
+            .padding(horizontal = 20.dp, vertical = 13.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -380,6 +456,9 @@ fun PrimaryButton(
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = Color.White.copy(alpha = alpha),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -392,21 +471,28 @@ fun OutlineButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     tint: Color = Accents.Bright,
+    minWidth: Dp = 0.dp,
 ) {
     val alpha = if (enabled) 1f else 0.35f
+    val interaction = remember { MutableInteractionSource() }
+
     Box(
         modifier = modifier
+            .widthIn(min = minWidth)
+            .pressable(enabled, interaction, onClick)
             .clip(RoundedCornerShape(14.dp))
             .background(Surfaces.Tile.copy(alpha = alpha))
             .border(1.dp, tint.copy(alpha = 0.45f * alpha), RoundedCornerShape(14.dp))
-            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 18.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.titleSmall,
             color = tint.copy(alpha = alpha),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }

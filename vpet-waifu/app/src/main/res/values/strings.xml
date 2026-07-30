@@ -63,6 +63,8 @@
     <string name="item_exp_pill">EXP pill</string>
     <string name="unlocks_at_level" tools:ignore="PluralsCandidate">Unlocks at level %1$d</string>
     <string name="session_remaining">%1$s left</string>
+    <string name="duration_minutes" tools:ignore="PluralsCandidate">%1$d min shift</string>
+    <string name="pay_scales_with_mood">mood</string>
     <string name="too_tired_to_work">She is too worn out to go anywhere. Let her sleep or feed her first.</string>
     <string name="not_enough_money">Too pricey</string>
     <string name="pills_warning">Pills pay out instantly and bill you later. Use them when you know what you are doing.</string>

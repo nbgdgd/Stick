@@ -37,16 +37,28 @@ class WidgetSync @Inject constructor(
 /**
  * Everything the widget actually shows, as one comparable value.
  *
- * Stats are rounded because that is how they are displayed: in a quiet minute
- * the underlying floats drift constantly while the widget's face does not
- * change, and redrawing for that would be pure battery cost.
+ * A redraw is not free: every frame of the character's loop is marshalled to
+ * the launcher over Binder, so this deliberately ignores changes too small to
+ * see. What she is *doing* is exact — pressing sleep must reach the widget on
+ * the next write, and that is the one thing this exists to guarantee — while
+ * the bars and the wallet move in visible steps.
+ *
+ * Wages now land every minute of a shift, so keeping money exact here meant a
+ * full redraw once a minute for two hours; a step of [MONEY_STEP] keeps the
+ * number honest without paying for a redraw per coin.
  */
 internal fun widgetKey(snapshot: PetSnapshot): String = listOf(
-    snapshot.activity.name,
-    snapshot.stats.hunger.roundToInt(),
-    snapshot.stats.energy.roundToInt(),
-    snapshot.stats.mood.roundToInt(),
+    // The FSM state, not the raw activity: it also carries hungry, tired and
+    // the transient emotes, which are exactly the faces the widget draws.
+    snapshot.state(snapshot.lastTickAt).name,
+    (snapshot.stats.hunger / STAT_STEP).roundToInt(),
+    (snapshot.stats.energy / STAT_STEP).roundToInt(),
+    (snapshot.stats.mood / STAT_STEP).roundToInt(),
     snapshot.level,
-    snapshot.progress.money,
+    snapshot.progress.money / MONEY_STEP,
     snapshot.session?.occupationId ?: "-",
 ).joinToString("|")
+
+/** About a twentieth of a bar — narrower than the bar's own rounded cap. */
+private const val STAT_STEP = 5f
+private const val MONEY_STEP = 25

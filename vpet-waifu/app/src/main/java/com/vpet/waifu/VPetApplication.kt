@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.vpet.waifu.di.ApplicationScope
+import com.vpet.waifu.widget.PetWidget
 import com.vpet.waifu.widget.WidgetSync
 import com.vpet.waifu.work.PetTickWorker
 import kotlinx.coroutines.CoroutineScope
@@ -33,5 +34,15 @@ class VPetApplication : Application(), Configuration.Provider {
         // One place decides when the widget redraws: whenever the save file
         // changes, whichever surface changed it.
         widgetSync.start(applicationScope)
+    }
+
+    /**
+     * The widget's cached frames are about a megabyte of PNG held purely to
+     * avoid re-encoding them. That is a good trade while there is memory to
+     * spare and a bad one the moment there is not, so it goes first.
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_BACKGROUND) PetWidget.releaseArt()
     }
 }

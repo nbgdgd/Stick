@@ -35,12 +35,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
+import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.components.ActionButton
+import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.LevelRing
 import com.vpet.waifu.ui.components.MoneyPill
+import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PanelCard
 import com.vpet.waifu.ui.components.PetStage
 import com.vpet.waifu.ui.components.PrimaryButton
@@ -177,13 +180,25 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
                     )
                 }
                 Spacer(Modifier.width(10.dp))
-                PrimaryButton(
-                    text = stringResource(R.string.action_call_home),
-                    onClick = onCancel,
+                // Wages land every minute now, so the running total belongs on
+                // the card — otherwise the only sign she is being paid is the
+                // wallet quietly ticking up somewhere else on the screen.
+                EffectChip(
+                    emoji = if (occupation.kind == OccupationKind.WORK) "💰" else "⭐",
+                    text = "+${if (occupation.kind == OccupationKind.WORK) session.paidOut else session.paidExp}",
+                    tint = if (occupation.kind == OccupationKind.WORK) StatColors.Money else StatColors.Exp,
                 )
             }
             Spacer(Modifier.height(14.dp))
             StatBarTrack(fraction = session.progress(nowMillis), color = Accents.Bright, height = 7.dp)
+            Spacer(Modifier.height(14.dp))
+            // Full width and on its own line: beside the title it fought the
+            // job name for space and both ended up truncated.
+            OutlineButton(
+                text = stringResource(R.string.action_call_home),
+                onClick = onCancel,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

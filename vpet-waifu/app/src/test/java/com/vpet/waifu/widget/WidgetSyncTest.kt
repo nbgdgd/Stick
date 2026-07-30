@@ -122,4 +122,31 @@ class WidgetSyncTest {
 
         assertNotEquals(widgetKey(idle), widgetKey(working))
     }
+
+    @Test
+    fun `a shift does not redraw the widget once a minute`() = runBlocking {
+        // Wages land every simulated minute now. Every frame of her animation
+        // is marshalled to the launcher on a redraw, so paying attention to
+        // single coins would mean a full transaction a minute for two hours.
+        pet.repository.startOccupation(com.vpet.waifu.domain.Occupations.WORK.first())
+
+        val keys = mutableSetOf<String>()
+        repeat(30) {
+            pet.clock.nowMillis += 60_000
+            keys += widgetKey(pet.repository.peek())
+        }
+
+        assertTrue("30 minutes on the clock wanted ${keys.size} redraws", keys.size <= 12)
+    }
+
+    @Test
+    fun `the key still notices her getting hungry`() = runBlocking {
+        val fed = pet.repository.feed()
+        // Long enough for the bars to visibly move, but well short of a state
+        // change — the coarsening must not turn into blindness.
+        pet.clock.nowMillis += 60 * 60_000
+        val later = pet.repository.peek()
+
+        assertNotEquals(widgetKey(fed), widgetKey(later))
+    }
 }

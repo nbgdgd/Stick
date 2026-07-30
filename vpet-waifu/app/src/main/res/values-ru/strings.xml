@@ -63,6 +63,8 @@
     <string name="item_exp_pill">EXP-таблетка</string>
     <string name="unlocks_at_level">Откроется на %1$d уровне</string>
     <string name="session_remaining">осталось %1$s</string>
+    <string name="duration_minutes">смена %1$d мин</string>
+    <string name="pay_scales_with_mood">настроение</string>
     <string name="too_tired_to_work">Она слишком вымоталась, чтобы куда-то идти. Сначала покорми или уложи спать.</string>
     <string name="not_enough_money">Дорого</string>
     <string name="pills_warning">Таблетки дают всё сразу, а счёт приходит потом. Бери, когда понимаешь, что делаешь.</string>

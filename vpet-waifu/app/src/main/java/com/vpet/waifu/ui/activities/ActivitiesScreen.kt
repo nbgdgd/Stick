@@ -37,6 +37,7 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.EmojiTile
+import com.vpet.waifu.ui.components.GainPop
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PanelCard
@@ -120,6 +121,10 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
     val session = snapshot.session ?: return
     val occupation = snapshot.occupation ?: return
 
+    val isWork = occupation.kind == OccupationKind.WORK
+    val earned = if (isWork) session.paidOut else session.paidExp
+    val tint = if (isWork) StatColors.Money else StatColors.Exp
+
     PanelCard(
         modifier = Modifier.fillMaxWidth(),
         border = Accents.Primary.copy(alpha = 0.45f),
@@ -150,6 +155,21 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Accents.TextMuted,
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                // The running total, with the minute's pay floating off it as
+                // it lands — the shift visibly pays as it goes.
+                Box(contentAlignment = Alignment.Center) {
+                    EffectChip(
+                        emoji = if (isWork) "💰" else "⭐",
+                        text = "+$earned",
+                        tint = tint,
+                    )
+                    GainPop(
+                        total = earned,
+                        label = if (isWork) "¥" else "EXP",
+                        tint = tint,
                     )
                 }
             }

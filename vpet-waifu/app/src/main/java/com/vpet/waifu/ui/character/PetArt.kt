@@ -624,8 +624,21 @@ private fun DrawScope.drawBowlAndBite(pose: PetPose, palette: PetPalette) {
     drawCircle(palette.white.copy(alpha = 0.55f), radius = 2.2f, center = Offset(tip.x - 2f, tip.y - 2f))
 }
 
+/**
+ * The laptop, mid-keystroke.
+ *
+ * Everything here is driven by `propProgress` — the same value that swings her
+ * forearms — rather than by the clock, so the keys light under the hand that is
+ * actually down, and the whole thing still loops in a whole number of typing
+ * cycles for the widget's flipbook.
+ */
 private fun DrawScope.drawLaptop(pose: PetPose, palette: PetPalette) {
     val baseY = 192f
+    val stroke = pose.propProgress
+    // 1 at either extreme of the swing: that is the instant a key bottoms out.
+    val impact = abs(stroke * 2f - 1f)
+    val leftDown = stroke > 0.5f
+
     val keyboard = Path().apply {
         moveTo(CX - 42f, baseY)
         lineTo(CX + 42f, baseY)
@@ -635,17 +648,51 @@ private fun DrawScope.drawLaptop(pose: PetPose, palette: PetPalette) {
     }
     drawPath(keyboard, palette.prop)
 
+    // Individual keys, with the one under the descending hand lit.
+    val struckColumn = if (leftDown) 1 else 4
+    for (column in 0..5) {
+        val x = CX - 36f + column * 14.5f
+        val lit = column == struckColumn
+        drawRoundRectPath(
+            Rect(x - 5.5f, baseY + 1.2f, x + 5.5f, baseY + 5.6f),
+            radius = 1.6f,
+            color = if (lit) {
+                palette.irisLight.copy(alpha = 0.35f + impact * 0.55f)
+            } else {
+                palette.propDark.copy(alpha = 0.32f)
+            },
+        )
+    }
+
+    // The clack: a short flare over the key that just landed.
+    if (impact > 0.55f) {
+        val flare = (impact - 0.55f) / 0.45f
+        drawStar(
+            center = Offset(CX - 36f + struckColumn * 14.5f, baseY + 1.5f),
+            radius = 3f + flare * 4f,
+            color = palette.accent.copy(alpha = flare * 0.7f),
+        )
+    }
+
     // Screen, brightening as she types.
-    val glow = 0.6f + pose.propProgress * 0.3f
+    val glow = 0.6f + stroke * 0.3f
     drawRoundRectPath(Rect(CX - 40f, baseY - 44f, CX + 40f, baseY), radius = 4f, color = palette.propDark)
+    // A soft bloom around the panel — the giveaway that it is actually on.
+    drawRoundRectPath(
+        Rect(CX - 43f, baseY - 47f, CX + 43f, baseY + 2f),
+        radius = 6f,
+        color = palette.irisLight.copy(alpha = 0.10f + impact * 0.06f),
+    )
     drawRoundRectPath(
         Rect(CX - 35f, baseY - 39f, CX + 35f, baseY - 5f),
         radius = 2.5f,
         color = palette.irisLight.copy(alpha = glow),
     )
+
+    // Lines of text, scrolling with the typing rather than the clock so they
+    // loop with it. The last one grows as she types and carries the caret.
     for (i in 0..2) {
-        // Scrolls with the typing rather than the clock, so it loops with it.
-        val y = baseY - 33f + i * 8f + (pose.propProgress * 8f)
+        val y = baseY - 33f + i * 8f + (stroke * 8f)
         if (y > baseY - 9f) continue
         val w = 18f + ((i * 11) % 30)
         drawLine(
@@ -656,6 +703,21 @@ private fun DrawScope.drawLaptop(pose: PetPose, palette: PetPalette) {
             cap = StrokeCap.Round,
         )
     }
+    // The line being written, and the caret at the end of it.
+    val caretY = baseY - 9f
+    val typed = 8f + stroke * 22f
+    drawLine(
+        color = palette.accent.copy(alpha = 0.75f),
+        start = Offset(CX - 30f, caretY),
+        end = Offset(CX - 30f + typed, caretY),
+        strokeWidth = 2.6f,
+        cap = StrokeCap.Round,
+    )
+    drawRoundRectPath(
+        Rect(CX - 28f + typed, caretY - 3.4f, CX - 25.6f + typed, caretY + 3.4f),
+        radius = 1f,
+        color = palette.propDark.copy(alpha = 0.35f + impact * 0.5f),
+    )
 }
 
 private fun DrawScope.drawBook(pose: PetPose, palette: PetPalette) {
@@ -748,12 +810,14 @@ private fun DrawScope.drawParticles(kind: ParticleKind, pose: PetPose, palette: 
     val count = when (kind) {
         ParticleKind.SLEEP_Z -> 3
         ParticleKind.SWEAT -> 1
+        ParticleKind.CODE -> 6
         else -> 4
     }
     // Whole cycles per particle phase, so a looping phase gives a looping
     // stream — a fractional rate would teleport them back once per cycle.
     val cycles = when (kind) {
         ParticleKind.COINS -> 2
+        ParticleKind.CODE -> 3
         else -> 1
     }
 
@@ -800,6 +864,69 @@ private fun DrawScope.drawParticles(kind: ParticleKind, pose: PetPose, palette: 
                 fade,
                 palette,
             )
+            // Her output, leaving the screen — scraps of code, and every third
+            // one a coin, because the shift pays while it runs.
+            //
+            // Both climb the narrow clear band immediately outside the laptop.
+            // Anything routed up the middle crosses her chin and then her face,
+            // and anything sent wider runs straight into a twin-tail; this is
+            // the only lane on the canvas that is actually empty.
+            ParticleKind.CODE -> {
+                val side = if (i % 2 == 0) -1f else 1f
+                val at = Offset(
+                    CX + side * (16f + phase * 34f) + drift * 0.3f,
+                    // A short climb in a narrow band: below it a coin sits on
+                    // her fringe looking like a hair clip, above it the widget's
+                    // frame crops the top off.
+                    38f - phase * 26f,
+                )
+                if (i % 3 == 2) {
+                    drawCoin(at, 6f, fade, palette)
+                } else {
+                    drawGlyph(i, at, 5.2f + fade * 1.6f, palette.irisLight.copy(alpha = fade * 0.95f))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A scrap of code: a bracket, a slash, a pair of dots.
+ *
+ * Deliberately not letters — at this size a glyph is four or five pixels
+ * across, and anything with real strokes turns to mush. These read as "text"
+ * from the shape alone.
+ */
+private fun DrawScope.drawGlyph(index: Int, center: Offset, size: Float, color: Color) {
+    val s = size
+    val width = s * 0.34f
+    when (index % 4) {
+        // { }
+        0 -> {
+            drawLine(color, Offset(center.x - s * 0.5f, center.y - s), Offset(center.x - s, center.y), width, StrokeCap.Round)
+            drawLine(color, Offset(center.x - s, center.y), Offset(center.x - s * 0.5f, center.y + s), width, StrokeCap.Round)
+            drawLine(color, Offset(center.x + s * 0.5f, center.y - s), Offset(center.x + s, center.y), width, StrokeCap.Round)
+            drawLine(color, Offset(center.x + s, center.y), Offset(center.x + s * 0.5f, center.y + s), width, StrokeCap.Round)
+        }
+        // /
+        1 -> drawLine(
+            color,
+            Offset(center.x - s * 0.5f, center.y + s),
+            Offset(center.x + s * 0.5f, center.y - s),
+            width,
+            StrokeCap.Round,
+        )
+        // < >
+        2 -> {
+            drawLine(color, Offset(center.x + s * 0.1f, center.y - s * 0.8f), Offset(center.x - s * 0.7f, center.y), width, StrokeCap.Round)
+            drawLine(color, Offset(center.x - s * 0.7f, center.y), Offset(center.x + s * 0.1f, center.y + s * 0.8f), width, StrokeCap.Round)
+            drawLine(color, Offset(center.x + s * 0.6f, center.y - s * 0.8f), Offset(center.x + s * 1.2f, center.y), width, StrokeCap.Round)
+            drawLine(color, Offset(center.x + s * 1.2f, center.y), Offset(center.x + s * 0.6f, center.y + s * 0.8f), width, StrokeCap.Round)
+        }
+        // ;
+        else -> {
+            drawCircle(color, radius = width * 0.7f, center = Offset(center.x, center.y - s * 0.35f))
+            drawCircle(color, radius = width * 0.7f, center = Offset(center.x, center.y + s * 0.35f))
         }
     }
 }

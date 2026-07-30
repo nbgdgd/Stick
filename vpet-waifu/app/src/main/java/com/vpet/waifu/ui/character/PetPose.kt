@@ -19,7 +19,7 @@ enum class MouthShape { SMILE, BIG_SMILE, CAT, WAVY, SMALL_O, FLAT, CHEWING }
 enum class Prop { BOWL, LAPTOP, BOOK, CONTROLLER, PILLOW }
 
 /** Floating decoration around her. */
-enum class ParticleKind { HEARTS, SPARKLES, SLEEP_Z, SWEAT, NOTES, CRUMBS, COINS }
+enum class ParticleKind { HEARTS, SPARKLES, SLEEP_Z, SWEAT, NOTES, CRUMBS, COINS, CODE }
 
 /**
  * Everything the renderer needs for one frame.
@@ -268,7 +268,10 @@ object PetPoseFactory {
             // the typing frequency.
             headTiltDegrees = 4f + base.headTiltDegrees * 0.6f,
             headBob = base.headBob + 4f,
-            bodyLean = 4f,
+            // A small nod on the beat: her head dips fractionally as the
+            // strokes land, which is what sells the arms as actually hitting
+            // something rather than waving over it.
+            bodyLean = 4f + typeL * 0.6f,
             leftArmDegrees = 46f,
             rightArmDegrees = -46f,
             leftElbowDegrees = 78f + typeL * 5f,
@@ -280,7 +283,8 @@ object PetPoseFactory {
             browWorry = -0.35f,
             prop = Prop.LAPTOP,
             propProgress = (typeL + 1f) / 2f,
-            particles = ParticleKind.SPARKLES,
+            // What she is making, and what it is paying, in one stream.
+            particles = ParticleKind.CODE,
         )
     }
 

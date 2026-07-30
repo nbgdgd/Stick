@@ -82,6 +82,15 @@ class PetViewModel @Inject constructor(
     }
 
     private companion object {
-        const val TICK_INTERVAL_MILLIS = 60_000L
+        /**
+         * Faster than the simulation's own minute.
+         *
+         * The world only ever moves in whole minutes, so a slower tick would
+         * not lose anything — but a wage that landed at the top of the minute
+         * would sit unnoticed for up to a minute before the screen showed it,
+         * which makes paying by the minute look like paying at random. A tick
+         * with nothing owed is a single indexed read and no write at all.
+         */
+        const val TICK_INTERVAL_MILLIS = 20_000L
     }
 }

@@ -41,6 +41,7 @@ import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.components.ActionButton
 import com.vpet.waifu.ui.components.EffectChip
+import com.vpet.waifu.ui.components.GainPop
 import com.vpet.waifu.ui.components.LevelRing
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.OutlineButton
@@ -95,6 +96,21 @@ fun HomeScreen(
                 dot = statusDot(state),
                 modifier = Modifier.padding(14.dp),
             )
+            // Every minute she is on the clock, what she just earned floats up
+            // off her. Wages arriving during the shift is the whole point of
+            // paying by the minute, and a number ticking in a pill is not
+            // something anyone looks at.
+            snapshot.session?.let { session ->
+                val isWork = snapshot.occupation?.kind == OccupationKind.WORK
+                GainPop(
+                    total = if (isWork) session.paidOut else session.paidExp,
+                    label = if (isWork) "¥" else "EXP",
+                    tint = if (isWork) StatColors.Money else StatColors.Exp,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 96.dp),
+                )
+            }
         }
 
         AnimatedVisibility(visible = snapshot.isBusy) {

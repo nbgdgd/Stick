@@ -10,7 +10,17 @@ import org.junit.Test
 import kotlin.math.abs
 
 private const val MINUTE = PetSimulation.MS_PER_MINUTE
-private const val T0 = 1_700_000_000_000L
+
+/**
+ * Six in the morning on a day that carries no event, followed by another.
+ *
+ * Days now roll their own event, so an arbitrary timestamp silently puts every
+ * test on whatever the calendar happened to hand it — the first draft of this
+ * file sat on a lucky day and every payout came out thirty percent high. Tests
+ * about events pick their own day on purpose; everything else runs on a
+ * deliberately uneventful one.
+ */
+private const val T0 = 1_700_373_600_000L
 
 /**
  * The balance rules.

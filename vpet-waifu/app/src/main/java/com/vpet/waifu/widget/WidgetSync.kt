@@ -73,4 +73,6 @@ internal fun widgetState(snapshot: PetSnapshot, nowMillis: Long): PetState =
  * advanced world.
  */
 internal fun widgetKey(advanced: PetSnapshot, nowMillis: Long): String =
-    widgetState(advanced, nowMillis).name
+    // Plus what she is wearing: an outfit is the one other thing that changes
+    // the picture without changing what she is doing.
+    "${widgetState(advanced, nowMillis).name}|${advanced.outfit}"

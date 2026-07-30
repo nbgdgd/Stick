@@ -134,14 +134,19 @@ fun VPetApp(
                     snapshot = snapshot,
                     tuning = viewModel.tuning,
                     nowMillis = nowMillis,
-                    bubbleEnabled = state.bubbleEnabled,
+                    settings = state.settings,
                     overlayPermissionGranted = overlayPermissionGranted,
                     onGrantOverlayPermission = onGrantOverlayPermission,
                     onBubbleEnabledChange = viewModel::setBubbleEnabled,
+                    onSoundChange = viewModel::setSoundEnabled,
+                    onHapticsChange = viewModel::setHapticsEnabled,
+                    onNotificationsChange = viewModel::setNotificationsEnabled,
+                    onNameChange = viewModel::setPetName,
                     onFeed = viewModel::feed,
                     onPet = viewModel::pet,
                     onToggleSleep = viewModel::toggleSleep,
                     onCancelOccupation = viewModel::cancelOccupation,
+                    onDismissEvent = viewModel::acknowledgeEvent,
                 )
                 Tab.ACTIVITIES -> ActivitiesScreen(
                     snapshot = snapshot,
@@ -151,12 +156,18 @@ fun VPetApp(
                     onStart = viewModel::startOccupation,
                     onCancel = viewModel::cancelOccupation,
                 )
-                Tab.SHOP -> ShopScreen(snapshot = snapshot, onBuy = viewModel::buy)
+                Tab.SHOP -> ShopScreen(
+                    snapshot = snapshot,
+                    onBuy = viewModel::buy,
+                    onBuyUpgrade = viewModel::buyUpgrade,
+                    onWear = viewModel::wear,
+                )
                 Tab.GAME -> GameScreen(
                     snapshot = snapshot,
                     nowMillis = nowMillis,
                     onStart = viewModel::startPlaying,
                     onFinish = viewModel::finishPlaying,
+                    onScored = viewModel::scored,
                 )
             }
         }

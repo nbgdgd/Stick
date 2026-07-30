@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.AnimatedPet
+import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.drawPetRoom
 import com.vpet.waifu.ui.theme.StageColors
 
@@ -31,6 +32,7 @@ fun PetStage(
     state: PetState,
     modifier: Modifier = Modifier,
     height: Dp = 300.dp,
+    palette: PetPalette = PetPalette.Default,
 ) {
     val night = state == PetState.SLEEPING
     val top by animateColorAsState(
@@ -59,6 +61,7 @@ fun PetStage(
 
         AnimatedPet(
             state = state,
+            palette = palette,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 8.dp, top = 14.dp),

@@ -17,30 +17,72 @@ data class Occupation(
     val energyCost: Float,
     /** Money for [OccupationKind.WORK], EXP for [OccupationKind.STUDY]. */
     val payout: Int,
+    /** Mood the whole session costs, on top of the usual drift. */
+    val moodCost: Float = 3f,
 ) {
     val energyPerMinute: Float get() = energyCost / durationMinutes
+
+    val moodPerMinute: Float get() = moodCost / durationMinutes
+
+    /** What an hour of it is worth, which is how a player actually compares two. */
+    val payPerHour: Float get() = payout * 60f / durationMinutes
 
     fun isUnlocked(level: Int): Boolean = level >= requiredLevel
 }
 
 /**
- * The Phase-2 catalog. Later jobs pay disproportionately more but cost more
- * energy and lock up more of the day, so the choice is real rather than "always
- * pick the newest one".
+ * The catalog.
+ *
+ * Deliberately *not* ordered by rate. Every tier used to pay strictly more per
+ * minute than the one before it, which meant the newest unlock obsoleted
+ * everything else and the list was really a single job with a changing name.
+ * Now each has something it is best at and something it is worst at:
+ *
+ *  - **cafe** — the best hourly rate in the game, and it barely touches her
+ *    mood, but half an hour at a time caps what it can ever earn in a day.
+ *  - **shop** — a shade worse per hour, cheap on energy, unremarkable.
+ *  - **office** — the worst rate and by far the worst for her mood. It exists
+ *    because two hours is two hours: you set it going and stop thinking.
+ *  - **idol** — pays like the cafe over three hours and pays *mood*, not costs
+ *    it, but it eats almost all her energy, so it is a whole evening committed.
+ *
+ * The same idea in study: school is the efficient one, university the one that
+ * gets a lot done at once while making her miserable.
  */
 object Occupations {
 
     val WORK: List<Occupation> = listOf(
-        Occupation("cafe", OccupationKind.WORK, requiredLevel = 1, durationMinutes = 30, energyCost = 16f, payout = 90),
-        Occupation("shop", OccupationKind.WORK, requiredLevel = 3, durationMinutes = 60, energyCost = 30f, payout = 200),
-        Occupation("office", OccupationKind.WORK, requiredLevel = 6, durationMinutes = 120, energyCost = 52f, payout = 470),
-        Occupation("idol", OccupationKind.WORK, requiredLevel = 10, durationMinutes = 180, energyCost = 72f, payout = 1050),
+        Occupation(
+            "cafe", OccupationKind.WORK, requiredLevel = 1,
+            durationMinutes = 30, energyCost = 15f, payout = 105, moodCost = 1f,
+        ),
+        Occupation(
+            "shop", OccupationKind.WORK, requiredLevel = 3,
+            durationMinutes = 60, energyCost = 24f, payout = 195, moodCost = 5f,
+        ),
+        Occupation(
+            "office", OccupationKind.WORK, requiredLevel = 6,
+            durationMinutes = 120, energyCost = 46f, payout = 360, moodCost = 16f,
+        ),
+        Occupation(
+            "idol", OccupationKind.WORK, requiredLevel = 10,
+            durationMinutes = 180, energyCost = 88f, payout = 620, moodCost = -12f,
+        ),
     )
 
     val STUDY: List<Occupation> = listOf(
-        Occupation("school", OccupationKind.STUDY, requiredLevel = 1, durationMinutes = 30, energyCost = 12f, payout = 55),
-        Occupation("course", OccupationKind.STUDY, requiredLevel = 4, durationMinutes = 60, energyCost = 24f, payout = 140),
-        Occupation("university", OccupationKind.STUDY, requiredLevel = 8, durationMinutes = 120, energyCost = 44f, payout = 340),
+        Occupation(
+            "school", OccupationKind.STUDY, requiredLevel = 1,
+            durationMinutes = 30, energyCost = 12f, payout = 62, moodCost = 3f,
+        ),
+        Occupation(
+            "course", OccupationKind.STUDY, requiredLevel = 4,
+            durationMinutes = 60, energyCost = 22f, payout = 115, moodCost = 7f,
+        ),
+        Occupation(
+            "university", OccupationKind.STUDY, requiredLevel = 8,
+            durationMinutes = 120, energyCost = 40f, payout = 215, moodCost = 20f,
+        ),
     )
 
     val ALL: List<Occupation> = WORK + STUDY

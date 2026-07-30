@@ -3,6 +3,9 @@ package com.vpet.waifu.ui
 import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import com.vpet.waifu.R
+import com.vpet.waifu.domain.DialogueLine
+import com.vpet.waifu.domain.DialogueTopic
+import com.vpet.waifu.domain.EventKind
 import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.theme.StatColors
@@ -69,6 +72,98 @@ fun shopItemEmoji(id: String): String = when (id) {
     "exp_pill" -> "💊"
     else -> "🎁"
 }
+
+@StringRes
+fun upgradeNameRes(id: String): Int = when (id) {
+    "fridge" -> R.string.upgrade_fridge
+    "bed" -> R.string.upgrade_bed
+    "console" -> R.string.upgrade_console
+    "cat" -> R.string.upgrade_cat
+    "coffee_machine" -> R.string.upgrade_coffee_machine
+    "laptop" -> R.string.upgrade_laptop
+    "textbooks" -> R.string.upgrade_textbooks
+    "studio" -> R.string.upgrade_studio
+    "outfit_uniform" -> R.string.upgrade_outfit_uniform
+    "outfit_cocoa" -> R.string.upgrade_outfit_cocoa
+    "outfit_mint" -> R.string.upgrade_outfit_mint
+    "outfit_sakura" -> R.string.upgrade_outfit_sakura
+    "outfit_midnight" -> R.string.upgrade_outfit_midnight
+    else -> R.string.upgrade_outfit_gold
+}
+
+fun upgradeEmoji(id: String): String = when (id) {
+    "fridge" -> "\uD83E\uDDCA"
+    "bed" -> "\uD83D\uDECF"
+    "console" -> "\uD83C\uDFAE"
+    "cat" -> "\uD83D\uDC08"
+    "coffee_machine" -> "\u2615"
+    "laptop" -> "\uD83D\uDCBB"
+    "textbooks" -> "\uD83D\uDCDA"
+    "studio" -> "\uD83C\uDFB9"
+    "outfit_uniform" -> "\uD83C\uDF93"
+    "outfit_cocoa" -> "\uD83E\uDD5B"
+    "outfit_mint" -> "\uD83C\uDF3F"
+    "outfit_sakura" -> "\uD83C\uDF38"
+    "outfit_midnight" -> "\uD83C\uDF19"
+    else -> "\u2728"
+}
+
+@StringRes
+fun eventTitleRes(kind: EventKind): Int = when (kind) {
+    EventKind.LUCKY_DAY -> R.string.event_title_lucky_day
+    EventKind.COLD -> R.string.event_title_cold
+    EventKind.LETTER -> R.string.event_title_letter
+    EventKind.INSPIRED -> R.string.event_title_inspired
+    EventKind.RESTLESS -> R.string.event_title_restless
+}
+
+@StringRes
+fun eventBodyRes(kind: EventKind): Int = when (kind) {
+    EventKind.LUCKY_DAY -> R.string.event_lucky_day
+    EventKind.COLD -> R.string.event_cold
+    EventKind.LETTER -> R.string.event_letter
+    EventKind.INSPIRED -> R.string.event_inspired
+    EventKind.RESTLESS -> R.string.event_restless
+}
+
+fun eventEmoji(kind: EventKind): String = when (kind) {
+    EventKind.LUCKY_DAY -> "\uD83C\uDF40"
+    EventKind.COLD -> "\uD83E\uDD12"
+    EventKind.LETTER -> "\u2709\uFE0F"
+    EventKind.INSPIRED -> "\uD83D\uDCA1"
+    EventKind.RESTLESS -> "\uD83D\uDE2B"
+}
+
+/**
+ * Her line, as a string resource.
+ *
+ * The domain picks the situation and the phrasing index; the words live here,
+ * because words are resources and the domain has no idea Android exists. The
+ * table is exhaustive on purpose — a missing topic should be a compile error,
+ * not a silent fallback to "So, what shall we do?".
+ */
+@StringRes
+fun dialogueRes(line: DialogueLine): Int = when (line.topic) {
+    DialogueTopic.IDLE -> pick(line.variant, R.string.say_idle_0, R.string.say_idle_1, R.string.say_idle_2)
+    DialogueTopic.HUNGRY -> pick(line.variant, R.string.say_hungry_0, R.string.say_hungry_1, R.string.say_hungry_2)
+    DialogueTopic.STARVING -> pick(line.variant, R.string.say_starving_0, R.string.say_starving_1, R.string.say_starving_2)
+    DialogueTopic.TIRED -> pick(line.variant, R.string.say_tired_0, R.string.say_tired_1, R.string.say_tired_2)
+    DialogueTopic.SLEEPING -> pick(line.variant, R.string.say_sleeping_0, R.string.say_sleeping_1, R.string.say_sleeping_2)
+    DialogueTopic.WORKING -> pick(line.variant, R.string.say_working_0, R.string.say_working_1, R.string.say_working_2)
+    DialogueTopic.STUDYING -> pick(line.variant, R.string.say_studying_0, R.string.say_studying_1, R.string.say_studying_2)
+    DialogueTopic.PLAYING -> pick(line.variant, R.string.say_playing_0, R.string.say_playing_1, R.string.say_playing_2)
+    DialogueTopic.JUST_FED -> pick(line.variant, R.string.say_just_fed_0, R.string.say_just_fed_1, R.string.say_just_fed_2)
+    DialogueTopic.SAME_MEAL_AGAIN -> pick(line.variant, R.string.say_same_meal_again_0, R.string.say_same_meal_again_1, R.string.say_same_meal_again_2)
+    DialogueTopic.PETTED -> pick(line.variant, R.string.say_petted_0, R.string.say_petted_1, R.string.say_petted_2)
+    DialogueTopic.WELCOME_BACK -> pick(line.variant, R.string.say_welcome_back_0, R.string.say_welcome_back_1, R.string.say_welcome_back_2)
+    DialogueTopic.MISSED_YOU -> pick(line.variant, R.string.say_missed_you_0, R.string.say_missed_you_1, R.string.say_missed_you_2)
+    DialogueTopic.PAYDAY -> pick(line.variant, R.string.say_payday_0, R.string.say_payday_1, R.string.say_payday_2)
+    DialogueTopic.LEVEL_UP -> pick(line.variant, R.string.say_level_up_0, R.string.say_level_up_1, R.string.say_level_up_2)
+    DialogueTopic.EVENT -> pick(line.variant, R.string.say_event_0, R.string.say_event_1, R.string.say_event_2)
+    DialogueTopic.CONTENT -> pick(line.variant, R.string.say_content_0, R.string.say_content_1, R.string.say_content_2)
+}
+
+private fun pick(variant: Int, vararg options: Int): Int = options[variant.mod(options.size)]
 
 @StringRes
 fun stateLabelRes(state: PetState): Int = when (state) {

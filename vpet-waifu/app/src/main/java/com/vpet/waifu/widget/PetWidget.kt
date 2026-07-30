@@ -35,6 +35,7 @@ import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.ART_HEIGHT
 import com.vpet.waifu.ui.character.ART_WIDTH
+import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.PetRasterizer
 import com.vpet.waifu.ui.character.RoomColors
 import com.vpet.waifu.ui.character.RoomDetail
@@ -97,9 +98,9 @@ class PetWidget : GlanceAppWidget() {
         val detail = if (size.height.value < 150f) RoomDetail.NONE else RoomDetail.WALL
 
         val frames = FRAMES.getOrPut(
-            "$state|$tempo|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density",
+            "$state|$tempo|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density|${snapshot.outfit}",
         ) {
-            renderFrames(state, tempo, stageWidthDp, stageHeightDp, density)
+            renderFrames(state, tempo, stageWidthDp, stageHeightDp, density, snapshot.outfit)
         }
         val flipper = buildFlipper(context, tempo, frames)
         val room = ROOMS.getOrPut(
@@ -147,6 +148,7 @@ class PetWidget : GlanceAppWidget() {
         stageWidthDp: Float,
         stageHeightDp: Float,
         density: Float,
+        outfit: String,
     ): List<ByteArray> {
         // Transparent: the room is a separate layer underneath, so the frames
         // carry nothing but the character.
@@ -157,6 +159,7 @@ class PetWidget : GlanceAppWidget() {
             density = density,
             frameCount = FRAME_COUNT,
             loopSeconds = tempo.loopSeconds,
+            palette = PetPalette.forOutfit(outfit),
         )
 
         val full = render(1f)

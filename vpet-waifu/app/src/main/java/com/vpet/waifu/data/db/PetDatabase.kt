@@ -5,8 +5,9 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vpet.waifu.domain.PetProgress
+import com.vpet.waifu.domain.Upgrades
 
-@Database(entities = [PetStateEntity::class], version = 3, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 4, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
@@ -57,6 +58,28 @@ abstract class PetDatabase : RoomDatabase() {
                     "sessionPaidOut INTEGER NOT NULL DEFAULT 0",
                     "sessionAccruedExp REAL NOT NULL DEFAULT 0",
                     "sessionPaidExp INTEGER NOT NULL DEFAULT 0",
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+            }
+        }
+
+        /**
+         * Things she keeps: upgrades, the outfit she is wearing, the day's
+         * event, and what you last fed her.
+         *
+         * Anyone upgrading keeps their wallet and their level and simply starts
+         * owning nothing but the default outfit — which is exactly right, since
+         * there was nothing permanent to own before this.
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "owned TEXT NOT NULL DEFAULT '${Upgrades.DEFAULT_OUTFIT}'",
+                    "outfit TEXT NOT NULL DEFAULT '${Upgrades.DEFAULT_OUTFIT}'",
+                    "eventKind TEXT",
+                    "eventDay INTEGER NOT NULL DEFAULT 0",
+                    "eventSeenAt INTEGER NOT NULL DEFAULT 0",
+                    "lastMealId TEXT",
+                    "repeatedMeals INTEGER NOT NULL DEFAULT 0",
                 ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
             }
         }

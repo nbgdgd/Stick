@@ -99,4 +99,118 @@
 
     <string name="widget_description">Your pet, her stats and one-tap care.</string>
     <string name="widget_pet_description">Your pet</string>
+
+    <!-- Permanent upgrades -->
+    <string name="section_room">Her room</string>
+    <string name="section_gear">Equipment</string>
+    <string name="section_outfits">Outfits</string>
+    <string name="upgrade_owned">Owned</string>
+    <string name="action_wear">Wear</string>
+    <string name="action_worn">Worn</string>
+    <string name="upgrade_fridge">Full fridge</string>
+    <string name="upgrade_bed">Proper bed</string>
+    <string name="upgrade_console">Games console</string>
+    <string name="upgrade_cat">A cat</string>
+    <string name="upgrade_coffee_machine">Coffee machine</string>
+    <string name="upgrade_laptop">Faster laptop</string>
+    <string name="upgrade_textbooks">Good textbooks</string>
+    <string name="upgrade_studio">Home studio</string>
+    <string name="upgrade_outfit_uniform">School uniform</string>
+    <string name="upgrade_outfit_cocoa">Cocoa</string>
+    <string name="upgrade_outfit_mint">Mint</string>
+    <string name="upgrade_outfit_sakura">Sakura</string>
+    <string name="upgrade_outfit_midnight">Midnight</string>
+    <string name="upgrade_outfit_gold">Gold</string>
+    <string name="effect_hunger_slower">gets hungry slower</string>
+    <string name="effect_energy_slower">tires slower</string>
+    <string name="effect_sleep_faster">sleeps better</string>
+    <string name="effect_pay_more">earns more</string>
+    <string name="effect_study_more">learns faster</string>
+    <string name="effect_play_more">games cheer her more</string>
+    <string name="effect_neglect_less">misses you less</string>
+    <string name="effect_cosmetic">just for the look</string>
+
+    <!-- Events -->
+    <string name="event_title_lucky_day">A good day</string>
+    <string name="event_title_cold">A cold</string>
+    <string name="event_title_letter">A letter</string>
+    <string name="event_title_inspired">Inspired</string>
+    <string name="event_title_restless">A bad night</string>
+    <string name="event_lucky_day">Everything is going her way today — work and study both pay more.</string>
+    <string name="event_cold">She has caught something. She tires faster and works worse until tomorrow.</string>
+    <string name="event_letter">An envelope with no return address, and money inside.</string>
+    <string name="event_inspired">Something clicked. Studying sticks much better today.</string>
+    <string name="event_restless">She barely slept. Today starts tired.</string>
+
+    <!-- Notifications -->
+    <string name="notify_channel_name">Your pet</string>
+    <string name="notify_channel_description">Shifts finishing, and when she needs something.</string>
+    <string name="notify_shift_title">%1$s is back</string>
+    <string name="notify_shift_body">She earned %1$d ¥. Open the app to see how it went.</string>
+    <string name="notify_hungry_title">%1$s is hungry</string>
+    <string name="notify_hungry_body">Her mood will start slipping if she is left like this.</string>
+    <string name="notify_tired_title">%1$s is worn out</string>
+    <string name="notify_tired_body">She cannot be sent anywhere until she sleeps.</string>
+    <string name="notify_event_title">Something happened</string>
+
+    <!-- Her -->
+    <string name="name_title">Her name</string>
+    <string name="name_hint">Call her something</string>
+    <string name="action_save">Save</string>
+    <string name="settings_sound">Sound</string>
+    <string name="settings_haptics">Vibration</string>
+    <string name="settings_notifications">Notifications</string>
+
+    <!-- What she says. Three phrasings each, chosen by Dialogue. -->
+    <string name="say_idle_0">So, what shall we do?</string>
+    <string name="say_idle_1">I am just here if you need me.</string>
+    <string name="say_idle_2">Nice and quiet today.</string>
+    <string name="say_hungry_0">I could really eat something…</string>
+    <string name="say_hungry_1">Is there anything in the fridge?</string>
+    <string name="say_hungry_2">My stomach is making noises again.</string>
+    <string name="say_starving_0">I am actually starving here!</string>
+    <string name="say_starving_1">Please. Anything. A rice ball.</string>
+    <string name="say_starving_2">I cannot think about anything but food.</string>
+    <string name="say_tired_0">My eyes keep closing…</string>
+    <string name="say_tired_1">Maybe just a short nap?</string>
+    <string name="say_tired_2">I have nothing left in me today.</string>
+    <string name="say_sleeping_0">…zzz…</string>
+    <string name="say_sleeping_1">…mm, five more minutes…</string>
+    <string name="say_sleeping_2">…zzz… don\'t go…</string>
+    <string name="say_working_0">Working, working…</string>
+    <string name="say_working_1">Almost through this bit.</string>
+    <string name="say_working_2">Do not distract me, I am concentrating!</string>
+    <string name="say_studying_0">…and that is why it works that way.</string>
+    <string name="say_studying_1">One more page and I will have it.</string>
+    <string name="say_studying_2">This is harder than it looked.</string>
+    <string name="say_playing_0">Hah! Got it!</string>
+    <string name="say_playing_1">Faster, faster!</string>
+    <string name="say_playing_2">One more round, come on.</string>
+    <string name="say_just_fed_0">Mmm, that is good.</string>
+    <string name="say_just_fed_1">Thank you! I needed that.</string>
+    <string name="say_just_fed_2">You always know when.</string>
+    <string name="say_same_meal_again_0">This again? Really?</string>
+    <string name="say_same_meal_again_1">I am starting to dream about this.</string>
+    <string name="say_same_meal_again_2">Would something else kill you?</string>
+    <string name="say_petted_0">Ehehe…</string>
+    <string name="say_petted_1">More, please.</string>
+    <string name="say_petted_2">Careful, you will mess up my hair.</string>
+    <string name="say_welcome_back_0">Oh, you are back!</string>
+    <string name="say_welcome_back_1">There you are. I was bored.</string>
+    <string name="say_welcome_back_2">I was wondering where you got to.</string>
+    <string name="say_missed_you_0">Where have you been all this time?</string>
+    <string name="say_missed_you_1">I thought you had forgotten about me.</string>
+    <string name="say_missed_you_2">Do you know how long that was?</string>
+    <string name="say_payday_0">It is adding up!</string>
+    <string name="say_payday_1">Another few coins in.</string>
+    <string name="say_payday_2">This is going well, actually.</string>
+    <string name="say_level_up_0">I am getting good at this!</string>
+    <string name="say_level_up_1">Did you see that?</string>
+    <string name="say_level_up_2">Onwards and upwards.</string>
+    <string name="say_event_0">Hey — something happened today.</string>
+    <string name="say_event_1">You will want to hear this.</string>
+    <string name="say_event_2">Guess what?</string>
+    <string name="say_content_0">Everything is just right.</string>
+    <string name="say_content_1">I am happy. That is all.</string>
+    <string name="say_content_2">Days like this are the good ones.</string>
 </resources>

@@ -33,5 +33,70 @@ data class PetPalette(
 ) {
     companion object {
         val Default = PetPalette()
+
+        /**
+         * The outfits, by the id [com.vpet.waifu.domain.Upgrades] sells them
+         * under.
+         *
+         * Each changes the uniform, the ribbon and the accent rather than her
+         * hair or skin: she should still read as the same character in a
+         * different set of clothes, not as a recolour.
+         */
+        private val BY_NAME: Map<String, PetPalette> = mapOf(
+            "uniform" to Default,
+            "cocoa" to Default.copy(
+                uniform = Color(0xFF6E4A34),
+                uniformShade = Color(0xFF553725),
+                skirt = Color(0xFF7C563E),
+                ribbon = Color(0xFFE9A23B),
+                collar = Color(0xFFFFF3E4),
+                sock = Color(0xFFFFF3E4),
+                accent = Color(0xFFFFD489),
+            ),
+            "mint" to Default.copy(
+                uniform = Color(0xFF2F6B60),
+                uniformShade = Color(0xFF24534A),
+                skirt = Color(0xFF357569),
+                ribbon = Color(0xFFF06E8E),
+                collar = Color(0xFFEFFBF6),
+                sock = Color(0xFFEFFBF6),
+                accent = Color(0xFF7FE3C4),
+            ),
+            "sakura" to Default.copy(
+                uniform = Color(0xFF8E4A6B),
+                uniformShade = Color(0xFF6F3853),
+                skirt = Color(0xFF9C5375),
+                ribbon = Color(0xFFFFD1E0),
+                collar = Color(0xFFFFF1F6),
+                sock = Color(0xFFFFF1F6),
+                accent = Color(0xFFFF9CC0),
+            ),
+            "midnight" to Default.copy(
+                uniform = Color(0xFF1D1B33),
+                uniformShade = Color(0xFF131226),
+                skirt = Color(0xFF232041),
+                ribbon = Color(0xFF6FD3FF),
+                collar = Color(0xFFDDE6FF),
+                sock = Color(0xFFDDE6FF),
+                shoe = Color(0xFF0E0D1B),
+                accent = Color(0xFF9CE0FF),
+            ),
+            "gold" to Default.copy(
+                uniform = Color(0xFF4A3B18),
+                uniformShade = Color(0xFF362B10),
+                skirt = Color(0xFF5C4A1F),
+                ribbon = Color(0xFFFFD35C),
+                collar = Color(0xFFFFF8E3),
+                sock = Color(0xFFFFF8E3),
+                shoe = Color(0xFF2B2208),
+                accent = Color(0xFFFFE9A8),
+            ),
+        )
+
+        /** The palette for an outfit id, falling back to what she starts in. */
+        fun forOutfit(outfitId: String?): PetPalette {
+            val name = outfitId?.removePrefix("outfit_")
+            return BY_NAME[name] ?: Default
+        }
     }
 }

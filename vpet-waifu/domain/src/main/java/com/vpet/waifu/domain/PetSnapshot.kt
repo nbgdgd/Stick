@@ -65,6 +65,15 @@ data class PetSnapshot(
     val emoteUntil: Long = 0L,
     val lastTickAt: Long,
     val lastInteractionAt: Long,
+    /** Everything bought once and kept — see [Upgrades]. */
+    val owned: Set<String> = setOf(Upgrades.DEFAULT_OUTFIT),
+    /** Which owned outfit she is wearing. */
+    val outfit: String = Upgrades.DEFAULT_OUTFIT,
+    /** Today's event, if one has landed. */
+    val event: PetEvent? = null,
+    /** The last thing she was fed, and how many times running. */
+    val lastMealId: String? = null,
+    val repeatedMeals: Int = 0,
 ) {
     val isSleeping: Boolean get() = activity == PetActivity.SLEEPING
 
@@ -94,6 +103,15 @@ data class PetSnapshot(
     fun canBuy(item: ShopItem): Boolean =
         item.isUnlocked(level) && progress.canAfford(item.price) &&
             (item.category != ShopCategory.FOOD || acceptsInteraction)
+
+    fun owns(upgradeId: String): Boolean = upgradeId in owned
+
+    fun canBuy(upgrade: Upgrade): Boolean =
+        !owns(upgrade.id) && upgrade.isUnlocked(level) && progress.canAfford(upgrade.price)
+
+    /** Everything her permanent purchases and today's event add up to. */
+    fun modifiers(): UpgradeEffect =
+        Upgrades.effectOf(owned) * (event?.kind?.effect() ?: UpgradeEffect.NONE)
 
     fun state(nowMillis: Long, tuning: PetTuning = PetTuning()): PetState =
         PetState.of(this, nowMillis, tuning)

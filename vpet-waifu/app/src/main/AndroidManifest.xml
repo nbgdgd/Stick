@@ -17,6 +17,9 @@
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- A short buzz on a payout or a level; degrades silently without it. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:name=".VPetApplication"
         android:allowBackup="true"

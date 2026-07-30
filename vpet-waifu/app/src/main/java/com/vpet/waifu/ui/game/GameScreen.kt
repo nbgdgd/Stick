@@ -91,6 +91,7 @@ fun GameScreen(
     onStart: () -> Unit,
     onFinish: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onScored: () -> Unit = {},
 ) {
     var running by remember { mutableStateOf(false) }
     var score by remember { mutableIntStateOf(0) }
@@ -190,6 +191,7 @@ fun GameScreen(
                         offsetY = boardHeight * target.yFraction - (TARGET_SIZE_DP / 2).dp,
                         onTap = {
                             score++
+                            onScored()
                             targets.remove(target)
                         },
                     )

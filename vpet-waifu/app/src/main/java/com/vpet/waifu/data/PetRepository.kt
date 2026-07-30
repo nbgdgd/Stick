@@ -7,6 +7,7 @@ import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.ShopItem
+import com.vpet.waifu.domain.Upgrade
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -63,6 +64,18 @@ class PetRepository @Inject constructor(
 
     suspend fun buy(item: ShopItem): PetSnapshot = mutate { current, now ->
         simulation.buy(current, item, now)
+    }
+
+    suspend fun buyUpgrade(upgrade: Upgrade): PetSnapshot = mutate { current, now ->
+        simulation.buyUpgrade(current, upgrade, now)
+    }
+
+    suspend fun wear(upgradeId: String): PetSnapshot = mutate { current, now ->
+        simulation.wear(current, upgradeId, now)
+    }
+
+    suspend fun acknowledgeEvent(): PetSnapshot = mutate { current, now ->
+        simulation.acknowledgeEvent(current, now)
     }
 
     suspend fun startPlaying(): PetSnapshot = mutate(simulation::startPlaying)

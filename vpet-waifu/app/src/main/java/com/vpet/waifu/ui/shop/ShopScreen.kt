@@ -1,5 +1,6 @@
 package com.vpet.waifu.ui.shop
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -29,6 +30,9 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.Shop
 import com.vpet.waifu.domain.ShopCategory
 import com.vpet.waifu.domain.ShopItem
+import com.vpet.waifu.domain.Upgrade
+import com.vpet.waifu.domain.UpgradeKind
+import com.vpet.waifu.domain.Upgrades
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.EmojiTile
 import com.vpet.waifu.ui.components.MoneyPill
@@ -38,9 +42,12 @@ import com.vpet.waifu.ui.components.ScreenTitle
 import com.vpet.waifu.ui.components.SectionHeader
 import com.vpet.waifu.ui.formatMinutes
 import com.vpet.waifu.ui.shopItemEmoji
+import com.vpet.waifu.ui.upgradeEmoji
+import com.vpet.waifu.ui.upgradeNameRes
 import com.vpet.waifu.ui.shopItemNameRes
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
+import com.vpet.waifu.ui.theme.Surfaces
 import kotlin.math.roundToInt
 
 /**
@@ -51,6 +58,8 @@ import kotlin.math.roundToInt
 fun ShopScreen(
     snapshot: PetSnapshot,
     onBuy: (ShopItem) -> Unit,
+    onBuyUpgrade: (Upgrade) -> Unit,
+    onWear: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -76,6 +85,125 @@ fun ShopScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
+
+        // Everything above is eaten within the hour. Everything below is kept,
+        // which is what makes the money worth earning in the first place.
+        upgrades(R.string.section_room, "\uD83C\uDFE0", Upgrades.ROOM, snapshot, onBuyUpgrade, onWear)
+        upgrades(R.string.section_gear, "\uD83D\uDEE0", Upgrades.GEAR, snapshot, onBuyUpgrade, onWear)
+        upgrades(R.string.section_outfits, "\uD83D\uDC57", Upgrades.OUTFITS, snapshot, onBuyUpgrade, onWear)
+    }
+}
+
+private fun LazyListScope.upgrades(
+    titleRes: Int,
+    emoji: String,
+    items: List<Upgrade>,
+    snapshot: PetSnapshot,
+    onBuy: (Upgrade) -> Unit,
+    onWear: (String) -> Unit,
+) {
+    item { SectionHeaderRow(emoji, titleRes) }
+    items(items, key = { it.id }) { upgrade ->
+        UpgradeCard(upgrade, snapshot, onBuy, onWear, modifier = Modifier.animateItem())
+    }
+}
+
+/**
+ * One permanent purchase.
+ *
+ * Deliberately shaped like the consumable card so the shop reads as one list,
+ * but the button says three different things: buy it, wear it, or — once it is
+ * hers and doing its job — nothing at all.
+ */
+@Composable
+private fun UpgradeCard(
+    upgrade: Upgrade,
+    snapshot: PetSnapshot,
+    onBuy: (Upgrade) -> Unit,
+    onWear: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val owned = snapshot.owns(upgrade.id)
+    val unlocked = upgrade.isUnlocked(snapshot.level)
+    val affordable = snapshot.progress.canAfford(upgrade.price)
+    val outfit = upgrade.kind == UpgradeKind.OUTFIT
+    val worn = outfit && snapshot.outfit == upgrade.id
+    val tint = if (outfit) StatColors.Mood else StatColors.Money
+
+    PanelCard(
+        modifier = modifier.fillMaxWidth(),
+        border = if (owned) tint.copy(alpha = 0.45f) else Surfaces.CardBorder,
+    ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            EmojiTile(
+                emoji = if (unlocked || owned) upgradeEmoji(upgrade.id) else "\uD83D\uDD12",
+                tint = tint,
+            )
+            Spacer(Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(upgradeNameRes(upgrade.id)),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Accents.Text,
+                )
+                Spacer(Modifier.height(7.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    EffectChip(
+                        emoji = if (outfit) "\u2728" else "\u2B06",
+                        text = stringResource(upgradeEffectRes(upgrade)),
+                        tint = tint,
+                    )
+                    if (owned) {
+                        EffectChip(emoji = "\u2714", text = stringResource(R.string.upgrade_owned), tint = tint)
+                    }
+                }
+                if (!unlocked && !owned) {
+                    Spacer(Modifier.height(7.dp))
+                    Text(
+                        text = stringResource(R.string.unlocks_at_level, upgrade.requiredLevel),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Accents.Danger,
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(10.dp))
+            when {
+                worn -> EffectChip(emoji = "\uD83D\uDC57", text = stringResource(R.string.action_worn), tint = tint)
+                owned && outfit -> OutlineButton(
+                    text = stringResource(R.string.action_wear),
+                    onClick = { onWear(upgrade.id) },
+                    tint = tint,
+                    minWidth = 84.dp,
+                )
+                owned -> Unit
+                else -> OutlineButton(
+                    text = "${upgrade.price} \u00A5",
+                    onClick = { onBuy(upgrade) },
+                    enabled = snapshot.canBuy(upgrade),
+                    tint = if (affordable) tint else Accents.Danger,
+                    minWidth = 92.dp,
+                )
+            }
+        }
+    }
+}
+
+@StringRes
+private fun upgradeEffectRes(upgrade: Upgrade): Int {
+    val e = upgrade.effect
+    return when {
+        upgrade.kind == UpgradeKind.OUTFIT -> R.string.effect_cosmetic
+        e.hungerDecay < 1f -> R.string.effect_hunger_slower
+        e.energyDecay < 1f -> R.string.effect_energy_slower
+        e.sleepSpeed > 1f -> R.string.effect_sleep_faster
+        e.pay > 1f -> R.string.effect_pay_more
+        e.study > 1f -> R.string.effect_study_more
+        e.play > 1f -> R.string.effect_play_more
+        e.neglect < 1f -> R.string.effect_neglect_less
+        else -> R.string.effect_cosmetic
     }
 }
 

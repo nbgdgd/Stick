@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.vpet.waifu.di.ApplicationScope
+import com.vpet.waifu.feedback.PetSounds
+import com.vpet.waifu.notify.NotificationSync
 import com.vpet.waifu.widget.PetWidget
 import com.vpet.waifu.widget.WidgetSync
 import com.vpet.waifu.work.PetTickWorker
@@ -16,6 +18,8 @@ class VPetApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var widgetSync: WidgetSync
+    @Inject lateinit var notificationSync: NotificationSync
+    @Inject lateinit var sounds: PetSounds
     @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
 
     /**
@@ -31,9 +35,12 @@ class VPetApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         PetTickWorker.ensureScheduled(this)
-        // One place decides when the widget redraws: whenever the save file
-        // changes, whichever surface changed it.
+        // One place decides when the widget redraws, and one decides when the
+        // player is told something: whenever the save file changes, whichever
+        // surface changed it.
         widgetSync.start(applicationScope)
+        notificationSync.start(applicationScope)
+        sounds.start(applicationScope)
     }
 
     /**

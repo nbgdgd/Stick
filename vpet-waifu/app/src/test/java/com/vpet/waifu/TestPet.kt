@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.data.WallClock
 import com.vpet.waifu.data.db.PetDatabase
+import com.vpet.waifu.data.db.toEntity
 import com.vpet.waifu.domain.PetSimulation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
@@ -32,6 +33,26 @@ class TestPet(val clock: FakeClock = FakeClock()) {
     val repository = PetRepository(database.petStateDao(), PetSimulation(), clock)
 
     fun close() = database.close()
+
+    /**
+     * Hands her money and standing without earning them.
+     *
+     * The upgrades cost thousands and unlock in the teens on purpose; grinding
+     * twenty cafe shifts inside a test would prove nothing about the thing the
+     * test is actually about.
+     */
+    suspend fun give(money: Int, level: Int = 20) {
+        val dao = database.petStateDao()
+        val current = repository.tick()
+        dao.save(
+            current.copy(
+                progress = com.vpet.waifu.domain.PetProgress(
+                    money = current.progress.money + money,
+                    exp = com.vpet.waifu.domain.Progression.expForLevel(level),
+                ),
+            ).toEntity(),
+        )
+    }
 
     /**
      * Works shifts until she can afford [target].

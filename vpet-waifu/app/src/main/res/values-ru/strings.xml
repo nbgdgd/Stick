@@ -99,4 +99,118 @@
 
     <string name="widget_description">Питомец, её статы и уход в одно касание.</string>
     <string name="widget_pet_description">Питомец</string>
+
+    <!-- Permanent upgrades -->
+    <string name="section_room">Её комната</string>
+    <string name="section_gear">Снаряжение</string>
+    <string name="section_outfits">Наряды</string>
+    <string name="upgrade_owned">Куплено</string>
+    <string name="action_wear">Надеть</string>
+    <string name="action_worn">На ней</string>
+    <string name="upgrade_fridge">Полный холодильник</string>
+    <string name="upgrade_bed">Нормальная кровать</string>
+    <string name="upgrade_console">Игровая приставка</string>
+    <string name="upgrade_cat">Кот</string>
+    <string name="upgrade_coffee_machine">Кофемашина</string>
+    <string name="upgrade_laptop">Ноутбук помощнее</string>
+    <string name="upgrade_textbooks">Хорошие учебники</string>
+    <string name="upgrade_studio">Домашняя студия</string>
+    <string name="upgrade_outfit_uniform">Школьная форма</string>
+    <string name="upgrade_outfit_cocoa">Какао</string>
+    <string name="upgrade_outfit_mint">Мята</string>
+    <string name="upgrade_outfit_sakura">Сакура</string>
+    <string name="upgrade_outfit_midnight">Полночь</string>
+    <string name="upgrade_outfit_gold">Золото</string>
+    <string name="effect_hunger_slower">медленнее голодает</string>
+    <string name="effect_energy_slower">медленнее устаёт</string>
+    <string name="effect_sleep_faster">лучше высыпается</string>
+    <string name="effect_pay_more">больше зарабатывает</string>
+    <string name="effect_study_more">быстрее учится</string>
+    <string name="effect_play_more">игры радуют сильнее</string>
+    <string name="effect_neglect_less">меньше скучает</string>
+    <string name="effect_cosmetic">просто красиво</string>
+
+    <!-- Events -->
+    <string name="event_title_lucky_day">Удачный день</string>
+    <string name="event_title_cold">Простуда</string>
+    <string name="event_title_letter">Письмо</string>
+    <string name="event_title_inspired">Вдохновение</string>
+    <string name="event_title_restless">Плохая ночь</string>
+    <string name="event_lucky_day">Сегодня всё складывается: и работа, и учёба приносят больше.</string>
+    <string name="event_cold">Она простыла. До завтра быстрее устаёт и хуже работает.</string>
+    <string name="event_letter">Конверт без обратного адреса, а внутри — деньги.</string>
+    <string name="event_inspired">Что-то щёлкнуло. Сегодня учёба усваивается гораздо лучше.</string>
+    <string name="event_restless">Она почти не спала. День начинается уставшим.</string>
+
+    <!-- Notifications -->
+    <string name="notify_channel_name">Твой питомец</string>
+    <string name="notify_channel_description">Окончание смен и когда ей что-то нужно.</string>
+    <string name="notify_shift_title">%1$s вернулась</string>
+    <string name="notify_shift_body">Заработала %1$d ¥. Загляни, чтобы посмотреть, как прошло.</string>
+    <string name="notify_hungry_title">%1$s голодна</string>
+    <string name="notify_hungry_body">Если её так оставить, настроение начнёт падать.</string>
+    <string name="notify_tired_title">%1$s вымоталась</string>
+    <string name="notify_tired_body">Пока не поспит, никуда её отправить не выйдет.</string>
+    <string name="notify_event_title">Кое-что случилось</string>
+
+    <!-- Her -->
+    <string name="name_title">Её имя</string>
+    <string name="name_hint">Как её звать</string>
+    <string name="action_save">Сохранить</string>
+    <string name="settings_sound">Звук</string>
+    <string name="settings_haptics">Вибрация</string>
+    <string name="settings_notifications">Уведомления</string>
+
+    <!-- What she says. Three phrasings each, chosen by Dialogue. -->
+    <string name="say_idle_0">Ну что, чем займёмся?</string>
+    <string name="say_idle_1">Я тут, если что.</string>
+    <string name="say_idle_2">Сегодня тихо и хорошо.</string>
+    <string name="say_hungry_0">Я бы что-нибудь съела…</string>
+    <string name="say_hungry_1">В холодильнике что-нибудь осталось?</string>
+    <string name="say_hungry_2">Живот опять урчит.</string>
+    <string name="say_starving_0">Я вообще-то умираю с голоду!</string>
+    <string name="say_starving_1">Ну пожалуйста. Хоть онигири.</string>
+    <string name="say_starving_2">Не могу думать ни о чём, кроме еды.</string>
+    <string name="say_tired_0">Глаза сами закрываются…</string>
+    <string name="say_tired_1">Может, вздремнуть немножко?</string>
+    <string name="say_tired_2">На сегодня во мне ничего не осталось.</string>
+    <string name="say_sleeping_0">…з-з-з…</string>
+    <string name="say_sleeping_1">…м-м, ещё пять минуточек…</string>
+    <string name="say_sleeping_2">…з-з-з… не уходи…</string>
+    <string name="say_working_0">Работаю, работаю…</string>
+    <string name="say_working_1">Почти дожала этот кусок.</string>
+    <string name="say_working_2">Не отвлекай, я сосредоточилась!</string>
+    <string name="say_studying_0">…вот поэтому оно так и работает.</string>
+    <string name="say_studying_1">Ещё страничка — и я поняла.</string>
+    <string name="say_studying_2">Это сложнее, чем казалось.</string>
+    <string name="say_playing_0">Ха! Попала!</string>
+    <string name="say_playing_1">Быстрее, быстрее!</string>
+    <string name="say_playing_2">Ещё разок, ну давай.</string>
+    <string name="say_just_fed_0">М-м, вкусно.</string>
+    <string name="say_just_fed_1">Спасибо! Как раз вовремя.</string>
+    <string name="say_just_fed_2">Ты всегда угадываешь момент.</string>
+    <string name="say_same_meal_again_0">Опять оно? Серьёзно?</string>
+    <string name="say_same_meal_again_1">Мне это уже снится.</string>
+    <string name="say_same_meal_again_2">Что-нибудь другое совсем никак?</string>
+    <string name="say_petted_0">Эхехе…</string>
+    <string name="say_petted_1">Ещё, пожалуйста.</string>
+    <string name="say_petted_2">Осторожно, причёску испортишь.</string>
+    <string name="say_welcome_back_0">О, ты вернулся!</string>
+    <string name="say_welcome_back_1">Ну наконец-то. Я скучала.</string>
+    <string name="say_welcome_back_2">Я уже думала, куда ты пропал.</string>
+    <string name="say_missed_you_0">И где ты был всё это время?</string>
+    <string name="say_missed_you_1">Я думала, ты про меня забыл.</string>
+    <string name="say_missed_you_2">Ты вообще представляешь, сколько прошло?</string>
+    <string name="say_payday_0">Капает!</string>
+    <string name="say_payday_1">Ещё немножко монеток.</string>
+    <string name="say_payday_2">А неплохо идёт, между прочим.</string>
+    <string name="say_level_up_0">У меня начинает получаться!</string>
+    <string name="say_level_up_1">Видел? Видел?</string>
+    <string name="say_level_up_2">Только вперёд.</string>
+    <string name="say_event_0">Слушай, тут сегодня кое-что случилось.</string>
+    <string name="say_event_1">Тебе это будет интересно.</string>
+    <string name="say_event_2">Угадай что?</string>
+    <string name="say_content_0">Всё как надо.</string>
+    <string name="say_content_1">Мне хорошо. Просто хорошо.</string>
+    <string name="say_content_2">Вот такие дни — самые лучшие.</string>
 </resources>

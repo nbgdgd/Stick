@@ -42,6 +42,7 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.accentFor
 import com.vpet.waifu.ui.character.AnimatedPet
+import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.components.StatBarTrack
 import com.vpet.waifu.ui.components.StatRow
 import com.vpet.waifu.ui.formatRemaining
@@ -106,6 +107,7 @@ fun PetBubble(
         ) {
             AnimatedPet(
                 state = state,
+                palette = PetPalette.forOutfit(snapshot.outfit),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(3.dp),

@@ -52,8 +52,9 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         // flag and keeps the session handling below free of null checks.
         val occupation = if (snapshot.isBusy) snapshot.occupation else null
         val busy = occupation != null
+        val mods = snapshot.modifiers()
 
-        val hungerRate = tuning.hungerDecayPerMinute *
+        val hungerRate = tuning.hungerDecayPerMinute * mods.hungerDecay *
             (if (busy) tuning.busyHungerMultiplier else 1f) *
             (if (snapshot.hasEffect(EffectKind.HUNGER_SURGE, clock)) tuning.hungerSurgeMultiplier else 1f)
 
@@ -61,17 +62,20 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             if (snapshot.hasEffect(EffectKind.EXHAUSTION, clock)) tuning.exhaustionMultiplier else 1f
 
         val energyDelta = when (snapshot.activity) {
-            PetActivity.SLEEPING -> tuning.energyRecoveryPerMinute
+            PetActivity.SLEEPING -> tuning.energyRecoveryPerMinute * mods.sleepSpeed
             PetActivity.WORKING, PetActivity.STUDYING ->
-                -(occupation?.energyPerMinute ?: tuning.energyDecayPerMinute) * exhaustion
+                -(occupation?.energyPerMinute ?: tuning.energyDecayPerMinute) *
+                    exhaustion * mods.energyDecay
             // The mini-game is played in short bursts; it costs energy per tap,
             // not per minute, so idling on the game screen is not a drain.
-            PetActivity.PLAYING, PetActivity.AWAKE -> -tuning.energyDecayPerMinute * exhaustion
+            PetActivity.PLAYING, PetActivity.AWAKE ->
+                -tuning.energyDecayPerMinute * exhaustion * mods.energyDecay
         }
 
+        // Per job, not per kind: the whole point of the catalog is that a shift
+        // at the cafe leaves her cheerful and one at the office does not.
         val activityMoodCost = when (snapshot.activity) {
-            PetActivity.WORKING -> tuning.workMoodPerMinute
-            PetActivity.STUDYING -> tuning.studyMoodPerMinute
+            PetActivity.WORKING, PetActivity.STUDYING -> occupation?.moodPerMinute ?: 0f
             else -> 0f
         }
 
@@ -81,11 +85,12 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 mood = stats.mood,
                 hunger = stats.hunger,
                 energy = stats.energy,
-                minutesSinceInteraction = minutesBetween(interactionAnchor, clock),
+                minutesSinceInteraction = minutesBetween(interactionAnchor, clock) * mods.neglect,
             ) - activityMoodCost,
         ).let { PetStats.coerced(it.hunger, it.energy, it.mood) }
 
         var next = snapshot.copy(stats = stats)
+        next = rollEvent(next, clock)
 
         // She gets up by herself once she is fully rested.
         if (next.isSleeping && stats.energy >= PetStats.MAX) {
@@ -118,6 +123,35 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     }
 
     /**
+     * The day's event, landing at most once.
+     *
+     * Whether a day carries one is a pure function of the day number, so it
+     * does not matter which of the four drivers reaches a given day first —
+     * they all agree. Storing it is what makes it *land*: its instant effects
+     * are applied here, and it stays on the snapshot until the day rolls over.
+     */
+    private fun rollEvent(snapshot: PetSnapshot, clock: Long): PetSnapshot {
+        val day = Events.dayOf(clock)
+        if (snapshot.event?.day == day) return snapshot
+
+        val kind = Events.forDay(day)
+            ?: return if (snapshot.event == null) snapshot else snapshot.copy(event = null)
+
+        return snapshot.copy(
+            event = PetEvent(kind, day),
+            progress = snapshot.progress.plus(money = kind.instantMoney()),
+            stats = snapshot.stats.adjusted(energyBy = kind.instantEnergy()),
+        )
+    }
+
+    /** Marks the day's event as read, so it stops being announced. */
+    fun acknowledgeEvent(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        val event = snapshot.event ?: return snapshot
+        if (event.acknowledged) return snapshot
+        return snapshot.copy(event = event.copy(seenAt = nowMillis))
+    }
+
+    /**
      * One minute of wages.
      *
      * Pay is earned as the shift is worked rather than handed over at the end,
@@ -128,6 +162,7 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
      */
     private fun accrue(snapshot: PetSnapshot, occupation: Occupation): PetSnapshot {
         val session = snapshot.session ?: return snapshot
+        val mods = snapshot.modifiers()
         val rate = multiplierFor(qualityFor(snapshot.stats.mood), occupation.kind)
         val perMinute = occupation.payout.toFloat() / occupation.durationMinutes * rate
 
@@ -135,10 +170,10 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         var exp = session.accruedExp
         when (occupation.kind) {
             OccupationKind.WORK -> {
-                pay += perMinute
-                exp += tuning.workExpPerMinute
+                pay += perMinute * mods.pay
+                exp += tuning.workExpPerMinute * mods.study
             }
-            OccupationKind.STUDY -> exp += perMinute
+            OccupationKind.STUDY -> exp += perMinute * mods.study
         }
 
         val payDue = pay.toInt() - session.paidOut
@@ -313,11 +348,12 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         // Not gated on still being PLAYING: a round can outlive the screen that
         // started it, and the score should still count when it comes back.
         if (score <= 0 && current.activity != PetActivity.PLAYING) return current
+        val mods = current.modifiers()
         return current.copy(
             activity = PetActivity.AWAKE,
             stats = current.stats.adjusted(
                 energyBy = -TapGame.energyCost(score),
-                moodBy = TapGame.moodGain(score),
+                moodBy = TapGame.moodGain(score) * mods.play,
             ),
             progress = current.progress.plus(money = TapGame.coins(score)),
             lastInteractionAt = nowMillis,
@@ -349,6 +385,13 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             ShopCategory.PILL -> tuning.celebrateEmoteMillis
         }
 
+        // Feeding her the same thing over and over is something she notices.
+        val repeated = if (item.category == ShopCategory.FOOD) {
+            if (current.lastMealId == item.id) current.repeatedMeals + 1 else 1
+        } else {
+            current.repeatedMeals
+        }
+
         return current.copy(
             stats = current.stats.adjusted(
                 hungerBy = item.hunger,
@@ -358,7 +401,37 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             progress = current.progress.plus(money = item.money - item.price, exp = item.exp),
             effects = effects,
             lastInteractionAt = nowMillis,
+            lastMealId = if (item.category == ShopCategory.FOOD) item.id else current.lastMealId,
+            repeatedMeals = repeated,
         ).withEmote(emote, nowMillis, emoteMillis)
+    }
+
+    /**
+     * Buys something permanent.
+     *
+     * Unlike everything else in the shop this is not consumed, so it is the
+     * only purchase that is worth saving for rather than spending on.
+     */
+    fun buyUpgrade(snapshot: PetSnapshot, upgrade: Upgrade, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        if (!current.canBuy(upgrade)) return current
+        return current.copy(
+            progress = current.progress.plus(money = -upgrade.price),
+            owned = current.owned + upgrade.id,
+            // Buying an outfit puts it on; there is no reason to make the
+            // player then find it in a list and tap it again.
+            outfit = if (upgrade.kind == UpgradeKind.OUTFIT) upgrade.id else current.outfit,
+            lastInteractionAt = nowMillis,
+        ).withEmote(Emote.CELEBRATING, nowMillis, tuning.celebrateEmoteMillis)
+    }
+
+    /** Changes into an outfit she already owns. */
+    fun wear(snapshot: PetSnapshot, upgradeId: String, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        val upgrade = Upgrades.byId(upgradeId) ?: return current
+        if (upgrade.kind != UpgradeKind.OUTFIT || !current.owns(upgradeId)) return current
+        return current.copy(outfit = upgradeId, lastInteractionAt = nowMillis)
+            .withEmote(Emote.LOVED, nowMillis, tuning.lovedEmoteMillis)
     }
 
     // --- mood ----------------------------------------------------------------

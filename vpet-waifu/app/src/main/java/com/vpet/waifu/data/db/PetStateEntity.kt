@@ -13,6 +13,9 @@ import com.vpet.waifu.domain.PetActivity
 import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetStats
+import com.vpet.waifu.domain.EventKind
+import com.vpet.waifu.domain.PetEvent
+import com.vpet.waifu.domain.Upgrades
 
 /**
  * The single row that is the save file.
@@ -43,6 +46,14 @@ data class PetStateEntity(
     val sessionPaidExp: Int = 0,
     /** `KIND:expiresAt` pairs, comma separated. */
     val effects: String = "",
+    /** Permanently owned upgrade ids, comma separated. */
+    val owned: String = Upgrades.DEFAULT_OUTFIT,
+    val outfit: String = Upgrades.DEFAULT_OUTFIT,
+    val eventKind: String? = null,
+    val eventDay: Long = 0,
+    val eventSeenAt: Long = 0,
+    val lastMealId: String? = null,
+    val repeatedMeals: Int = 0,
     val outcomeOccupationId: String? = null,
     val outcomeKind: String? = null,
     val outcomeMoney: Int = 0,
@@ -92,6 +103,11 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
     emoteUntil = emoteUntil,
     lastTickAt = lastTickAt,
     lastInteractionAt = lastInteractionAt,
+    owned = decodeIds(owned) + Upgrades.DEFAULT_OUTFIT,
+    outfit = outfit.takeIf { Upgrades.byId(it) != null } ?: Upgrades.DEFAULT_OUTFIT,
+    event = enumOrNull<EventKind>(eventKind)?.let { PetEvent(it, eventDay, eventSeenAt) },
+    lastMealId = lastMealId,
+    repeatedMeals = repeatedMeals.coerceAtLeast(0),
 )
 
 fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
@@ -120,7 +136,17 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     outcomeAt = lastOutcome?.completedAt ?: 0,
     emote = emote?.name,
     emoteUntil = emoteUntil,
+    owned = owned.joinToString(","),
+    outfit = outfit,
+    eventKind = event?.kind?.name,
+    eventDay = event?.day ?: 0,
+    eventSeenAt = event?.seenAt ?: 0,
+    lastMealId = lastMealId,
+    repeatedMeals = repeatedMeals,
 )
+
+private fun decodeIds(raw: String): Set<String> =
+    raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
 
 private fun encodeEffects(effects: List<ActiveEffect>): String =
     effects.joinToString(",") { "${it.kind.name}:${it.expiresAt}" }

@@ -86,9 +86,9 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState
-                    .distinctUntilChanged { old, new -> old.bubbleEnabled == new.bubbleEnabled }
+                    .distinctUntilChanged { old, new -> old.settings.bubbleEnabled == new.settings.bubbleEnabled }
                     .collect { state ->
-                        if (state.bubbleEnabled && OverlayPermission.isGranted(this@MainActivity)) {
+                        if (state.settings.bubbleEnabled && OverlayPermission.isGranted(this@MainActivity)) {
                             PetOverlayService.start(this@MainActivity)
                         } else {
                             PetOverlayService.stop(this@MainActivity)

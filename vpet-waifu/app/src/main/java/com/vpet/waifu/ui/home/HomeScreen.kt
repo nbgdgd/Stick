@@ -22,25 +22,38 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
+import com.vpet.waifu.data.PetPreferences
+import com.vpet.waifu.data.PetSettings
+import com.vpet.waifu.domain.Dialogue
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.components.ActionButton
+import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.components.EffectChip
+import com.vpet.waifu.ui.components.EventCard
 import com.vpet.waifu.ui.components.GainPop
 import com.vpet.waifu.ui.components.LevelRing
 import com.vpet.waifu.ui.components.MoneyPill
@@ -50,7 +63,9 @@ import com.vpet.waifu.ui.components.PetStage
 import com.vpet.waifu.ui.components.PrimaryButton
 import com.vpet.waifu.ui.components.StatBarTrack
 import com.vpet.waifu.ui.components.StatRow
+import com.vpet.waifu.ui.components.SpeechBubble
 import com.vpet.waifu.ui.components.StatusChip
+import com.vpet.waifu.ui.dialogueRes
 import com.vpet.waifu.ui.formatRemaining
 import com.vpet.waifu.ui.occupationEmoji
 import com.vpet.waifu.ui.occupationNameRes
@@ -68,17 +83,25 @@ fun HomeScreen(
     snapshot: PetSnapshot,
     tuning: PetTuning,
     nowMillis: Long,
-    bubbleEnabled: Boolean,
+    settings: PetSettings,
     overlayPermissionGranted: Boolean,
     onGrantOverlayPermission: () -> Unit,
     onBubbleEnabledChange: (Boolean) -> Unit,
+    onSoundChange: (Boolean) -> Unit,
+    onHapticsChange: (Boolean) -> Unit,
+    onNotificationsChange: (Boolean) -> Unit,
+    onNameChange: (String) -> Unit,
     onFeed: () -> Unit,
     onPet: () -> Unit,
     onToggleSleep: () -> Unit,
     onCancelOccupation: () -> Unit,
+    onDismissEvent: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state = snapshot.state(nowMillis, tuning)
+    val line = remember(snapshot, nowMillis / 5_000L) {
+        Dialogue.lineFor(snapshot, nowMillis, tuning)
+    }
 
     Column(
         modifier = modifier
@@ -87,14 +110,25 @@ fun HomeScreen(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Header(snapshot)
+        Header(snapshot, settings.petName)
 
         Box {
-            PetStage(state = state, height = 320.dp)
+            PetStage(
+                state = state,
+                height = 320.dp,
+                palette = PetPalette.forOutfit(snapshot.outfit),
+            )
             StatusChip(
                 text = stringResource(stateLabelRes(state)),
                 dot = statusDot(state),
                 modifier = Modifier.padding(14.dp),
+            )
+            // She talks. One line, over her head, changing with the situation.
+            SpeechBubble(
+                text = stringResource(dialogueRes(line)),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 56.dp),
             )
             // Every minute she is on the clock, what she just earned floats up
             // off her. Wages arriving during the shift is the whole point of
@@ -113,17 +147,25 @@ fun HomeScreen(
             }
         }
 
+        snapshot.event?.takeIf { !it.acknowledged }?.let { event ->
+            EventCard(event, onDismissEvent)
+        }
+
         AnimatedVisibility(visible = snapshot.isBusy) {
             SessionCard(snapshot, nowMillis, onCancelOccupation)
         }
 
         StatsCard(snapshot)
         CareRow(snapshot, tuning, onFeed, onPet, onToggleSleep)
-        BubbleCard(
-            bubbleEnabled = bubbleEnabled,
+        SettingsCard(
+            settings = settings,
             overlayPermissionGranted = overlayPermissionGranted,
             onGrantOverlayPermission = onGrantOverlayPermission,
             onBubbleEnabledChange = onBubbleEnabledChange,
+            onSoundChange = onSoundChange,
+            onHapticsChange = onHapticsChange,
+            onNotificationsChange = onNotificationsChange,
+            onNameChange = onNameChange,
         )
         Spacer(Modifier.height(4.dp))
     }
@@ -137,7 +179,7 @@ private fun statusDot(state: PetState): Color = when (state) {
 }
 
 @Composable
-private fun Header(snapshot: PetSnapshot) {
+private fun Header(snapshot: PetSnapshot, petName: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -146,10 +188,12 @@ private fun Header(snapshot: PetSnapshot) {
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.app_name),
+                text = petName.ifBlank { stringResource(R.string.app_name) },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Accents.Text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = stringResource(R.string.level_label, snapshot.level),
@@ -290,64 +334,150 @@ private fun CareRow(
 }
 
 @Composable
-private fun BubbleCard(
-    bubbleEnabled: Boolean,
+private fun SettingsCard(
+    settings: PetSettings,
     overlayPermissionGranted: Boolean,
     onGrantOverlayPermission: () -> Unit,
     onBubbleEnabledChange: (Boolean) -> Unit,
+    onSoundChange: (Boolean) -> Unit,
+    onHapticsChange: (Boolean) -> Unit,
+    onNotificationsChange: (Boolean) -> Unit,
+    onNameChange: (String) -> Unit,
 ) {
     PanelCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Accents.Primary.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("🫧", fontSize = 19.sp)
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.bubble_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Accents.Text,
-                    )
-                    Text(
-                        text = stringResource(R.string.bubble_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Accents.TextMuted,
-                    )
-                }
-                Switch(
-                    checked = bubbleEnabled && overlayPermissionGranted,
-                    onCheckedChange = onBubbleEnabledChange,
-                    enabled = overlayPermissionGranted,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = Accents.Primary,
-                        uncheckedTrackColor = Surfaces.Track,
-                        uncheckedBorderColor = Surfaces.Divider,
-                    ),
-                )
-            }
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            NameField(settings.petName, onNameChange)
+
+            SettingRow(
+                emoji = "\uD83E\uDEE7",
+                title = stringResource(R.string.bubble_title),
+                subtitle = stringResource(R.string.bubble_subtitle),
+                checked = settings.bubbleEnabled && overlayPermissionGranted,
+                enabled = overlayPermissionGranted,
+                onCheckedChange = onBubbleEnabledChange,
+            )
 
             if (!overlayPermissionGranted) {
-                Spacer(Modifier.height(12.dp))
                 Text(
                     text = stringResource(R.string.overlay_permission_rationale),
                     style = MaterialTheme.typography.bodySmall,
                     color = Accents.Danger,
                 )
-                Spacer(Modifier.height(10.dp))
                 PrimaryButton(
                     text = stringResource(R.string.action_grant_overlay),
                     onClick = onGrantOverlayPermission,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+
+            SettingRow(
+                emoji = "\uD83D\uDD14",
+                title = stringResource(R.string.settings_notifications),
+                checked = settings.notificationsEnabled,
+                onCheckedChange = onNotificationsChange,
+            )
+            SettingRow(
+                emoji = "\uD83D\uDD0A",
+                title = stringResource(R.string.settings_sound),
+                checked = settings.soundEnabled,
+                onCheckedChange = onSoundChange,
+            )
+            SettingRow(
+                emoji = "\uD83D\uDCF3",
+                title = stringResource(R.string.settings_haptics),
+                checked = settings.hapticsEnabled,
+                onCheckedChange = onHapticsChange,
+            )
         }
+    }
+}
+
+/**
+ * Naming her.
+ *
+ * Held locally while it is being typed and committed on the button, rather than
+ * written on every keystroke: the name reaches notifications and the header, and
+ * watching those redraw letter by letter is unpleasant.
+ */
+@Composable
+private fun NameField(current: String, onNameChange: (String) -> Unit) {
+    var draft by rememberSaveable(current) { mutableStateOf(current) }
+    val dirty = draft.trim() != current
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = draft,
+            onValueChange = { if (it.length <= PetPreferences.MAX_NAME_LENGTH) draft = it },
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            label = { Text(stringResource(R.string.name_title)) },
+            placeholder = { Text(stringResource(R.string.name_hint)) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Accents.Text,
+                unfocusedTextColor = Accents.Text,
+                focusedBorderColor = Accents.Primary,
+                unfocusedBorderColor = Surfaces.Divider,
+                focusedLabelColor = Accents.Primary,
+                unfocusedLabelColor = Accents.TextDim,
+                cursorColor = Accents.Bright,
+            ),
+        )
+        AnimatedVisibility(visible = dirty) {
+            Row {
+                Spacer(Modifier.width(10.dp))
+                PrimaryButton(
+                    text = stringResource(R.string.action_save),
+                    onClick = { onNameChange(draft) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingRow(
+    emoji: String,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    subtitle: String? = null,
+    enabled: Boolean = true,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(Accents.Primary.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(emoji, fontSize = 17.sp)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = Accents.Text,
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Accents.TextMuted,
+                )
+            }
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Accents.Primary,
+                uncheckedTrackColor = Surfaces.Track,
+                uncheckedBorderColor = Surfaces.Divider,
+            ),
+        )
     }
 }

@@ -13,12 +13,17 @@ class TikTokLoginViewModel @Inject constructor(
     private val sessionRepository: TikTokSessionRepository,
 ) : ViewModel() {
 
-    private var saved = false
+    /** Last value written, so repeated captures don't spam DataStore… */
+    private var lastSaved: String? = null
 
-    /** Save once — onPageFinished can fire repeatedly as TikTok redirects. */
+    /**
+     * Save the cookie header. Called repeatedly by the poller/callbacks, so it
+     * skips no-op writes but still persists a *refreshed* cookie (TikTok rotates
+     * these during login — an earlier "save once" guard dropped the final value).
+     */
     fun saveSession(cookieHeader: String, onSaved: () -> Unit) {
-        if (saved) return
-        saved = true
+        if (cookieHeader == lastSaved) return
+        lastSaved = cookieHeader
         viewModelScope.launch {
             sessionRepository.save(cookieHeader)
             onSaved()

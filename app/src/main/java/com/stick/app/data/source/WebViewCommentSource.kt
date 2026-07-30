@@ -77,6 +77,9 @@ class WebViewCommentSource(
                 databaseEnabled = true
                 loadWithOverviewMode = true
                 useWideViewPort = true
+                // Desktop site needs a desktop-width viewport to lay out the
+                // comment panel at all.
+                setSupportZoom(false)
                 userAgentString = CHROME_UA
                 blockNetworkImage = false
                 loadsImagesAutomatically = true
@@ -228,12 +231,18 @@ class WebViewCommentSource(
     private companion object {
         const val TAG = "StickDiag"
         const val SOURCE_ID = "tiktok-webview"
-        const val VIEW_W = 1080
+        const val VIEW_W = 1600
         const val VIEW_H = 2400
         val ASSET_ID_REGEX = Regex("""/([0-9a-f]{32})""")
+        /**
+         * Desktop UA, not mobile. A device log showed the mobile page loading with
+         * only 8 images and apiHits=0 — TikTok's mobile web never fetches comments
+         * at all, it just offers to open the app. The desktop layout renders the
+         * comment list and issues the /api/comment/ requests we capture.
+         */
         const val CHROME_UA =
-            "Mozilla/5.0 (Linux; Android 14; SM-G991B) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
         /**
          * Wraps fetch/XHR so sticker URLs can be read straight out of the comment

@@ -131,20 +131,33 @@ func scatter_props() -> void:
 			var junk := world.scrap_field[i]
 			var above := world.elevation[i] - sea
 
+			# Смесь пропов по типу грунта. Растительность нарочно редкая: остров —
+			# полигон списания, и лес на нём читался бы как обычный тропический
+			# остров, а не как свалка.
 			var key := ""
 			var chance := 0.0
+			var vegetation := false
 			if kind == WorldGen.DUMP or junk > 0.70:
-				key = "prop_scrap"
-				chance = 0.11
+				chance = 0.13
+				var roll := rng.randf()
+				key = "prop_scrap" if roll < 0.55 else ("prop_crane" if roll < 0.80 else "prop_debris")
 			elif kind == WorldGen.HILL or above > 0.28:
-				key = "prop_rock"
 				chance = 0.06
+				key = "prop_rock"
 			elif kind == WorldGen.SAND:
-				key = "prop_wreck"
-				chance = 0.035
+				chance = 0.04
+				key = "prop_wreck" if rng.chance(0.7) else "prop_fence"
 			else:
-				key = "prop_debris"
-				chance = 0.045
+				chance = 0.022
+				var roll2 := rng.randf()
+				if roll2 < 0.40:
+					key = "prop_trees"
+					vegetation = true
+				elif roll2 < 0.75:
+					key = "prop_bush"
+					vegetation = true
+				else:
+					key = "prop_debris"
 			if not rng.chance(chance):
 				continue
 
@@ -154,9 +167,13 @@ func scatter_props() -> void:
 			s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			s.position = world.world_pos(Vector2i(tile_x, tile_y)) \
 				+ Vector2(rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0))
-			s.scale = Vector2.ONE * rng.randf_range(1.3, 2.3)
-			s.rotation = rng.randf_range(0.0, TAU) if key != "prop_wreck" else 0.0
-			s.modulate = Color(1, 1, 1).lerp(Color(0.72, 0.68, 0.62), rng.randf() * 0.5)
+			s.scale = Vector2.ONE * rng.randf_range(0.85, 1.35)
+			# Спрайты Kenney нарисованы «лицом вверх» — вращать их нельзя.
+			s.rotation = 0.0
+			# Ассеты Kenney насыщеннее приглушённого террейна — сажаю их в тон,
+			# иначе пропы висят яркими наклейками поверх карты.
+			var tone := Color(0.70, 0.80, 0.66) if vegetation else Color(0.76, 0.72, 0.66)
+			s.modulate = Color(1, 1, 1).lerp(tone, 0.35 + rng.randf() * 0.45)
 			props.add_child(s)
 			placed += 1
 		if placed >= budget:
@@ -175,7 +192,7 @@ func _add_marker(s: Settlement) -> void:
 	var m := SettlementMarker.new()
 	add_child(m)
 	var f := world.faction(s.faction_id)
-	m.bind(s, f.color if f != null else Color.WHITE)
+	m.bind(s, f.color if f != null else Color.WHITE, f.sprite_set if f != null else "blue")
 	m.selected = s.id == selected_id
 	markers[s.id] = m
 
@@ -192,8 +209,9 @@ func refresh() -> void:
 			var m: SettlementMarker = markers[s.id]
 			var f := world.faction(s.faction_id)
 			var color := f.color if f != null else Color.WHITE
-			if color != m.faction_color:
-				m.bind(s, color)
+			var set_name := f.sprite_set if f != null else "blue"
+			if color != m.faction_color or set_name != m.sprite_set:
+				m.bind(s, color, set_name)
 			m.selected = s.id == selected_id
 			m.refresh()
 	for key in markers.keys():

@@ -83,7 +83,6 @@ func _set_units(s: Settlement, desired: int) -> void:
 	while list.size() > desired:
 		pool.release(list.pop_back())
 	var faction := world.faction(s.faction_id)
-	var color := faction.color if faction != null else Color.WHITE
 	while list.size() < desired:
 		var u := pool.acquire()
 		if u == null:
@@ -94,8 +93,8 @@ func _set_units(s: Settlement, desired: int) -> void:
 			kind = Tier1Unit.Kind.HAULER
 		elif roll == 4 and s.military_strength > 1.0:
 			kind = Tier1Unit.Kind.GUARD
-		u.configure(kind, s.id, s.pos, pop_per_unit, SimRng.hash_seed(world.world_seed, s.id * 131 + list.size()))
-		u.tint(color)
+		u.configure(kind, s.id, s.pos, pop_per_unit, SimRng.hash_seed(world.world_seed, s.id * 131 + list.size()),
+			faction.sprite_set if faction != null else "blue")
 		list.append(u)
 	_assigned[s.id] = list
 	for u: Tier1Unit in list:
@@ -129,7 +128,9 @@ func _sync_battles() -> void:
 				return
 			var attacker := i % 2 == 0
 			var kind := Tier1Unit.Kind.SOLDIER if attacker else Tier1Unit.Kind.GUARD
-			u.configure(kind, -1, pos, pop_per_unit, SimRng.hash_seed(world.world_seed, i * 977 + int(inv.get("target", 0))))
+			u.configure(kind, -1, pos, pop_per_unit,
+				SimRng.hash_seed(world.world_seed, i * 977 + int(inv.get("target", 0))),
+				"red" if attacker else "blue")
 			u.state = Tier1Unit.State.FIGHT
 			u.wander_radius = 60.0
 			u.target = pos + Vector2(randf_range(-40.0, 40.0), randf_range(-40.0, 40.0))

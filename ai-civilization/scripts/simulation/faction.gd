@@ -15,6 +15,12 @@ var alive: bool = true
 var color: Color = Color.WHITE
 var founded_day: int = 0
 
+## Какой набор спрайтов Kenney рисовать за эту фракцию: "blue" — совет,
+## "orange" — отделившиеся, "red" — материк. Хранится строкой, а не цветом,
+## потому что файлы ассетов подобраны наборами и оттенок между ними не
+## интерполируется.
+var sprite_set: String = "blue"
+
 # --- технологии ---
 var unlocked: Dictionary = {}
 var progress: Dictionary = {}
@@ -62,6 +68,7 @@ static func create_ai(p_id: int, p_name: String, p_color: Color, world_seed: int
 	f.name = p_name
 	f.color = p_color
 	f.founded_day = day
+	f.sprite_set = "blue" if p_id == 0 else "orange"
 	f.rng = SimRng.new(SimRng.hash_seed(world_seed, 100003 + p_id))
 	f.refresh_multipliers()
 	return f
@@ -72,7 +79,9 @@ static func create_human(p_id: int, world_seed: int) -> Faction:
 	f.id = p_id
 	f.name = "Человечество"
 	f.is_human = true
-	f.color = Color(0.85, 0.78, 0.42)
+	# Красный: и в HUD, и на спрайтах материк должен читаться как противник.
+	f.color = Color(0.88, 0.42, 0.36)
+	f.sprite_set = "red"
 	f.rng = SimRng.new(SimRng.hash_seed(world_seed, 777001))
 	f.population = Balance.num("human/start_population", 8200.0)
 	f.industry = Balance.num("human/start_industry", 1000.0)
@@ -153,6 +162,7 @@ func to_dict() -> Dictionary:
 		"last_refocus_day": last_refocus_day,
 		"story_mult": story_mult.duplicate(),
 		"policy": policy,
+		"sprite_set": sprite_set,
 		"at_war_with": at_war_with.duplicate(),
 		"war_score": war_score,
 		"battles_won": battles_won,
@@ -189,6 +199,7 @@ static func from_dict(d: Dictionary) -> Faction:
 	f.last_refocus_day = int(d.get("last_refocus_day", -999))
 	f.story_mult = (d.get("story_mult", {}) as Dictionary).duplicate()
 	f.policy = String(d.get("policy", "auto"))
+	f.sprite_set = String(d.get("sprite_set", "blue"))
 	f.at_war_with = (d.get("at_war_with", {}) as Dictionary).duplicate()
 	f.war_score = float(d.get("war_score", 0.0))
 	f.battles_won = int(d.get("battles_won", 0))

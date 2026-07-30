@@ -132,6 +132,12 @@ vec3 land_color(float h, float junk, vec2 uv, vec2 world_px) {
 	float shade = clamp(1.0 + (-dx - dy) * shade_strength, 0.55, 1.55);
 	col *= shade;
 
+	// Мелкое зерно грунта: текстура данных всего 192x192, и на близком зуме
+	// один тексель растягивается на десятки пикселей — без зерна поверхность
+	// читается как размытое пятно, а не как земля.
+	float grain = hash21(floor(world_px * 0.75));
+	col *= 0.94 + grain * 0.12;
+
 	// Тёмная кромка у самой воды — остров получает силуэт.
 	if (above < 0.006) {
 		col = mix(col, c_shore_line, 0.45);

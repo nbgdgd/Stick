@@ -15,7 +15,8 @@ extends Node2D
 enum Kind { WORKER, HAULER, GUARD, SOLDIER }
 enum State { IDLE, TO_TARGET, WORK, RETURN, FIGHT }
 
-const SPRITE_KEYS := ["unit_worker", "unit_hauler", "unit_guard", "unit_soldier"]
+## Вид техники по роли; набор (цвет фракции) подставляется отдельно.
+const KIND_NAMES := ["truck", "truck_load", "tank", "soldier"]
 
 var kind: int = Kind.WORKER
 var home_id: int = -1
@@ -27,6 +28,8 @@ var target: Vector2 = Vector2.ZERO
 var speed: float = 26.0
 var work_left: float = 0.0
 var wander_radius: float = 140.0
+
+var sprite_set: String = "blue"
 
 var _sprite: Sprite2D
 var _rng := RandomNumberGenerator.new()
@@ -40,14 +43,18 @@ func _ready() -> void:
 	set_process(false)
 
 
-func configure(p_kind: int, p_home_id: int, p_home_pos: Vector2, p_represents: float, seed_value: int) -> void:
+func configure(p_kind: int, p_home_id: int, p_home_pos: Vector2, p_represents: float, seed_value: int, p_sprite_set: String = "blue") -> void:
 	kind = p_kind
+	sprite_set = p_sprite_set
 	home_id = p_home_id
 	home_pos = p_home_pos
 	represents = p_represents
 	_rng.seed = seed_value
 	if _sprite != null:
-		_sprite.texture = Art.sprite(SPRITE_KEYS[clampi(kind, 0, SPRITE_KEYS.size() - 1)])
+		_sprite.texture = Art.unit(sprite_set, KIND_NAMES[clampi(kind, 0, KIND_NAMES.size() - 1)])
+		_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		# Техника 16 px рядом с постройкой в 2.4 масштаба должна быть мельче её.
+		_sprite.scale = Vector2.ONE * 0.85
 	speed = 26.0 + _rng.randf_range(-6.0, 10.0)
 	if kind == Kind.SOLDIER or kind == Kind.GUARD:
 		speed *= 1.25

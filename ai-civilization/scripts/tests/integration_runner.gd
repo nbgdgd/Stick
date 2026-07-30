@@ -114,10 +114,95 @@ func _process(_delta: float) -> bool:
 			game._on_rewound(game.sim.day())
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 
+		540:
+			_test_jitter_tap()
+		600:
+			_test_real_drag_is_not_tap()
+
 	if frames >= TOTAL_FRAMES:
 		_report()
 		return true
 	return false
+
+
+## Жалоба «вмешательства не работают» сводилась к распознаванию тапа: камера
+## копила длину ПУТИ пальца, а не смещение от точки нажатия, поэтому дрожание
+## на плотном экране отменяло тап тем вернее, чем дольше держишь палец.
+##
+## Порог берётся из самой камеры, а не задаётся числом: он зависит от DPI, и
+## тест обязан оставаться верным и на 95 ppi под xvfb, и на 461 ppi телефона.
+func _test_jitter_tap() -> void:
+	var capital = game.sim.world.capital_of(game.sim.world.council_id)
+	if capital == null:
+		return
+	var threshold: float = game.camera.tap_max_drift()
+	check(threshold > 0.0, "порог тапа нулевой")
+
+	var tapped_at := []
+	game.camera.tapped.connect(func(p: Vector2): tapped_at.append(p), CONNECT_ONE_SHOT)
+
+	# Дрожание: суммарный путь в пять порогов, но смещение всё время в пределах
+	# 60% порога. Старая логика отвергла бы такой тап, новая обязана принять.
+	var step := threshold * 0.5
+	var jitter: Array[Vector2] = []
+	for i in 10:
+		jitter.append(Vector2(step if i % 2 == 0 else -step, step * (0.4 if i % 3 == 0 else -0.4)))
+	var path := 0.0
+	for j in jitter:
+		path += j.length()
+	check(path > threshold * 4.0, "дрожание слишком слабое, тест ничего не проверяет (путь %.1f, порог %.1f)" % [path, threshold])
+
+	_send_touch(capital.pos, jitter)
+	check(tapped_at.size() == 1,
+		"дрожащий тап не распознан: путь %.1f при пороге смещения %.1f" % [path, threshold])
+
+
+## Обратная сторона: настоящее перетаскивание тапом считаться не должно, иначе
+## панорамирование карты будет случайно применять вмешательства.
+func _test_real_drag_is_not_tap() -> void:
+	var capital = game.sim.world.capital_of(game.sim.world.council_id)
+	if capital == null:
+		return
+	var threshold: float = game.camera.tap_max_drift()
+	var tapped_at := []
+	var cb := func(p: Vector2): tapped_at.append(p)
+	game.camera.tapped.connect(cb)
+
+	var far: Array[Vector2] = []
+	for i in 6:
+		far.append(Vector2(threshold * 1.5, 0.0))
+	_send_touch(capital.pos, far)
+
+	game.camera.tapped.disconnect(cb)
+	check(tapped_at.is_empty(),
+		"перетаскивание на %.1f единиц засчитано как тап" % (threshold * 9.0))
+
+
+func _send_touch(world_pos: Vector2, drags: Array[Vector2]) -> void:
+	# push_input с in_local_coords=true принимает координаты вьюпорта: иначе
+	# движок ещё раз поделит их на коэффициент растяжения canvas_items.
+	var vp := game.get_viewport()
+	var pos: Vector2 = game.camera.get_canvas_transform() * world_pos
+
+	var press := InputEventScreenTouch.new()
+	press.index = 0
+	press.pressed = true
+	press.position = pos
+	vp.push_input(press, true)
+
+	for d in drags:
+		var drag := InputEventScreenDrag.new()
+		drag.index = 0
+		drag.relative = d
+		pos += d
+		drag.position = pos
+		vp.push_input(drag, true)
+
+	var release := InputEventScreenTouch.new()
+	release.index = 0
+	release.pressed = false
+	release.position = pos
+	vp.push_input(release, true)
 
 
 func check(condition: bool, message: String) -> void:

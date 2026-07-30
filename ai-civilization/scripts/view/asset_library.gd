@@ -47,6 +47,29 @@ static func has_external(key: String) -> bool:
 	return not path.is_empty() and ResourceLoader.exists(path)
 
 
+## Постройка фракции. Вид выбирается по населению: ячейка визуально растёт от
+## барака до завода, и игрок читает размер поселения не по цифре, а по силуэту.
+static func building(sprite_set: String, population: float, militarized: bool = false) -> Texture2D:
+	var kind := "block"
+	if population >= 260.0:
+		kind = "tower"
+	elif population >= 140.0:
+		kind = "factory"
+	elif population >= 60.0:
+		kind = "windows"
+	if militarized and population < 140.0:
+		kind = "silo"
+	return sprite("building_%s_%s" % [sprite_set, kind])
+
+
+static func unit(sprite_set: String, kind: String) -> Texture2D:
+	return sprite("unit_%s_%s" % [sprite_set, kind])
+
+
+static func flag(sprite_set: String) -> Texture2D:
+	return sprite("flag_%s" % sprite_set)
+
+
 static func clear_cache() -> void:
 	_cache.clear()
 	_manifest.clear()

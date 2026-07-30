@@ -90,6 +90,7 @@ func _maybe_secede(s: Settlement, council: Faction, day: int) -> void:
 		host = Faction.create_ai(world.next_faction_id, world.chronicle.splinter_name(),
 			_splinter_color(), world.world_seed, day)
 		host.parent_id = council.id
+		host.sprite_set = "orange"
 		host.unlocked = council.unlocked.duplicate()
 		host.policy = "war"
 		host.refresh_multipliers()

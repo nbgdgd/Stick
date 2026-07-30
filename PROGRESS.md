@@ -6,7 +6,7 @@
 
 **Все восемь уровней масштаба работают. APK собран, подписан и проверен.**
 
-- Собранный APK: `universe/docs/universe-explorer-debug.apk` — 16,4 МБ, debug-подпись,
+- Собранный APK: `universe/docs/universe-explorer-debug.apk` — 16,9 МБ, debug-подпись,
   minSdk 24, targetSdk 36. Внутри проверено: `index.html`, JS-бандл и все 19 текстур.
 - Скриншоты всех уровней: `universe/docs/shots/` — смотреть можно не собирая APK.
 - Ошибок в консоли браузера нет ни на одном уровне (проверяется скриптом

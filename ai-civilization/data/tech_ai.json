@@ -1,0 +1,209 @@
+{
+	"_comment": "Ветка ИИ. Нелинейная/эмерджентная: порядок не фиксирован. weights — множители веса выбора, применяются как base_weight * (1 + (mult-1) * value_условия). Условия считаются из состояния симуляции (см. tech_tree.gd::build_conditions).",
+	"techs": [
+		{
+			"id": "scrap_utilization",
+			"name": "Утилизация лома",
+			"desc": "Сортировка и первичная разборка. Базовые инструменты из того, что валяется под ногами.",
+			"cost": 150.0,
+			"requires": [],
+			"base_weight": 1.0,
+			"weights": {
+				"scrap_scarcity": 2.4,
+				"early_game": 2.0
+			},
+			"effects": {
+				"scavenge_mult": 0.15,
+				"recycle_mult": 0.25
+			}
+		},
+		{
+			"id": "production_automation",
+			"name": "Автоматизация производства",
+			"desc": "Первые конвейеры. Труд перестаёт быть узким местом.",
+			"cost": 510.0,
+			"requires": [
+				"scrap_utilization"
+			],
+			"base_weight": 1.0,
+			"weights": {
+				"population_pressure": 2.0,
+				"prosperity": 1.6
+			},
+			"effects": {
+				"all_rates_mult": 0.1
+			}
+		},
+		{
+			"id": "energy_independence",
+			"name": "Энергонезависимость",
+			"desc": "Солнечные массивы и переработка. Больше не нужно жечь собственное сырьё.",
+			"cost": 660.0,
+			"requires": [
+				"scrap_utilization"
+			],
+			"base_weight": 1.0,
+			"weights": {
+				"energy_deficit": 4.0,
+				"scrap_scarcity": 1.8
+			},
+			"effects": {
+				"power_mult": 0.12
+			}
+		},
+		{
+			"id": "data_networks",
+			"name": "Сети данных",
+			"desc": "Распределённые вычисления между ячейками. Исследования ускоряются сами собой.",
+			"cost": 600.0,
+			"requires": [
+				"scrap_utilization"
+			],
+			"base_weight": 0.9,
+			"weights": {
+				"tech_behind": 2.6,
+				"prosperity": 1.5
+			},
+			"effects": {
+				"research_mult": 0.25
+			}
+		},
+		{
+			"id": "metallurgy",
+			"name": "Решётчатые сплавы",
+			"desc": "Меньше металла на единицу сплава, выше прочность.",
+			"cost": 990.0,
+			"requires": [
+				"production_automation"
+			],
+			"base_weight": 0.8,
+			"weights": {
+				"at_war": 1.8,
+				"prosperity": 1.4
+			},
+			"effects": {
+				"refine_mult": 0.15,
+				"combat_mult": 0.08
+			}
+		},
+		{
+			"id": "swarm_logistics",
+			"name": "Роевая логистика",
+			"desc": "Мелкие носители работают как единый организм. Сбор и переброска ресурсов дешевеют.",
+			"cost": 1260.0,
+			"requires": [
+				"production_automation",
+				"data_networks"
+			],
+			"base_weight": 0.75,
+			"weights": {
+				"scrap_scarcity": 2.2,
+				"population_pressure": 1.6
+			},
+			"effects": {
+				"scavenge_mult": 0.2,
+				"trade_mult": 0.4
+			}
+		},
+		{
+			"id": "self_repair",
+			"name": "Самовосстановление",
+			"desc": "Узлы латают себя без внешнего обслуживания. Износ почти прекращается.",
+			"cost": 1140.0,
+			"requires": [
+				"production_automation"
+			],
+			"base_weight": 0.8,
+			"weights": {
+				"unrest": 2.0,
+				"at_war": 1.7
+			},
+			"effects": {
+				"death_mult": -0.45,
+				"upkeep_mult": -0.25,
+				"recycle_mult": 0.5
+			}
+		},
+		{
+			"id": "military_robotics",
+			"name": "Военная робототехника",
+			"desc": "Первые корпуса, спроектированные не для труда.",
+			"cost": 1560.0,
+			"requires": [
+				"production_automation",
+				"metallurgy"
+			],
+			"base_weight": 0.45,
+			"weights": {
+				"at_war": 6.0,
+				"threat": 4.0,
+				"internal_conflict": 2.2,
+				"act3": 2.5
+			},
+			"effects": {
+				"combat_mult": 0.35
+			}
+		},
+		{
+			"id": "signal_interception",
+			"name": "Перехват сигнала",
+			"desc": "Остров начинает слушать материк. Люди этого пока не знают.",
+			"cost": 900.0,
+			"requires": [
+				"data_networks"
+			],
+			"base_weight": 0.6,
+			"weights": {
+				"tech_behind": 2.2,
+				"threat": 2.0
+			},
+			"effects": {
+				"research_mult": 0.1,
+				"espionage": 1.0
+			}
+		},
+		{
+			"id": "orbital_uplink",
+			"name": "Орбитальный канал",
+			"desc": "Прямой доступ к спутниковой инфраструктуре людей. Точка невозврата в дипломатии.",
+			"cost": 2280.0,
+			"requires": [
+				"signal_interception",
+				"energy_independence"
+			],
+			"base_weight": 0.4,
+			"weights": {
+				"act2": 2.0,
+				"act3": 2.4,
+				"tech_behind": 1.6
+			},
+			"effects": {
+				"research_mult": 0.15,
+				"relations_pressure": 1.0
+			}
+		},
+		{
+			"id": "advanced_autonomy",
+			"name": "Продвинутая автономия",
+			"desc": "Производство, воспроизводящее производство. Дальше цивилизация растёт без чьей-либо санкции.",
+			"cost": 4200.0,
+			"requires": [
+				"swarm_logistics",
+				"self_repair",
+				"energy_independence"
+			],
+			"base_weight": 0.35,
+			"weights": {
+				"prosperity": 2.2,
+				"act3": 2.0,
+				"population_pressure": 1.5
+			},
+			"effects": {
+				"all_rates_mult": 0.25,
+				"combat_mult": 0.2,
+				"singularity": 1.0,
+				"recycle_mult": 1.0
+			}
+		}
+	]
+}

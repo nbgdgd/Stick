@@ -1,0 +1,41 @@
+; Engine configuration file.
+; AI Civilization — god-sim / autonomous AI civilization (Godot 4.x, Android target)
+
+config_version=5
+
+[application]
+
+config/name="AI Civilization"
+config/description="Autonomous AI civilization god-sim. Two-tier simulation (detailed + aggregate)."
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/handheld/orientation=1
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[physics]
+
+common/physics_ticks_per_second=60
+common/enable_object_picking=false
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=0
+anti_aliasing/quality/msaa_2d=0
+environment/defaults/default_clear_color=Color(0.043, 0.055, 0.078, 1)
+
+[gui]
+
+theme/default_font_multichannel_signed_distance_field=true

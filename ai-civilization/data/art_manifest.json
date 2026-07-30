@@ -1,0 +1,34 @@
+{
+	"_comment": "Соответствие «логическая роль спрайта → файл». Пока путь пуст или файла нет, Art генерирует процедурный плейсхолдер той же роли и размера, и проект запускается без предварительной загрузки паков. Арт-пасс (M7) = заполнить пути, не менять код.",
+
+	"_licensing": "Все перечисленные ниже паки — CC0 (public domain), атрибуция не требуется даже в коммерческом проекте. Лицензию каждого файла всё равно проверять на его странице: на OpenGameArt лицензии смешаны и CC0 там не по умолчанию.",
+
+	"_recommended_packs": {
+		"kenney_sci_fi_rts": "https://kenney.nl/assets/sci-fi-rts — поселения, здания, юниты top-down",
+		"kenney_robot_pack": "https://kenney.nl/assets/robot-pack — корпуса ИИ-юнитов",
+		"kenney_tiny_battle": "https://kenney.nl/assets/tiny-battle — боевые юниты, флаги",
+		"kenney_1bit_pack": "https://kenney.nl/assets/1-bit-pack — иконки, лом, ресурсы",
+		"kenney_particle_pack": "https://kenney.nl/assets/particle-pack — взрывы, дым, искры",
+		"kenney_ui_pack": "https://kenney.nl/assets/ui-pack — панели и кнопки HUD",
+		"opengameart": "https://opengameart.org — фильтр строго по CC0",
+		"freesound": "https://freesound.org — звук, фильтр CC0"
+	},
+
+	"sprites": {
+		"unit_worker": "",
+		"unit_hauler": "",
+		"unit_guard": "",
+		"unit_soldier": "",
+		"scrap_node": "",
+		"settlement": "",
+		"spark": ""
+	},
+
+	"audio": {
+		"ui_click": "",
+		"event_normal": "",
+		"event_critical": "",
+		"war_declared": "",
+		"ambient_island": ""
+	}
+}

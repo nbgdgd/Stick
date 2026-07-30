@@ -1,0 +1,185 @@
+{
+	"_comment": "All balance tunables live here. Никакой логики — только числа. Правки не требуют изменения скриптов.",
+	"time": {
+		"ticks_per_day": 24,
+		"base_ticks_per_second": 6.0,
+		"max_ticks_per_frame": 400,
+		"speeds": [
+			0.0,
+			1.0,
+			3.0,
+			10.0,
+			30.0
+		],
+		"skip_max_days": 120
+	},
+	"world": {
+		"map_size": 192,
+		"island_radius_frac": 0.4,
+		"noise_frequency": 0.028,
+		"sea_level": 0.46,
+		"tile_size": 16.0,
+		"start_settlements": 3,
+		"scrap_field_frequency": 0.06
+	},
+	"tier": {
+		"tier1_radius": 780.0,
+		"tier1_hysteresis": 240.0,
+		"unit_budget": 260,
+		"units_per_settlement_max": 32,
+		"pop_per_visual_unit": 5.0,
+		"reeval_interval_ticks": 12
+	},
+	"snapshots": {
+		"interval_days": 5,
+		"max_kept": 60
+	},
+	"settlement": {
+		"start_population": 30.0,
+		"start_scrap": 120.0,
+		"start_energy": 60.0,
+		"deposit_base": 6000.0,
+		"deposit_min_richness": 0.25,
+		"stock_soft_cap": 4000.0,
+		"data_reserve": 8.0,
+		"data_export_frac": 0.65,
+		"deposit_regen_frac": 0.0015
+	},
+	"population": {
+		"upkeep_energy_per_pop": 0.06,
+		"upkeep_components_per_pop": 0.012,
+		"assembly_rate": 0.012,
+		"assembly_cost_machines": 1.2,
+		"starvation_death_rate": 0.045,
+		"attrition_rate": 0.0015,
+		"unrest_from_deficit": 0.16,
+		"unrest_decay": 0.045,
+		"unrest_death_threshold": 0.75,
+		"min_pop": 1.0,
+		"max_pop_per_settlement": 420.0
+	},
+	"expansion": {
+		"min_pop_to_split": 90.0,
+		"machines_cost": 30.0,
+		"cooldown_days": 35,
+		"max_settlements": 14,
+		"child_pop_frac": 0.3
+	},
+	"research": {
+		"parallel_focus": 2,
+		"refocus_interval_days": 6,
+		"human_speed_mult": 1.0,
+		"leak_bonus_frac": 0.35,
+		"cost_growth_per_tech": 0.35
+	},
+	"loyalty": {
+		"start": 82.0,
+		"secede_threshold": 22.0,
+		"rejoin_threshold": 74.0,
+		"distance_penalty_per_1000px": 0.85,
+		"unrest_penalty": 6.0,
+		"council_bonus": 0.55,
+		"prosperity_bonus": 1.1,
+		"drift_to_center": 0.06,
+		"grudge_decay": 0.02,
+		"max_grudge": 40.0
+	},
+	"relations": {
+		"start": 58.0,
+		"min": -100.0,
+		"max": 100.0,
+		"drift_to": 42.0,
+		"drift_rate": 0.018,
+		"territory_penalty_per_settlement": 0.16,
+		"territory_free_settlements": 3,
+		"economy_penalty_scale": 0.55,
+		"tech_gap_penalty": 0.3,
+		"incident_chance_per_day": 0.022,
+		"incident_severity": [
+			4.0,
+			13.0
+		],
+		"war_threshold": 14.0,
+		"peace_threshold": 46.0,
+		"war_min_act": 2,
+		"ceasefire_war_score": 0.72,
+		"mobilization_threshold": 30.0
+	},
+	"human": {
+		"start_population": 8200.0,
+		"start_industry": 3000.0,
+		"industry_growth_per_day": 0.00025,
+		"strength_per_industry": 0.25,
+		"tech_days_scale": 1.0,
+		"invasion_interval_days": 14,
+		"invasion_force_frac": 0.1,
+		"mainland_strike_frac": 0.04,
+		"morale_loss_per_defeat": 0.055,
+		"scrap_shipment_interval_days": 10,
+		"scrap_shipment_amount": 900.0,
+		"shipments_stop_act": 3,
+		"output_per_industry": 0.08,
+		"invasion_ramp_days": 90.0,
+		"rebuild_growth_per_day": 0.004
+	},
+	"combat": {
+		"tech_strength_exponent": 1.25,
+		"randomness": 0.16,
+		"attacker_penalty": 0.9,
+		"loss_ratio_winner": 0.35,
+		"loss_ratio_loser": 0.85,
+		"settlement_defense_per_pop": 0.45,
+		"capture_pop_loss": 0.45,
+		"tier1_battle_units": 24,
+		"strength_decay": 0.015,
+		"max_war_days": 220
+	},
+	"trade": {
+		"interval_days": 3,
+		"surplus_threshold": 120.0,
+		"deficit_threshold": 25.0,
+		"max_transfer_frac": 0.3,
+		"relation_bonus_per_trade": 0.05
+	},
+	"events": {
+		"malfunction_chance": 0.01,
+		"malfunction_pop_loss": 0.035,
+		"scrap_find_chance": 0.016,
+		"scrap_find_amount": [
+			60.0,
+			240.0
+		],
+		"insight_chance": 0.009,
+		"insight_data": [
+			10.0,
+			45.0
+		],
+		"quake_chance": 0.0025
+	},
+	"interventions": {
+		"cooldown_days": {
+			"drop_scrap": 6,
+			"incite_conflict": 14,
+			"leak_tech": 20,
+			"disaster": 18,
+			"open_talks": 12,
+			"back_uprising": 25
+		},
+		"drop_scrap_amount": 520.0,
+		"incite_grudge": 26.0,
+		"disaster_pop_frac": 0.16,
+		"disaster_stock_frac": 0.3,
+		"open_talks_relations": 9.0,
+		"back_uprising_loyalty": 30.0
+	},
+	"endings": {
+		"tech_gap_absorption": 3.0,
+		"economy_ratio_absorption": 2.6,
+		"coexistence_relations": 62.0,
+		"min_days_before_ending": 450
+	},
+	"economy": {
+		"recipe_fallback_threshold": 0.25,
+		"_comment": "Доля мощности, ниже которой поселение откатывается со старшего технологического процесса на предыдущий (нет входов — работаем по-старому)."
+	}
+}

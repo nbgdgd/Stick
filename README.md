@@ -89,3 +89,15 @@ to enable them (see `di/MediaModule.kt`). WebM and MP4 export work out of the bo
 Stick fetches stickers a user can already view in TikTok. Respect TikTok's Terms
 of Service, rate-limit requests, and use it only for content you're entitled to
 save.
+
+---
+
+## Также в этом репозитории: `ai-civilization/`
+
+Отдельный проект на **Godot 4.3** — god-sim про цивилизацию списанных ИИ на
+острове-свалке (Android). Никак не связан с приложением Stick выше и лежит в
+своём каталоге, чтобы ничего не пересекалось: собственный `project.godot`,
+данные и тесты.
+
+Подробности, архитектура двухуровневой симуляции и статус вех —
+[`ai-civilization/README.md`](ai-civilization/README.md).

@@ -1,0 +1,311 @@
+{
+	"_comment": "Производственные цепочки. job — рабочая специальность, tier — приоритет (выбирается самый высокий разблокированный рецепт для job). rate — единиц в день на одного рабочего. tech — требуемая технология ('' = базовая).",
+	"recipes": [
+		{
+			"id": "scavenge_scrap",
+			"job": "SCAVENGE",
+			"tier": 0,
+			"tech": "",
+			"rate": 0.95,
+			"scales_with_deposit": true,
+			"inputs": {},
+			"outputs": {
+				"SCRAP": 1.0
+			}
+		},
+		{
+			"id": "sorted_salvage",
+			"job": "SCAVENGE",
+			"tier": 1,
+			"tech": "scrap_utilization",
+			"rate": 1.3,
+			"scales_with_deposit": true,
+			"inputs": {},
+			"outputs": {
+				"SCRAP": 1.0,
+				"METAL": 0.08
+			}
+		},
+		{
+			"id": "swarm_salvage",
+			"job": "SCAVENGE",
+			"tier": 2,
+			"tech": "swarm_logistics",
+			"rate": 1.75,
+			"scales_with_deposit": true,
+			"inputs": {
+				"ENERGY": 0.08
+			},
+			"outputs": {
+				"SCRAP": 1.0,
+				"METAL": 0.14
+			}
+		},
+		{
+			"id": "burn_scrap",
+			"job": "POWER",
+			"tier": 0,
+			"tech": "",
+			"rate": 0.9,
+			"inputs": {
+				"SCRAP": 0.6
+			},
+			"outputs": {
+				"ENERGY": 1.2
+			}
+		},
+		{
+			"id": "solar_array",
+			"job": "POWER",
+			"tier": 1,
+			"tech": "energy_independence",
+			"rate": 0.9,
+			"inputs": {
+				"ALLOY": 0.02
+			},
+			"outputs": {
+				"ENERGY": 2.2
+			}
+		},
+		{
+			"id": "closed_loop_grid",
+			"job": "POWER",
+			"tier": 2,
+			"tech": "advanced_autonomy",
+			"rate": 0.9,
+			"inputs": {
+				"ALLOY": 0.02
+			},
+			"outputs": {
+				"ENERGY": 3.2
+			}
+		},
+		{
+			"id": "smelt_metal",
+			"job": "SMELT",
+			"tier": 0,
+			"tech": "",
+			"rate": 0.36,
+			"inputs": {
+				"SCRAP": 2.0,
+				"ENERGY": 0.5
+			},
+			"outputs": {
+				"METAL": 1.0
+			}
+		},
+		{
+			"id": "arc_smelt",
+			"job": "SMELT",
+			"tier": 1,
+			"tech": "production_automation",
+			"rate": 0.52,
+			"inputs": {
+				"SCRAP": 1.55,
+				"ENERGY": 0.45
+			},
+			"outputs": {
+				"METAL": 1.0
+			}
+		},
+		{
+			"id": "refine_alloy",
+			"job": "REFINE",
+			"tier": 0,
+			"tech": "",
+			"rate": 0.3,
+			"inputs": {
+				"METAL": 2.0,
+				"ENERGY": 1.0
+			},
+			"outputs": {
+				"ALLOY": 1.0
+			}
+		},
+		{
+			"id": "lattice_alloy",
+			"job": "REFINE",
+			"tier": 1,
+			"tech": "metallurgy",
+			"rate": 0.42,
+			"inputs": {
+				"METAL": 1.5,
+				"ENERGY": 0.8
+			},
+			"outputs": {
+				"ALLOY": 1.0
+			}
+		},
+		{
+			"id": "fab_components",
+			"job": "FAB",
+			"tier": 0,
+			"tech": "",
+			"rate": 0.3,
+			"inputs": {
+				"METAL": 1.0,
+				"DATA": 0.1
+			},
+			"outputs": {
+				"COMPONENTS": 1.4
+			}
+		},
+		{
+			"id": "auto_fab",
+			"job": "FAB",
+			"tier": 1,
+			"tech": "production_automation",
+			"rate": 0.44,
+			"inputs": {
+				"METAL": 1.0,
+				"DATA": 0.1
+			},
+			"outputs": {
+				"COMPONENTS": 2.1
+			}
+		},
+		{
+			"id": "replicating_fab",
+			"job": "FAB",
+			"tier": 2,
+			"tech": "advanced_autonomy",
+			"rate": 0.6,
+			"inputs": {
+				"METAL": 0.85,
+				"DATA": 0.08
+			},
+			"outputs": {
+				"COMPONENTS": 3.0
+			}
+		},
+		{
+			"id": "assemble_machine",
+			"job": "ASSEMBLE",
+			"tier": 0,
+			"tech": "",
+			"rate": 0.24,
+			"inputs": {
+				"COMPONENTS": 2.0,
+				"ALLOY": 0.8
+			},
+			"outputs": {
+				"MACHINES": 1.0
+			}
+		},
+		{
+			"id": "self_replicating_line",
+			"job": "ASSEMBLE",
+			"tier": 2,
+			"tech": "advanced_autonomy",
+			"rate": 0.46,
+			"inputs": {
+				"COMPONENTS": 1.6,
+				"ALLOY": 0.6
+			},
+			"outputs": {
+				"MACHINES": 1.0
+			}
+		},
+		{
+			"id": "compute_data",
+			"job": "RESEARCH",
+			"tier": 0,
+			"tech": "",
+			"rate": 0.65,
+			"inputs": {
+				"ENERGY": 0.4
+			},
+			"outputs": {
+				"DATA": 1.0
+			}
+		},
+		{
+			"id": "mesh_compute",
+			"job": "RESEARCH",
+			"tier": 1,
+			"tech": "data_networks",
+			"rate": 0.65,
+			"inputs": {
+				"ENERGY": 0.35
+			},
+			"outputs": {
+				"DATA": 1.85
+			}
+		},
+		{
+			"id": "improvised_arms",
+			"job": "MILITARY",
+			"tier": 0,
+			"tech": "",
+			"rate": 0.22,
+			"strength_gain": 0.9,
+			"inputs": {
+				"COMPONENTS": 1.0,
+				"ALLOY": 0.2
+			},
+			"outputs": {}
+		},
+		{
+			"id": "combat_chassis",
+			"job": "MILITARY",
+			"tier": 1,
+			"tech": "military_robotics",
+			"rate": 0.28,
+			"strength_gain": 1.6,
+			"inputs": {
+				"COMPONENTS": 1.2,
+				"ALLOY": 0.7,
+				"MACHINES": 0.1
+			},
+			"outputs": {}
+		},
+		{
+			"id": "autonomous_warframe",
+			"job": "MILITARY",
+			"tier": 2,
+			"tech": "advanced_autonomy",
+			"rate": 0.32,
+			"strength_gain": 3.1,
+			"inputs": {
+				"COMPONENTS": 1.4,
+				"ALLOY": 0.9,
+				"MACHINES": 0.18
+			},
+			"outputs": {}
+		},
+		{
+			"id": "automated_assembly",
+			"job": "ASSEMBLE",
+			"tier": 1,
+			"tech": "production_automation",
+			"rate": 0.34,
+			"inputs": {
+				"COMPONENTS": 1.8,
+				"ALLOY": 0.7
+			},
+			"outputs": {
+				"MACHINES": 1.0
+			}
+		}
+	],
+	"default_allocation": {
+		"SCAVENGE": 0.26,
+		"POWER": 0.17,
+		"SMELT": 0.23,
+		"REFINE": 0.08,
+		"FAB": 0.13,
+		"ASSEMBLE": 0.06,
+		"RESEARCH": 0.07,
+		"MILITARY": 0.0
+	},
+	"war_allocation": {
+		"SCAVENGE": 0.21,
+		"POWER": 0.16,
+		"SMELT": 0.2,
+		"REFINE": 0.1,
+		"FAB": 0.12,
+		"ASSEMBLE": 0.05,
+		"RESEARCH": 0.04,
+		"MILITARY": 0.12
+	}
+}

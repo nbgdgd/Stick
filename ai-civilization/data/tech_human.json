@@ -1,0 +1,13 @@
+{
+	"_comment": "Человеческая ветка — линейная и предсказуемая. Прогресс по дням, а не по эмерджентным весам: контраст 'ИИ обгоняет' должен читаться как разница в скорости итерации, а не как чит.",
+
+	"techs": [
+		{ "id": "h_industrial_base",   "name": "Промышленная база",           "days": 0,   "industry_mult": 0.00, "combat_mult": 0.00 },
+		{ "id": "h_drone_logistics",   "name": "Дронная логистика",           "days": 55,  "industry_mult": 0.08, "combat_mult": 0.05 },
+		{ "id": "h_smart_factories",   "name": "Умные фабрики",               "days": 90,  "industry_mult": 0.12, "combat_mult": 0.04 },
+		{ "id": "h_armored_corps",     "name": "Бронетанковый корпус",        "days": 80,  "industry_mult": 0.02, "combat_mult": 0.18 },
+		{ "id": "h_fusion_pilot",      "name": "Опытный термоядерный блок",   "days": 140, "industry_mult": 0.16, "combat_mult": 0.06 },
+		{ "id": "h_counter_ai_doctrine","name": "Доктрина противодействия ИИ", "days": 120, "industry_mult": 0.03, "combat_mult": 0.26 },
+		{ "id": "h_orbital_strike",    "name": "Орбитальное вооружение",      "days": 190, "industry_mult": 0.04, "combat_mult": 0.34 }
+	]
+}

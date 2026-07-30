@@ -95,13 +95,41 @@ class WebViewCommentSource(
                     main.postDelayed(pump, 1_500)
                 }
 
+                /**
+                 * TikTok's mobile page tries to hand off to the native app via a
+                 * custom scheme (snssdk…/tiktok…). A WebView cannot open those and
+                 * reports ERR_UNKNOWN_URL_SCHEME, so swallow anything that isn't
+                 * http(s) and stay on the page.
+                 */
+                override fun shouldOverrideUrlLoading(
+                    view: WebView?,
+                    request: android.webkit.WebResourceRequest?,
+                ): Boolean {
+                    val url = request?.url?.toString().orEmpty()
+                    return !url.startsWith("http://") && !url.startsWith("https://")
+                }
+
+                @Deprecated("Kept for API < 24 devices")
+                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                    val u = url.orEmpty()
+                    return !u.startsWith("http://") && !u.startsWith("https://")
+                }
+
                 override fun onReceivedError(
                     view: WebView?,
-                    errorCode: Int,
-                    description: String?,
-                    failingUrl: String?,
+                    request: android.webkit.WebResourceRequest?,
+                    error: android.webkit.WebResourceError?,
                 ) {
-                    trySend(StickResult.Failure(StickError.Network(description ?: "Page failed to load")))
+                    // Sub-resource failures (ads, trackers, app-handoff links) are
+                    // normal on this page — only a failed main document is fatal.
+                    if (request?.isForMainFrame != true) return
+                    val url = request.url?.toString().orEmpty()
+                    if (!url.startsWith("http")) return
+                    trySend(
+                        StickResult.Failure(
+                            StickError.Network(error?.description?.toString() ?: "Page failed to load"),
+                        ),
+                    )
                     close()
                 }
             }
@@ -161,9 +189,14 @@ class WebViewCommentSource(
     private companion object {
         const val SOURCE_ID = "tiktok-webview"
         val ASSET_ID_REGEX = Regex("""/([0-9a-f]{32})""")
+        /**
+         * Desktop UA on purpose: the mobile page pushes an "open in app"
+         * interstitial and hides the comment list, while the desktop layout
+         * renders comments inline where they can be scrolled and read.
+         */
         const val CHROME_UA =
-            "Mozilla/5.0 (Linux; Android 14; SM-G991B) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
         /**
          * Scrolls every scrollable container (the comment panel is a nested

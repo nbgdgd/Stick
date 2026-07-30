@@ -18,6 +18,7 @@ import { useStore } from '../store'
 import { getFocusPosition, getFocusRadius } from '../lib/focus'
 import { sunGeometry } from '../lib/sun'
 import { cameraBus } from '../lib/cameraBus'
+import { markDrag, TAP_SLOP_PX } from '../lib/tapGuard'
 
 /** Плавная кривая для наездов: медленный старт, медленное торможение. */
 function easeInOutCubic(t: number): number {
@@ -153,6 +154,9 @@ export function CameraRig() {
 
     const onPointerUp = (e: PointerEvent) => {
       const wasSingle = s.lastPointers.size === 1
+      // Жест был протяжкой — запрещаем выбор объекта, который иначе
+      // сработал бы от синтетического click сразу после отпускания
+      if (s.movedPx > TAP_SLOP_PX) markDrag()
       s.lastPointers.delete(e.pointerId)
       if (s.lastPointers.size < 2) {
         s.pinchDist = 0

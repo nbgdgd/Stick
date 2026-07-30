@@ -11,6 +11,7 @@ import { LevelRail } from './components/LevelRail'
 import { LoadingVeil } from './components/LoadingVeil'
 import { Sandbox } from './components/Sandbox'
 import { ZoomPad } from './components/ZoomPad'
+import { useBackButton } from './lib/useBackButton'
 
 export default function App() {
   const levelIndex = useStore((s) => s.levelIndex)
@@ -18,6 +19,9 @@ export default function App() {
   const timeScale = useStore((s) => s.timeScale)
   const advanceTime = useStore((s) => s.advanceTime)
   const level = LEVELS[levelIndex]
+
+  // Системная кнопка «назад» закрывает открытый слой, а не выходит сразу
+  useBackButton()
 
   // Ход времени симуляции. Держим его в rAF, а не внутри useFrame,
   // чтобы время шло независимо от того, что рисует конкретная сцена.

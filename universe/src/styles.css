@@ -629,17 +629,29 @@ canvas {
   background: var(--surface-solid);
   border: 1px solid var(--line);
   color: var(--ink);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  animation: panel-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  animation: panel-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Панель сама обрабатывает жесты: браузерная прокрутка страницы
+     перехватывала бы свайп закрытия */
+  touch-action: none;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Телефон: выезжает снизу, максимум 62 % высоты */
+  /* Телефон: лист снизу, не выше 62 % высоты */
   left: 0;
   right: 0;
   bottom: 0;
   max-height: 62vh;
   border-radius: 18px 18px 0 0;
-  padding: 8px 16px calc(var(--safe-b) + 18px);
+  padding: 0 0 calc(var(--safe-b) + 8px);
+  box-shadow: 0 -14px 44px rgba(0, 0, 0, 0.55);
+}
+
+/* Уезжает вниз при закрытии свайпом или крестиком */
+.panel--closing {
+  transform: translateY(110%);
+  opacity: 0;
+  transition: transform 0.18s ease-in, opacity 0.18s ease-in;
 }
 
 @keyframes panel-in {
@@ -647,6 +659,33 @@ canvas {
     transform: translateY(28px);
     opacity: 0;
   }
+}
+
+/* Зона захвата для свайпа: полоска-ручка сама по себе слишком мала,
+   чтобы в неё попасть пальцем */
+.panel__grip {
+  padding: 10px 0 6px;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  flex: none;
+}
+
+.panel__handle {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line-strong);
+}
+
+.panel__scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Прокрутка списка фактов должна работать пальцем, поэтому здесь
+     touch-action возвращается; сам свайп закрытия стартует только
+     сверху или когда список уже прокручен в начало */
+  touch-action: pan-y;
+  padding: 0 16px 10px;
 }
 
 @media (min-width: 780px) {
@@ -658,9 +697,17 @@ canvas {
     width: 372px;
     max-height: calc(100vh - var(--safe-t) - var(--safe-b) - 20px);
     border-radius: var(--radius);
-    padding: 14px 16px 18px;
+    padding: 0 0 14px;
     backdrop-filter: blur(18px);
     background: var(--surface);
+  }
+
+  .panel__grip {
+    display: none;
+  }
+
+  .panel__scroll {
+    padding: 14px 16px 4px;
   }
 
   @keyframes panel-in {
@@ -671,37 +718,24 @@ canvas {
   }
 }
 
-.panel__handle {
-  width: 38px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--line-strong);
-  margin: 2px auto 10px;
-}
-
-@media (min-width: 780px) {
-  .panel__handle {
-    display: none;
-  }
-}
-
 .panel__close {
   position: absolute;
-  top: 10px;
-  right: 12px;
-  width: 30px;
-  height: 30px;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
-  background: rgba(120, 150, 200, 0.11);
+  background: rgba(120, 150, 200, 0.14);
   border: 0;
-  border-radius: 8px;
+  border-radius: 11px;
   color: var(--ink-dim);
-  font-size: 14px;
   cursor: pointer;
 }
 
-.panel__close:hover {
+.panel__close:active {
+  background: rgba(120, 150, 200, 0.3);
   color: var(--ink);
 }
 
@@ -709,7 +743,7 @@ canvas {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  padding-right: 36px;
+  padding-right: 44px;
 }
 
 .panel__thumb {

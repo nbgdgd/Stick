@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { LEVELS, type LevelId } from '../data/levels'
+import { allowSelection } from '../lib/tapGuard'
 import { SUN, PLANETS, DWARF_PLANETS } from '../data/planets'
 import { MOONS } from '../data/moons'
 import { STARS, NOTABLE_FAR_STARS } from '../data/stars'
@@ -158,11 +159,16 @@ export function SearchOverlay() {
   function go(e: Entry) {
     const target = LEVELS.findIndex((l) => l.id === e.level)
     setOpen(false)
+    // Переход из поиска — намеренное действие, а не последствие протяжки
+    allowSelection()
     if (target >= 0 && target !== levelIndex) {
       setLevel(target)
       // после наезда камеры навести на объект: сцена к этому моменту
       // уже смонтирована и записала свои координаты в реестр
-      setTimeout(() => setFocus(e.id), 1800)
+      setTimeout(() => {
+        allowSelection()
+        setFocus(e.id)
+      }, 1800)
     } else {
       setFocus(e.id)
     }

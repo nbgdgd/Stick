@@ -6,6 +6,7 @@
 
 import { create } from 'zustand'
 import { LEVELS } from './data/levels'
+import { selectionSuppressed } from './lib/tapGuard'
 
 export interface SelectedObject {
   id: string
@@ -137,9 +138,18 @@ export const useStore = create<UniverseState>((set, get) => ({
   toggleOrbits: () => set((s) => ({ showOrbits: !s.showOrbits })),
   toggleLabels: () => set((s) => ({ showLabels: !s.showLabels })),
 
-  select: (o) => set({ selected: o }),
+  // Выбор объекта после протяжки игнорируется: см. lib/tapGuard.
+  // Снятие выбора (null) проходит всегда — закрывать панель нужно уметь
+  // в любой момент.
+  select: (o) => {
+    if (o !== null && selectionSuppressed()) return
+    set({ selected: o })
+  },
   setSearchOpen: (v) => set({ searchOpen: v }),
-  setFocus: (id) => set({ focusId: id }),
+  setFocus: (id) => {
+    if (id !== null && selectionSuppressed()) return
+    set({ focusId: id })
+  },
   setCameraDist: (d) => set({ cameraDist: d }),
   setSandboxOpen: (v) => set({ sandboxOpen: v }),
   setQuality: (q) => set((s) => (s.qualityLocked ? s : { quality: q })),

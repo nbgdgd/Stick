@@ -133,6 +133,89 @@ await page.waitForTimeout(300)
 const labelsAfter = await page.evaluate(() => window.__universeStore.getState().showLabels)
 check('тумблер подписей работает', labelsBefore !== labelsAfter)
 
+
+// --- 8. Протяжка по планете не должна её выбирать ---
+// Это и была причина «панель сама переключается на другую планету»:
+// свайп начинался и заканчивался на планете, и засчитывался как клик.
+await page.evaluate(() => {
+  const st = window.__universeStore.getState()
+  st.select(null); st.setFocus(null); st.setLevel(2)
+})
+await page.waitForTimeout(5000)
+await page.evaluate(() => window.__universeStore.getState().setFocus('venus'))
+await page.waitForTimeout(4000)
+await page.evaluate(() => window.__universeStore.getState().select(null))
+await page.waitForTimeout(600)
+
+const cx = 393 / 2, cy = 853 / 2
+await page.mouse.move(cx, cy)
+await page.mouse.down()
+for (let i = 1; i <= 12; i++) await page.mouse.move(cx + i * 2, cy + i * 9)
+await page.mouse.up()
+await page.waitForTimeout(700)
+const afterDrag = await page.evaluate(() => window.__universeStore.getState().selected?.name ?? null)
+check('протяжка по планете не выбирает её', afterDrag === null,
+      afterDrag ? `выбралось: ${afterDrag}` : '')
+
+// --- 9. Короткое касание по планете всё ещё выбирает ---
+await page.mouse.move(cx, cy)
+await page.mouse.down()
+await page.mouse.up()
+await page.waitForTimeout(700)
+const afterTap = await page.evaluate(() => window.__universeStore.getState().selected?.name ?? null)
+check('короткое касание по планете выбирает объект', afterTap !== null,
+      afterTap ? `выбрано: ${afterTap}` : 'ничего не выбралось')
+
+// --- 10. Свайп вниз по шапке закрывает панель ---
+if (afterTap === null) {
+  await page.evaluate(() => {
+    window.__universeStore.getState().select({
+      id: 'venus', name: 'Венера', kind: 'Планета', facts: [{ label: 'Год', value: '224,7 суток' }],
+    })
+  })
+  await page.waitForTimeout(600)
+}
+const grip = await page.locator('.panel__grip').boundingBox()
+check('у панели есть зона захвата для свайпа', grip !== null)
+if (grip) {
+  const gx = grip.x + grip.width / 2, gy = grip.y + grip.height / 2
+  await page.mouse.move(gx, gy)
+  await page.mouse.down()
+  for (let i = 1; i <= 10; i++) await page.mouse.move(gx, gy + i * 16)
+  await page.mouse.up()
+  await page.waitForTimeout(800)
+  check('свайп вниз закрывает панель',
+        await page.locator('.panel').count() === 0 &&
+        await page.evaluate(() => window.__universeStore.getState().selected) === null)
+}
+
+// --- 11. Прокрутка списка фактов не закрывает панель ---
+await page.evaluate(() => {
+  const facts = Array.from({ length: 20 }, (_, i) => ({ label: `Параметр ${i}`, value: `${i}` }))
+  window.__universeStore.getState().select({
+    id: 'venus', name: 'Венера', kind: 'Планета',
+    blurb: 'Длинное описание для того, чтобы список точно прокручивался.', facts,
+  })
+})
+await page.waitForTimeout(700)
+await page.evaluate(() => {
+  const el = document.querySelector('.panel__scroll')
+  if (el) el.scrollTop = 120
+})
+await page.waitForTimeout(200)
+const sb = await page.locator('.panel__scroll').boundingBox()
+if (sb) {
+  const sx = sb.x + sb.width / 2, sy = sb.y + sb.height * 0.6
+  await page.mouse.move(sx, sy)
+  await page.mouse.down()
+  for (let i = 1; i <= 8; i++) await page.mouse.move(sx, sy + i * 14)
+  await page.mouse.up()
+  await page.waitForTimeout(700)
+  check('прокрутка фактов не закрывает панель', await page.locator('.panel').count() === 1)
+}
+await page.evaluate(() => window.__universeStore.getState().select(null))
+await page.waitForTimeout(400)
+
 await browser.close()
 if (errs.length) { console.error('ОШИБКИ КОНСОЛИ:', [...new Set(errs)]); failures++ }
 console.log(failures === 0 ? '\nвсе проверки пройдены' : `\nпровалено проверок: ${failures}`)

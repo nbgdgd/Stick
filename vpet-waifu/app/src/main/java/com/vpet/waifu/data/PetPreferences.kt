@@ -21,6 +21,7 @@ data class PetSettings(
     /** Blank until she is named; the UI falls back to the app's own name. */
     val petName: String = "",
     val soundEnabled: Boolean = true,
+    val musicEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
     val notificationsEnabled: Boolean = true,
 )
@@ -41,6 +42,7 @@ class PetPreferences @Inject constructor(
             bubbleEnabled = it[BUBBLE_ENABLED] ?: false,
             petName = (it[PET_NAME] ?: "").take(MAX_NAME_LENGTH),
             soundEnabled = it[SOUND] ?: true,
+            musicEnabled = it[MUSIC] ?: true,
             hapticsEnabled = it[HAPTICS] ?: true,
             notificationsEnabled = it[NOTIFICATIONS] ?: true,
         )
@@ -61,6 +63,10 @@ class PetPreferences @Inject constructor(
         context.dataStore.edit { it[SOUND] = enabled }
     }
 
+    suspend fun setMusicEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[MUSIC] = enabled }
+    }
+
     suspend fun setHapticsEnabled(enabled: Boolean) {
         context.dataStore.edit { it[HAPTICS] = enabled }
     }
@@ -75,6 +81,7 @@ class PetPreferences @Inject constructor(
         private val BUBBLE_ENABLED = booleanPreferencesKey("bubble_enabled")
         private val PET_NAME = stringPreferencesKey("pet_name")
         private val SOUND = booleanPreferencesKey("sound_enabled")
+        private val MUSIC = booleanPreferencesKey("music_enabled")
         private val HAPTICS = booleanPreferencesKey("haptics_enabled")
         private val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
     }

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
@@ -99,6 +100,7 @@ fun HomeScreen(
     onGrantOverlayPermission: () -> Unit,
     onBubbleEnabledChange: (Boolean) -> Unit,
     onSoundChange: (Boolean) -> Unit,
+    onMusicChange: (Boolean) -> Unit,
     onHapticsChange: (Boolean) -> Unit,
     onNotificationsChange: (Boolean) -> Unit,
     onNameChange: (String) -> Unit,
@@ -177,6 +179,7 @@ fun HomeScreen(
             onGrantOverlayPermission = onGrantOverlayPermission,
             onBubbleEnabledChange = onBubbleEnabledChange,
             onSoundChange = onSoundChange,
+            onMusicChange = onMusicChange,
             onHapticsChange = onHapticsChange,
             onNotificationsChange = onNotificationsChange,
             onNameChange = onNameChange,
@@ -359,6 +362,7 @@ private fun SettingsCard(
     onGrantOverlayPermission: () -> Unit,
     onBubbleEnabledChange: (Boolean) -> Unit,
     onSoundChange: (Boolean) -> Unit,
+    onMusicChange: (Boolean) -> Unit,
     onHapticsChange: (Boolean) -> Unit,
     onNotificationsChange: (Boolean) -> Unit,
     onNameChange: (String) -> Unit,
@@ -400,6 +404,12 @@ private fun SettingsCard(
                 title = stringResource(R.string.settings_sound),
                 checked = settings.soundEnabled,
                 onCheckedChange = onSoundChange,
+            )
+            SettingRow(
+                icon = Icons.Rounded.MusicNote,
+                title = stringResource(R.string.settings_music),
+                checked = settings.musicEnabled,
+                onCheckedChange = onMusicChange,
             )
             SettingRow(
                 icon = Icons.Rounded.Vibration,

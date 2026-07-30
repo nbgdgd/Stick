@@ -158,6 +158,7 @@
     <string name="name_hint">Как её звать</string>
     <string name="action_save">Сохранить</string>
     <string name="settings_sound">Звук</string>
+    <string name="settings_music">Музыка</string>
     <string name="settings_haptics">Вибрация</string>
     <string name="settings_notifications">Уведомления</string>
 

@@ -6,6 +6,8 @@ import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.feedback.Cue
+import com.vpet.waifu.feedback.MusicTrack
+import com.vpet.waifu.feedback.PetMusic
 import com.vpet.waifu.feedback.PetSounds
 import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
@@ -40,6 +42,7 @@ class PetViewModel @Inject constructor(
     private val repository: PetRepository,
     private val preferences: PetPreferences,
     private val sounds: PetSounds,
+    private val music: PetMusic,
     val simulation: PetSimulation,
     val tuning: PetTuning,
 ) : ViewModel() {
@@ -94,6 +97,11 @@ class PetViewModel @Inject constructor(
     fun setBubbleEnabled(enabled: Boolean) = act { preferences.setBubbleEnabled(enabled) }
 
     fun setSoundEnabled(enabled: Boolean) = act { preferences.setSoundEnabled(enabled) }
+
+    fun setMusicEnabled(enabled: Boolean) = act { preferences.setMusicEnabled(enabled) }
+
+    /** The screen that owns the moment decides what plays over it. */
+    fun setMusicScene(track: MusicTrack?) = music.setScene(track)
 
     fun setHapticsEnabled(enabled: Boolean) = act { preferences.setHapticsEnabled(enabled) }
 

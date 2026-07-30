@@ -60,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.ActivityOutcome
+import com.vpet.waifu.feedback.MusicTrack
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.ui.components.EffectChip
@@ -109,6 +110,15 @@ fun VPetApp(
         }
     }
 
+    // The soundtrack follows the screen: the shop and the arcade have their
+    // own atmosphere, everywhere else the room plays whatever fits her state.
+    val musicTrack = when (tab) {
+        Tab.SHOP -> MusicTrack.SHOP
+        Tab.GAME -> MusicTrack.GAME
+        else -> MusicTrack.forState(snapshot.state(nowMillis, viewModel.tuning))
+    }
+    LaunchedEffect(musicTrack) { viewModel.setMusicScene(musicTrack) }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Surfaces.Screen,
@@ -142,6 +152,7 @@ fun VPetApp(
                     onGrantOverlayPermission = onGrantOverlayPermission,
                     onBubbleEnabledChange = viewModel::setBubbleEnabled,
                     onSoundChange = viewModel::setSoundEnabled,
+                    onMusicChange = viewModel::setMusicEnabled,
                     onHapticsChange = viewModel::setHapticsEnabled,
                     onNotificationsChange = viewModel::setNotificationsEnabled,
                     onNameChange = viewModel::setPetName,

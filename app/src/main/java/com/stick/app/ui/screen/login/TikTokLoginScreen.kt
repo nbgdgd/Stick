@@ -34,6 +34,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 
+/** Plain Chrome UA (no "wv" token) so sign-in providers don't refuse the flow. */
+private const val CHROME_UA =
+    "Mozilla/5.0 (Linux; Android 14; SM-G991B) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+
 /**
  * In-app TikTok sign-in.
  *
@@ -111,8 +116,9 @@ fun TikTokLoginScreen(
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
             Text(
-                "$status  ·  Log in on TikTok's own page — Stick never sees your " +
-                    "password, it only keeps the session so it can read every comment.",
+                "$status  ·  Stick never sees your password. If \"Continue with " +
+                    "Google\" is refused, Google blocks sign-in inside embedded " +
+                    "browsers — use phone / email / username login instead.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -138,6 +144,10 @@ fun TikTokLoginScreen(
                             javaScriptCanOpenWindowsAutomatically = true
                             setSupportMultipleWindows(false)
                             mediaPlaybackRequiresUserGesture = false
+                            // The default WebView UA contains a "; wv" token that
+                            // identity providers use to refuse sign-in inside
+                            // embedded browsers. Present as plain Chrome instead.
+                            userAgentString = CHROME_UA
                         }
                         // A WebChromeClient is required for pages that use JS
                         // dialogs/popups; without it TikTok's login can hang blank.

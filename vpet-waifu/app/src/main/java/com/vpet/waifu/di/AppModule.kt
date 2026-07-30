@@ -36,7 +36,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PetDatabase =
         Room.databaseBuilder(context, PetDatabase::class.java, PetDatabase.NAME)
-            .addMigrations(PetDatabase.MIGRATION_1_2)
+            .addMigrations(PetDatabase.MIGRATION_1_2, PetDatabase.MIGRATION_2_3)
             .build()
 
     @Provides

@@ -48,8 +48,10 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
 
     /** One simulated minute, ending at [clock]. */
     private fun step(snapshot: PetSnapshot, clock: Long, interactionAnchor: Long): PetSnapshot {
-        val occupation = snapshot.occupation
-        val busy = snapshot.isBusy && occupation != null
+        // Non-null exactly when she is on the clock, so it doubles as the "busy"
+        // flag and keeps the session handling below free of null checks.
+        val occupation = if (snapshot.isBusy) snapshot.occupation else null
+        val busy = occupation != null
 
         val hungerRate = tuning.hungerDecayPerMinute *
             (if (busy) tuning.busyHungerMultiplier else 1f) *
@@ -91,20 +93,65 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         }
 
         val session = next.session
-        if (busy && session != null && occupation != null) {
+        if (occupation != null && session != null) {
+            next = accrue(next, occupation)
             if (clock >= session.endsAt) {
-                next = complete(next, occupation, clock, cancelled = false, completedFraction = 1f)
+                next = complete(next, occupation, clock, cancelled = false)
             } else if (stats.energy <= PetStats.MIN) {
-                // Running out of energy on the clock ends the shift badly.
-                next = complete(
-                    next, occupation, clock,
-                    cancelled = true,
-                    completedFraction = session.progress(clock),
-                )
+                // Running out of energy on the clock ends the shift there and
+                // then. She keeps what she has already been paid.
+                next = complete(next, occupation, clock, cancelled = true)
             }
         }
 
+        // The mini-game is played in one sitting. If the screen that started it
+        // went away — a tab switch, a killed process — nothing would ever end
+        // the session, and every other action stays blocked behind it. Time
+        // itself closes it instead.
+        if (next.activity == PetActivity.PLAYING &&
+            minutesBetween(next.lastInteractionAt, clock) >= tuning.maxPlayMinutes
+        ) {
+            next = next.copy(activity = PetActivity.AWAKE)
+        }
+
         return next
+    }
+
+    /**
+     * One minute of wages.
+     *
+     * Pay is earned as the shift is worked rather than handed over at the end,
+     * so a two-hour job is not two hours of nothing. The rate is scaled by how
+     * she feels *this* minute, which means a shift that starts cheerful and
+     * ends miserable pays somewhere in between — no retroactive adjustment, and
+     * nothing can ever be taken back out of the wallet.
+     */
+    private fun accrue(snapshot: PetSnapshot, occupation: Occupation): PetSnapshot {
+        val session = snapshot.session ?: return snapshot
+        val rate = multiplierFor(qualityFor(snapshot.stats.mood), occupation.kind)
+        val perMinute = occupation.payout.toFloat() / occupation.durationMinutes * rate
+
+        var pay = session.accruedPay
+        var exp = session.accruedExp
+        when (occupation.kind) {
+            OccupationKind.WORK -> {
+                pay += perMinute
+                exp += tuning.workExpPerMinute
+            }
+            OccupationKind.STUDY -> exp += perMinute
+        }
+
+        val payDue = pay.toInt() - session.paidOut
+        val expDue = exp.toInt() - session.paidExp
+        return snapshot.copy(
+            progress = snapshot.progress.plus(money = payDue, exp = expDue),
+            session = session.copy(
+                accruedPay = pay,
+                paidOut = session.paidOut + payDue,
+                accruedExp = exp,
+                paidExp = session.paidExp + expDue,
+            ),
+        )
     }
 
     // --- care actions --------------------------------------------------------
@@ -181,49 +228,39 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     /** Calling her home early. She is paid for the time she actually put in. */
     fun cancelOccupation(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
-        val session = current.session ?: return current
+        current.session ?: return current
         val occupation = current.occupation ?: return current.copy(
             session = null,
             activity = PetActivity.AWAKE,
         )
-        return complete(
-            current, occupation, nowMillis,
-            cancelled = true,
-            completedFraction = session.progress(nowMillis),
-        )
+        return complete(current, occupation, nowMillis, cancelled = true)
     }
 
     /**
-     * Ends a session and pays it out.
+     * Ends a session.
      *
-     * [completedFraction] is 1 for a full shift and the elapsed share for one
-     * cut short, so leaving early is not free but is not a total loss either.
+     * Almost everything has been paid already, minute by minute; all that is
+     * left is the fraction of a coin still banked in the session. Leaving early
+     * therefore needs no penalty formula — she simply stops earning, and keeps
+     * what the hours she actually worked were worth.
      */
     private fun complete(
         snapshot: PetSnapshot,
         occupation: Occupation,
         atMillis: Long,
         cancelled: Boolean,
-        completedFraction: Float,
     ): PetSnapshot {
-        val quality = qualityFor(snapshot.stats.mood)
-        val multiplier = multiplierFor(quality, occupation.kind) * completedFraction.coerceIn(0f, 1f)
+        val session = snapshot.session
+        val remainderPay = ((session?.accruedPay ?: 0f).roundToInt() - (session?.paidOut ?: 0))
+            .coerceAtLeast(0)
+        val remainderExp = ((session?.accruedExp ?: 0f).roundToInt() - (session?.paidExp ?: 0))
+            .coerceAtLeast(0)
 
-        val money: Int
-        val exp: Int
-        when (occupation.kind) {
-            OccupationKind.WORK -> {
-                money = (occupation.payout * multiplier).roundToInt()
-                exp = (occupation.durationMinutes * tuning.workExpPerMinute * completedFraction).roundToInt()
-            }
-            OccupationKind.STUDY -> {
-                money = 0
-                exp = (occupation.payout * multiplier).roundToInt()
-            }
-        }
+        val money = (session?.paidOut ?: 0) + remainderPay
+        val exp = (session?.paidExp ?: 0) + remainderExp
 
         return snapshot.copy(
-            progress = snapshot.progress.plus(money = money, exp = exp),
+            progress = snapshot.progress.plus(money = remainderPay, exp = remainderExp),
             activity = PetActivity.AWAKE,
             session = null,
             lastOutcome = ActivityOutcome(
@@ -231,7 +268,7 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 kind = occupation.kind,
                 money = money,
                 exp = exp,
-                quality = if (cancelled) OutcomeQuality.POOR else quality,
+                quality = if (cancelled) OutcomeQuality.POOR else qualityFor(snapshot.stats.mood),
                 cancelled = cancelled,
                 completedAt = atMillis,
             ),
@@ -273,7 +310,9 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     /** Ends the mini-game and applies its score. Playing lifts mood but costs energy. */
     fun finishPlaying(snapshot: PetSnapshot, score: Int, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
-        if (current.activity != PetActivity.PLAYING) return current
+        // Not gated on still being PLAYING: a round can outlive the screen that
+        // started it, and the score should still count when it comes back.
+        if (score <= 0 && current.activity != PetActivity.PLAYING) return current
         return current.copy(
             activity = PetActivity.AWAKE,
             stats = current.stats.adjusted(

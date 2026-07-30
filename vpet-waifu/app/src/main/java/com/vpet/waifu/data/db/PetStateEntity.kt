@@ -37,6 +37,10 @@ data class PetStateEntity(
     val sessionOccupationId: String? = null,
     val sessionStartedAt: Long = 0,
     val sessionEndsAt: Long = 0,
+    val sessionAccruedPay: Float = 0f,
+    val sessionPaidOut: Int = 0,
+    val sessionAccruedExp: Float = 0f,
+    val sessionPaidExp: Int = 0,
     /** `KIND:expiresAt` pairs, comma separated. */
     val effects: String = "",
     val outcomeOccupationId: String? = null,
@@ -62,7 +66,15 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
     progress = PetProgress(money = money.coerceAtLeast(0), exp = exp.coerceAtLeast(0)),
     activity = enumOr(activity, PetActivity.AWAKE),
     session = sessionOccupationId?.let {
-        ActivitySession(occupationId = it, startedAt = sessionStartedAt, endsAt = sessionEndsAt)
+        ActivitySession(
+            occupationId = it,
+            startedAt = sessionStartedAt,
+            endsAt = sessionEndsAt,
+            accruedPay = sessionAccruedPay,
+            paidOut = sessionPaidOut,
+            accruedExp = sessionAccruedExp,
+            paidExp = sessionPaidExp,
+        )
     },
     effects = decodeEffects(effects),
     lastOutcome = outcomeOccupationId?.let { id ->
@@ -94,6 +106,10 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     sessionOccupationId = session?.occupationId,
     sessionStartedAt = session?.startedAt ?: 0,
     sessionEndsAt = session?.endsAt ?: 0,
+    sessionAccruedPay = session?.accruedPay ?: 0f,
+    sessionPaidOut = session?.paidOut ?: 0,
+    sessionAccruedExp = session?.accruedExp ?: 0f,
+    sessionPaidExp = session?.paidExp ?: 0,
     effects = encodeEffects(effects),
     outcomeOccupationId = lastOutcome?.occupationId,
     outcomeKind = lastOutcome?.kind?.name,

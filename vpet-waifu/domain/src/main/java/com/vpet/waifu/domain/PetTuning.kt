@@ -8,25 +8,32 @@ package com.vpet.waifu.domain
  * can load a different curve per difficulty.
  */
 data class PetTuning(
-    /** Hunger drains constantly, awake or asleep. */
-    val hungerDecayPerMinute: Float = 1f,
+    /**
+     * Hunger drains constantly, awake or asleep.
+     *
+     * The rates below are per real minute and deliberately gentle: at a point a
+     * minute a full pet emptied in an hour and a half, which made the game a
+     * chore rather than something to check in on. These give her most of a
+     * working day before anything is urgent.
+     */
+    val hungerDecayPerMinute: Float = 0.35f,
     /** Energy drain while awake and idle. */
-    val energyDecayPerMinute: Float = 1f,
+    val energyDecayPerMinute: Float = 0.30f,
     /** Energy gained while sleeping — sleeping is twice as fast as living. */
-    val energyRecoveryPerMinute: Float = 2f,
+    val energyRecoveryPerMinute: Float = 2.5f,
     /** How fast mood walks towards its target. */
-    val moodDriftPerMinute: Float = 0.5f,
+    val moodDriftPerMinute: Float = 0.4f,
 
     /** Mood target is the average of hunger and energy, minus the neglect penalty. */
     val moodHungerWeight: Float = 0.5f,
     val moodEnergyWeight: Float = 0.5f,
     /** One point of mood target is lost per this many minutes without attention… */
-    val neglectMinutesPerPoint: Float = 15f,
+    val neglectMinutesPerPoint: Float = 25f,
     /** …up to this cap, so an ignored pet is sad but never instantly miserable. */
-    val maxNeglectPenalty: Float = 30f,
+    val maxNeglectPenalty: Float = 25f,
 
     /** A single home-cooked meal — the free action on the bubble. */
-    val feedHunger: Float = 35f,
+    val feedHunger: Float = 30f,
     val feedMood: Float = 5f,
 
     /** A head pat at full effect, and how long it takes to recharge to full. */
@@ -38,14 +45,14 @@ data class PetTuning(
     // --- work & study --------------------------------------------------------
 
     /** Working makes her hungrier than lounging around. */
-    val busyHungerMultiplier: Float = 1.3f,
+    val busyHungerMultiplier: Float = 1.4f,
     /** A shift is a slow mood drain on top of the usual drift. */
-    val workMoodPerMinute: Float = 0.2f,
-    val studyMoodPerMinute: Float = 0.25f,
+    val workMoodPerMinute: Float = 0.10f,
+    val studyMoodPerMinute: Float = 0.13f,
     /** Below this she is too tired to be sent anywhere. */
-    val minimumEnergyToWork: Float = 15f,
+    val minimumEnergyToWork: Float = 12f,
     /** Work also teaches her something: EXP per minute on the clock. */
-    val workExpPerMinute: Float = 0.35f,
+    val workExpPerMinute: Float = 0.5f,
 
     /** Mood at clock-out decides the payout. */
     val greatMoodThreshold: Float = 75f,
@@ -74,6 +81,15 @@ data class PetTuning(
     val fullThreshold: Float = 95f,
 
     // --- reactions -----------------------------------------------------------
+
+    /**
+     * How long a mini-game round may stay open.
+     *
+     * A round lasts twenty seconds, so anything beyond this means the screen
+     * that started it is gone. Without a ceiling the pet would sit in PLAYING
+     * for good, with every other action locked behind it.
+     */
+    val maxPlayMinutes: Float = 3f,
 
     val eatingEmoteMillis: Long = 5_000,
     val lovedEmoteMillis: Long = 3_500,

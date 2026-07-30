@@ -80,9 +80,9 @@
 
     <string name="game_start">Start</string>
     <string name="game_again">Play again</string>
-    <string name="game_score">Score %1$d · %2$ds</string>
+    <string name="game_stop">Stop</string>
+    <string name="game_seconds_left" tools:ignore="PluralsCandidate">%1$ds left</string>
     <string name="game_result">Caught %1$d</string>
-    <string name="game_reward" tools:ignore="PluralsCandidate">+%1$d mood · +%2$d ¥</string>
     <string name="game_hint">Tap what pops up. Playing lifts her mood but costs energy.</string>
     <string name="game_busy">She is busy right now.</string>
 

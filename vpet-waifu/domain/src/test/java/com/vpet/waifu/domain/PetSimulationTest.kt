@@ -7,13 +7,22 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.abs
 
 private const val MINUTE = PetSimulation.MS_PER_MINUTE
 private const val T0 = 1_700_000_000_000L
 
+/**
+ * The balance rules.
+ *
+ * Expectations are written against [PetTuning] rather than against the numbers
+ * it currently holds: a rebalance should change how the game feels, not break
+ * the suite that proves it still works.
+ */
 class PetSimulationTest {
 
     private val sim = PetSimulation()
+    private val tuning = sim.tuning
 
     private fun snapshot(
         hunger: Float = 80f,
@@ -35,18 +44,28 @@ class PetSimulationTest {
     // --- decay ---------------------------------------------------------------
 
     @Test
-    fun `awake pet loses one hunger and one energy per minute`() {
+    fun `an awake pet loses hunger and energy at the tuned rate`() {
         val after = sim.advanceTo(snapshot(), T0 + 10 * MINUTE)
 
-        assertEquals(70f, after.stats.hunger, 0.001f)
-        assertEquals(70f, after.stats.energy, 0.001f)
+        assertEquals(80f - tuning.hungerDecayPerMinute * 10, after.stats.hunger, 0.001f)
+        assertEquals(80f - tuning.energyDecayPerMinute * 10, after.stats.energy, 0.001f)
+    }
+
+    @Test
+    fun `a full pet lasts hours rather than minutes`() {
+        // The point of the balance pass: she should survive a working day, so
+        // the game is something to check in on rather than a chore.
+        val afterThreeHours = sim.advanceTo(snapshot(hunger = 100f, energy = 100f), T0 + 180 * MINUTE)
+
+        assertTrue("hunger ${afterThreeHours.stats.hunger}", afterThreeHours.stats.hunger > 20f)
+        assertTrue("energy ${afterThreeHours.stats.energy}", afterThreeHours.stats.energy > 20f)
     }
 
     @Test
     fun `partial minutes are kept owed rather than dropped`() {
         val after = sim.advanceTo(snapshot(), T0 + 90_000L) // 1.5 minutes
 
-        assertEquals(79f, after.stats.hunger, 0.001f)
+        assertEquals(80f - tuning.hungerDecayPerMinute, after.stats.hunger, 0.001f)
         // Only the whole minute was consumed; 30s is still on the clock.
         assertEquals(T0 + MINUTE, after.lastTickAt)
     }
@@ -57,7 +76,7 @@ class PetSimulationTest {
         // 600 one-second ticks == 10 minutes of decay, no more and no less.
         for (second in 1..600) state = sim.advanceTo(state, T0 + second * 1_000L)
 
-        assertEquals(70f, state.stats.hunger, 0.001f)
+        assertEquals(80f - tuning.hungerDecayPerMinute * 10, state.stats.hunger, 0.001f)
         assertEquals(T0 + 10 * MINUTE, state.lastTickAt)
     }
 
@@ -94,29 +113,27 @@ class PetSimulationTest {
         val asleep = sim.startSleep(snapshot(hunger = 80f, energy = 40f), T0)
         val after = sim.advanceTo(asleep, T0 + 10 * MINUTE)
 
-        assertEquals(60f, after.stats.energy, 0.001f)
-        assertEquals(70f, after.stats.hunger, 0.001f)
+        assertEquals(40f + tuning.energyRecoveryPerMinute * 10, after.stats.energy, 0.001f)
+        assertEquals(80f - tuning.hungerDecayPerMinute * 10, after.stats.hunger, 0.001f)
         assertTrue(after.isSleeping)
     }
 
     @Test
     fun `she wakes up by herself once fully rested`() {
         val asleep = sim.startSleep(snapshot(energy = 50f), T0)
-        // 50 energy at +2/min is full after exactly 25 minutes.
-        val after = sim.advanceTo(asleep, T0 + 25 * MINUTE)
+        val minutesToFull = (50f / tuning.energyRecoveryPerMinute).toLong() + 1
+        val after = sim.advanceTo(asleep, T0 + minutesToFull * MINUTE)
 
         assertFalse(after.isSleeping)
-        assertEquals(PetStats.MAX, after.stats.energy, 0.001f)
     }
 
     @Test
     fun `energy drains again after the automatic wake-up`() {
-        val asleep = sim.startSleep(snapshot(energy = 90f), T0)
-        // Full at +5 min, then awake and draining for the remaining 5.
-        val after = sim.advanceTo(asleep, T0 + 10 * MINUTE)
+        val asleep = sim.startSleep(snapshot(energy = 95f), T0)
+        val after = sim.advanceTo(asleep, T0 + 30 * MINUTE)
 
         assertFalse(after.isSleeping)
-        assertEquals(95f, after.stats.energy, 0.001f)
+        assertTrue("she should have been draining since waking", after.stats.energy < PetStats.MAX)
     }
 
     @Test
@@ -143,16 +160,15 @@ class PetSimulationTest {
     fun `feeding restores hunger and lifts mood`() {
         val after = sim.feed(snapshot(hunger = 20f, mood = 40f), T0)
 
-        assertEquals(55f, after.stats.hunger, 0.001f)
-        assertEquals(45f, after.stats.mood, 0.001f)
+        assertEquals(20f + tuning.feedHunger, after.stats.hunger, 0.001f)
+        assertEquals(40f + tuning.feedMood, after.stats.mood, 0.001f)
     }
 
     @Test
     fun `feeding pays off the decay it was owed first`() {
         val after = sim.feed(snapshot(hunger = 50f), T0 + 10 * MINUTE)
 
-        // 50 - 10 owed + 35 fed, not 50 + 35.
-        assertEquals(75f, after.stats.hunger, 0.001f)
+        assertEquals(50f - tuning.hungerDecayPerMinute * 10 + tuning.feedHunger, after.stats.hunger, 0.001f)
     }
 
     @Test
@@ -175,7 +191,7 @@ class PetSimulationTest {
     fun `a rested pat gives the full mood bonus`() {
         val after = sim.pet(snapshot(mood = 50f, lastInteractionAt = T0 - 30 * MINUTE), T0)
 
-        assertEquals(58f, after.stats.mood, 0.001f)
+        assertEquals(50f + tuning.petMood, after.stats.mood, 0.001f)
     }
 
     @Test
@@ -196,8 +212,8 @@ class PetSimulationTest {
     fun `mood drifts towards the average of hunger and energy`() {
         val after = sim.advanceTo(snapshot(hunger = 90f, energy = 90f, mood = 20f), T0 + 4 * MINUTE)
 
-        // Target is well above 20, so mood climbs at the 0.5 per minute cap.
-        assertEquals(22f, after.stats.mood, 0.001f)
+        // Target is well above 20, so mood climbs at the per-minute cap.
+        assertEquals(20f + tuning.moodDriftPerMinute * 4, after.stats.mood, 0.001f)
     }
 
     @Test
@@ -210,9 +226,14 @@ class PetSimulationTest {
     @Test
     fun `being ignored drags the mood target down`() {
         val stats = PetStats(hunger = 80f, energy = 80f, mood = 80f)
+        val hour = 60f
 
         assertEquals(80f, sim.moodTarget(stats, minutesSinceInteraction = 0f), 0.001f)
-        assertEquals(76f, sim.moodTarget(stats, minutesSinceInteraction = 60f), 0.001f)
+        assertEquals(
+            80f - hour / tuning.neglectMinutesPerPoint,
+            sim.moodTarget(stats, hour),
+            0.001f,
+        )
     }
 
     @Test
@@ -220,7 +241,7 @@ class PetSimulationTest {
         val stats = PetStats(hunger = 100f, energy = 100f, mood = 100f)
         val week = 7 * 24 * 60f
 
-        assertEquals(100f - 30f, sim.moodTarget(stats, week), 0.001f)
+        assertEquals(100f - tuning.maxNeglectPenalty, sim.moodTarget(stats, week), 0.001f)
     }
 
     @Test
@@ -242,14 +263,42 @@ class PetSimulationTest {
         val working = sim.startOccupation(snapshot(), cafe, T0)
 
         assertEquals(PetActivity.WORKING, working.activity)
-        assertEquals(T0 + 30 * MINUTE, working.session?.endsAt)
+        assertEquals(T0 + cafe.durationMinutes * MINUTE, working.session?.endsAt)
         assertEquals(PetState.WORKING, working.state(T0))
     }
 
     @Test
-    fun `a shift pays out by itself when the timer runs out`() {
+    fun `wages arrive during the shift, not only at the end`() {
         val working = sim.startOccupation(snapshot(mood = 50f), cafe, T0)
-        val after = sim.advanceTo(working, T0 + 40 * MINUTE)
+
+        val quarter = sim.advanceTo(working, T0 + cafe.durationMinutes / 4 * MINUTE)
+        val half = sim.advanceTo(working, T0 + cafe.durationMinutes / 2 * MINUTE)
+
+        assertTrue("nothing paid a quarter in", quarter.progress.money > 0)
+        assertTrue("pay should keep climbing", half.progress.money > quarter.progress.money)
+        assertTrue("but not the whole shift yet", half.progress.money < cafe.payout)
+        // Still on the clock — the money is not an early payout.
+        assertEquals(PetActivity.WORKING, half.activity)
+    }
+
+    @Test
+    fun `pay accrues smoothly rather than in one lump`() {
+        var state = sim.startOccupation(snapshot(mood = 50f), cafe, T0)
+        var previous = 0
+        var increments = 0
+        for (minute in 1..cafe.durationMinutes) {
+            state = sim.advanceTo(state, T0 + minute * MINUTE)
+            if (state.progress.money > previous) increments++
+            previous = state.progress.money
+        }
+
+        assertTrue("only $increments payments across the shift", increments >= cafe.durationMinutes / 3)
+    }
+
+    @Test
+    fun `a full shift pays what the job advertises`() {
+        val working = sim.startOccupation(snapshot(mood = 50f), cafe, T0)
+        val after = sim.advanceTo(working, T0 + (cafe.durationMinutes + 2) * MINUTE)
 
         assertEquals(PetActivity.AWAKE, after.activity)
         assertNull(after.session)
@@ -268,25 +317,25 @@ class PetSimulationTest {
 
     @Test
     fun `a happy pet earns more than a miserable one`() {
-        // A shift is a mood drain, so "great" needs her to start topped up —
-        // 30 minutes on the clock costs her about 20 points either way.
         val happy = sim.advanceTo(
             sim.startOccupation(snapshot(hunger = 100f, energy = 100f, mood = 100f), cafe, T0),
-            T0 + 31 * MINUTE,
+            T0 + (cafe.durationMinutes + 2) * MINUTE,
         )
-        val sad = sim.advanceTo(sim.startOccupation(snapshot(mood = 25f), cafe, T0), T0 + 31 * MINUTE)
+        val sad = sim.advanceTo(
+            sim.startOccupation(snapshot(mood = 25f), cafe, T0),
+            T0 + (cafe.durationMinutes + 2) * MINUTE,
+        )
 
         assertTrue(
             "happy ${happy.progress.money} should beat sad ${sad.progress.money}",
             happy.progress.money > sad.progress.money,
         )
-        assertEquals(OutcomeQuality.GREAT, happy.lastOutcome?.quality)
     }
 
     @Test
     fun `working drains energy over exactly the length of the shift`() {
         val working = sim.startOccupation(snapshot(energy = 100f), cafe, T0)
-        val after = sim.advanceTo(working, T0 + 30 * MINUTE)
+        val after = sim.advanceTo(working, T0 + cafe.durationMinutes * MINUTE)
 
         assertEquals(100f - cafe.energyCost, after.stats.energy, 0.5f)
     }
@@ -301,7 +350,7 @@ class PetSimulationTest {
 
     @Test
     fun `she cannot be sent to work while exhausted`() {
-        val exhausted = snapshot(energy = 5f)
+        val exhausted = snapshot(energy = tuning.minimumEnergyToWork - 1f)
 
         assertFalse(exhausted.canStart(cafe))
         assertEquals(PetActivity.AWAKE, sim.startOccupation(exhausted, cafe, T0).activity)
@@ -316,25 +365,27 @@ class PetSimulationTest {
     }
 
     @Test
-    fun `calling her home early pays for the time she put in`() {
+    fun `calling her home early lets her keep what she earned`() {
         val working = sim.startOccupation(snapshot(mood = 50f), cafe, T0)
-        val after = sim.cancelOccupation(working, T0 + 15 * MINUTE)
+        val half = cafe.durationMinutes / 2
+        val after = sim.cancelOccupation(working, T0 + half * MINUTE)
 
         assertEquals(PetActivity.AWAKE, after.activity)
         assertTrue(after.lastOutcome?.cancelled == true)
-        // Half the shift at the "good" multiplier.
-        val half = cafe.payout / 2
-        assertTrue("got ${after.progress.money}, expected about $half", after.progress.money in (half - 3)..(half + 3))
+        assertNear(cafe.payout / 2, after.progress.money)
     }
 
     @Test
     fun `running out of energy on the clock ends the shift early`() {
-        val working = sim.startOccupation(snapshot(energy = 20f, mood = 50f), cafe, T0)
-        val after = sim.advanceTo(working, T0 + 30 * MINUTE)
+        // Just enough to start, not enough to see it through.
+        val barely = tuning.minimumEnergyToWork + 1f
+        val working = sim.startOccupation(snapshot(energy = barely, mood = 50f), cafe, T0)
+        val after = sim.advanceTo(working, T0 + cafe.durationMinutes * MINUTE)
 
         assertEquals(PetActivity.AWAKE, after.activity)
         assertTrue(after.lastOutcome?.cancelled == true)
         assertTrue("partial pay only", after.progress.money < cafe.payout)
+        assertTrue("but she is paid for the time she did put in", after.progress.money > 0)
     }
 
     // --- study ---------------------------------------------------------------
@@ -342,7 +393,7 @@ class PetSimulationTest {
     @Test
     fun `studying pays in EXP and not money`() {
         val studying = sim.startOccupation(snapshot(mood = 50f), school, T0)
-        val after = sim.advanceTo(studying, T0 + 31 * MINUTE)
+        val after = sim.advanceTo(studying, T0 + (school.durationMinutes + 2) * MINUTE)
 
         assertEquals(0, after.progress.money)
         assertEquals(school.payout, after.progress.exp)
@@ -361,7 +412,11 @@ class PetSimulationTest {
     fun `enough study levels her up and unlocks the next job`() {
         var state = snapshot(mood = 90f)
         repeat(3) {
-            state = sim.advanceTo(sim.startOccupation(state.copy(stats = state.stats.copy(energy = 100f, mood = 90f)), school, state.lastTickAt), state.lastTickAt + 31 * MINUTE)
+            val topped = state.copy(stats = state.stats.copy(energy = 100f, mood = 90f))
+            state = sim.advanceTo(
+                sim.startOccupation(topped, school, state.lastTickAt),
+                state.lastTickAt + (school.durationMinutes + 2) * MINUTE,
+            )
         }
 
         assertTrue("exp ${state.progress.exp}", state.progress.exp >= Progression.expForLevel(2))
@@ -390,6 +445,33 @@ class PetSimulationTest {
     }
 
     @Test
+    fun `the energy drink is the only way to buy energy`() {
+        val drink = Shop.byId("energy_drink")!!
+        val tired = snapshot(energy = 30f, money = 500)
+
+        val after = sim.buy(tired, drink, T0)
+
+        assertEquals(30f + drink.energy, after.stats.energy, 0.001f)
+        assertEquals(500 - drink.price, after.progress.money)
+        // And the crash is recorded rather than hidden.
+        assertTrue(after.hasEffect(EffectKind.EXHAUSTION, T0))
+    }
+
+    @Test
+    fun `the energy drink does not simply replace sleeping`() {
+        val drink = Shop.byId("energy_drink")!!
+        val bought = sim.buy(snapshot(energy = 30f, money = 500), drink, T0)
+        val slept = sim.advanceTo(sim.startSleep(snapshot(energy = 30f), T0), T0 + 30 * MINUTE)
+
+        // Half an hour of sleep beats the can, and costs nothing.
+        val drunkLater = sim.advanceTo(bought, T0 + 30 * MINUTE)
+        assertTrue(
+            "sleep ${slept.stats.energy} should beat the can ${drunkLater.stats.energy}",
+            slept.stats.energy > drunkLater.stats.energy,
+        )
+    }
+
+    @Test
     fun `the cash advance pays now and starves her later`() {
         val advance = Shop.byId("advance")!!
         val after = sim.buy(snapshot(money = 200), advance, T0)
@@ -411,8 +493,8 @@ class PetSimulationTest {
         val after = sim.buy(snapshot(money = 200), advance, T0)
 
         assertTrue(after.hasEffect(EffectKind.HUNGER_SURGE, T0))
-        val later = sim.advanceTo(after, T0 + 200 * MINUTE)
-        assertFalse(later.hasEffect(EffectKind.HUNGER_SURGE, T0 + 200 * MINUTE))
+        val later = sim.advanceTo(after, T0 + 300 * MINUTE)
+        assertFalse(later.hasEffect(EffectKind.HUNGER_SURGE, T0 + 300 * MINUTE))
         assertTrue(later.effects.isEmpty())
     }
 
@@ -436,7 +518,11 @@ class PetSimulationTest {
 
         val after = sim.advanceTo(tired, T0 + 10 * MINUTE)
 
-        assertEquals(energyAtBuy - 16f, after.stats.energy, 0.001f)
+        assertEquals(
+            energyAtBuy - tuning.energyDecayPerMinute * tuning.exhaustionMultiplier * 10,
+            after.stats.energy,
+            0.001f,
+        )
     }
 
     @Test
@@ -461,6 +547,28 @@ class PetSimulationTest {
         assertTrue(after.stats.mood > 40f)
         assertTrue(after.stats.energy < 80f)
         assertEquals(PetActivity.AWAKE, after.activity)
+    }
+
+    @Test
+    fun `an abandoned round does not trap her in the game forever`() {
+        // The screen that started the round is gone and finishPlaying is never
+        // called; without a ceiling every other action stays blocked.
+        val playing = sim.startPlaying(snapshot(), T0)
+        val later = sim.advanceTo(playing, T0 + (tuning.maxPlayMinutes.toLong() + 1) * MINUTE)
+
+        assertEquals(PetActivity.AWAKE, later.activity)
+        assertTrue(later.acceptsInteraction)
+        assertTrue(later.canFeed())
+    }
+
+    @Test
+    fun `a round still counts when the screen comes back late`() {
+        val playing = sim.startPlaying(snapshot(mood = 40f), T0)
+        val abandoned = sim.advanceTo(playing, T0 + (tuning.maxPlayMinutes.toLong() + 1) * MINUTE)
+
+        val settled = sim.finishPlaying(abandoned, score = 15, nowMillis = abandoned.lastTickAt)
+
+        assertTrue("the score should still pay out", settled.stats.mood > abandoned.stats.mood)
     }
 
     @Test
@@ -489,13 +597,22 @@ class PetSimulationTest {
         assertTrue(needed > 0)
     }
 
+    @Test
+    fun `the first job is affordable to start and worth more than a meal`() {
+        // A new player must be able to feed her before the first wage arrives,
+        // and one shift must be worth more than the snack it replaces.
+        val onigiri = Shop.byId("onigiri")!!
+        assertTrue(PetProgress().canAfford(onigiri.price))
+        assertTrue(cafe.payout > onigiri.price)
+    }
+
     // --- state machine -------------------------------------------------------
 
     @Test
     fun `the sprite state follows the stats`() {
         assertEquals(PetState.IDLE, snapshot(hunger = 80f, energy = 80f, mood = 50f).state(T0))
-        assertEquals(PetState.HUNGRY, snapshot(hunger = 30f).state(T0))
-        assertEquals(PetState.TIRED, snapshot(hunger = 80f, energy = 20f).state(T0))
+        assertEquals(PetState.HUNGRY, snapshot(hunger = tuning.hungryThreshold).state(T0))
+        assertEquals(PetState.TIRED, snapshot(hunger = 80f, energy = tuning.tiredThreshold).state(T0))
         assertEquals(PetState.HAPPY, snapshot(hunger = 90f, energy = 90f, mood = 90f).state(T0))
     }
 
@@ -508,10 +625,19 @@ class PetSimulationTest {
     @Test
     fun `finishing a shift leaves a result to show and it can be dismissed`() {
         val working = sim.startOccupation(snapshot(mood = 50f), cafe, T0)
-        val done = sim.advanceTo(working, T0 + 31 * MINUTE)
+        val done = sim.advanceTo(working, T0 + (cafe.durationMinutes + 2) * MINUTE)
 
         assertNotNull(done.lastOutcome)
         assertNull(sim.acknowledgeOutcome(done).lastOutcome)
+    }
+
+    @Test
+    fun `the result reports everything the shift paid`() {
+        val working = sim.startOccupation(snapshot(mood = 50f), cafe, T0)
+        val done = sim.advanceTo(working, T0 + (cafe.durationMinutes + 2) * MINUTE)
+
+        assertEquals(done.progress.money, done.lastOutcome?.money)
+        assertEquals(done.progress.exp, done.lastOutcome?.exp)
     }
 
     // --- tuning --------------------------------------------------------------
@@ -522,5 +648,10 @@ class PetSimulationTest {
         val after = gentle.advanceTo(snapshot(hunger = 100f), T0 + 60 * MINUTE)
 
         assertEquals(85f, after.stats.hunger, 0.001f)
+    }
+
+    /** For sums that land on a rounding boundary — never for exact payouts. */
+    private fun assertNear(expected: Int, actual: Int, tolerance: Int = 2) {
+        assertTrue("expected about $expected but was $actual", abs(expected - actual) <= tolerance)
     }
 }

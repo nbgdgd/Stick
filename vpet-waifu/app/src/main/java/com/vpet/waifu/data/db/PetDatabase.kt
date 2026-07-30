@@ -6,7 +6,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vpet.waifu.domain.PetProgress
 
-@Database(entities = [PetStateEntity::class], version = 2, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 3, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
@@ -39,6 +39,25 @@ abstract class PetDatabase : RoomDatabase() {
                     "emoteUntil INTEGER NOT NULL DEFAULT 0",
                 )
                 columns.forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+            }
+        }
+
+        /**
+         * Wages moved from a lump sum at clock-out to per-minute accrual, which
+         * needs somewhere to bank the fraction of a coin not yet handed over.
+         *
+         * A shift that is mid-flight during the upgrade simply starts accruing
+         * from zero; she keeps her wallet, and the worst case is one shift paid
+         * from the moment of the update rather than from its start.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "sessionAccruedPay REAL NOT NULL DEFAULT 0",
+                    "sessionPaidOut INTEGER NOT NULL DEFAULT 0",
+                    "sessionAccruedExp REAL NOT NULL DEFAULT 0",
+                    "sessionPaidExp INTEGER NOT NULL DEFAULT 0",
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
             }
         }
     }

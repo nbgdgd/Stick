@@ -45,6 +45,6 @@ data class PetProgress(
 
     companion object {
         /** Enough for a couple of meals before the first shift pays out. */
-        const val START_MONEY = 120
+        const val START_MONEY = 150
     }
 }

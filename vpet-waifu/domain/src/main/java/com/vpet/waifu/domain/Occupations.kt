@@ -31,16 +31,16 @@ data class Occupation(
 object Occupations {
 
     val WORK: List<Occupation> = listOf(
-        Occupation("cafe", OccupationKind.WORK, requiredLevel = 1, durationMinutes = 30, energyCost = 22f, payout = 70),
-        Occupation("shop", OccupationKind.WORK, requiredLevel = 3, durationMinutes = 60, energyCost = 40f, payout = 170),
-        Occupation("office", OccupationKind.WORK, requiredLevel = 6, durationMinutes = 120, energyCost = 65f, payout = 420),
-        Occupation("idol", OccupationKind.WORK, requiredLevel = 10, durationMinutes = 180, energyCost = 85f, payout = 950),
+        Occupation("cafe", OccupationKind.WORK, requiredLevel = 1, durationMinutes = 30, energyCost = 16f, payout = 90),
+        Occupation("shop", OccupationKind.WORK, requiredLevel = 3, durationMinutes = 60, energyCost = 30f, payout = 200),
+        Occupation("office", OccupationKind.WORK, requiredLevel = 6, durationMinutes = 120, energyCost = 52f, payout = 470),
+        Occupation("idol", OccupationKind.WORK, requiredLevel = 10, durationMinutes = 180, energyCost = 72f, payout = 1050),
     )
 
     val STUDY: List<Occupation> = listOf(
-        Occupation("school", OccupationKind.STUDY, requiredLevel = 1, durationMinutes = 30, energyCost = 16f, payout = 45),
-        Occupation("course", OccupationKind.STUDY, requiredLevel = 4, durationMinutes = 60, energyCost = 32f, payout = 120),
-        Occupation("university", OccupationKind.STUDY, requiredLevel = 8, durationMinutes = 120, energyCost = 55f, payout = 300),
+        Occupation("school", OccupationKind.STUDY, requiredLevel = 1, durationMinutes = 30, energyCost = 12f, payout = 55),
+        Occupation("course", OccupationKind.STUDY, requiredLevel = 4, durationMinutes = 60, energyCost = 24f, payout = 140),
+        Occupation("university", OccupationKind.STUDY, requiredLevel = 8, durationMinutes = 120, energyCost = 44f, payout = 340),
     )
 
     val ALL: List<Occupation> = WORK + STUDY
@@ -60,6 +60,18 @@ data class ActivitySession(
     val occupationId: String,
     val startedAt: Long,
     val endsAt: Long,
+    /**
+     * Pay earned so far, including the fraction of a coin not yet handed over.
+     *
+     * Wages accrue every simulated minute, but the wallet holds whole units, so
+     * the remainder is banked here and moved across as it crosses an integer.
+     * Keeping the fraction is what stops a long shift from quietly losing most
+     * of its value to rounding, a minute at a time.
+     */
+    val accruedPay: Float = 0f,
+    val paidOut: Int = 0,
+    val accruedExp: Float = 0f,
+    val paidExp: Int = 0,
 ) {
     fun remainingMillis(nowMillis: Long): Long = (endsAt - nowMillis).coerceAtLeast(0)
 

@@ -80,9 +80,9 @@
 
     <string name="game_start">Начать</string>
     <string name="game_again">Ещё раз</string>
-    <string name="game_score">Счёт %1$d · %2$dс</string>
+    <string name="game_stop">Стоп</string>
+    <string name="game_seconds_left">осталось %1$dс</string>
     <string name="game_result">Поймано: %1$d</string>
-    <string name="game_reward">+%1$d настроения · +%2$d ¥</string>
     <string name="game_hint">Лови всё, что выскакивает. Игра поднимает настроение, но тратит энергию.</string>
     <string name="game_busy">Она сейчас занята.</string>
 

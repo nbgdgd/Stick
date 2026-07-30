@@ -2,17 +2,20 @@ package com.stick.app.di
 
 import android.content.Context
 import com.stick.app.data.repository.TikTokSessionRepository
+import com.stick.app.data.source.WebViewCommentSource
 import com.stick.stickersource.StickerSource
 import com.stick.stickersource.StickerSourceRegistry
 import com.stick.stickersource.clipboard.ClipboardStickerSource
 import com.stick.stickersource.giphy.GiphySourceFactory
 import com.stick.stickersource.local.LocalFileStickerSource
+import com.stick.stickersource.tiktok.AssetDownloader
 import com.stick.stickersource.tiktok.TikTokSourceFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
 import java.io.File
 import javax.inject.Singleton
 
@@ -49,8 +52,17 @@ object SourceModule {
             cookieProvider = { sessionRepository.cookiesBlocking() },
         )
         val giphy = GiphySourceFactory.create(downloadDir = downloadDir)
+        // Registration order is priority. The page scraper goes first for comment
+        // scanning because the public API only returns part of a busy video's
+        // comments; it deliberately does NOT claim RESOLVE_VIDEO, so link
+        // resolution still falls to the API source below.
+        val webViewSource = WebViewCommentSource(
+            context = context,
+            downloader = AssetDownloader(OkHttpClient(), downloadDir),
+        )
         val sources: List<StickerSource> = listOf(
-            tikTok,                      // comments from a TikTok link
+            webViewSource,               // full comment list via the rendered page
+            tikTok,                      // API fallback + link resolution
             giphy,                       // keyword catalog search
             LocalFileStickerSource(),    // import an existing file
             ClipboardStickerSource(),    // paste from clipboard

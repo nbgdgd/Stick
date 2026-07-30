@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.stick.core.model.CatalogQuery
@@ -80,7 +81,10 @@ class WebViewCommentSource(
                     return@Runnable
                 }
                 wv.evaluateJavascript(HARVEST_JS) { raw ->
-                    parseUrls(raw).forEach { url ->
+                    val found = parseUrls(raw)
+                    Log.i(TAG, "pass $pass: js returned ${found.size} urls, unique so far ${seen.size}")
+                    if (found.isEmpty() && pass <= 2) Log.i(TAG, "raw js result: ${raw?.take(200)}")
+                    found.forEach { url ->
                         if (seen.add(assetKey(url))) {
                             trySend(StickResult.Success(toSticker(url, video)))
                         }
@@ -91,7 +95,7 @@ class WebViewCommentSource(
 
             wv.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
-                    // Start harvesting once the page is up.
+                    Log.i(TAG, "page loaded: ${url?.take(90)}")
                     main.postDelayed(pump, 1_500)
                 }
 
@@ -122,6 +126,7 @@ class WebViewCommentSource(
                 ) {
                     // Sub-resource failures (ads, trackers, app-handoff links) are
                     // normal on this page — only a failed main document is fatal.
+                    Log.i(TAG, "error on ${request?.url?.toString()?.take(70)} mainFrame=${request?.isForMainFrame} : ${error?.description}")
                     if (request?.isForMainFrame != true) return
                     val url = request.url?.toString().orEmpty()
                     if (!url.startsWith("http")) return
@@ -133,6 +138,7 @@ class WebViewCommentSource(
                     close()
                 }
             }
+            Log.i(TAG, "loading ${video.canonicalUrl}")
             wv.loadUrl(video.canonicalUrl)
         }
 
@@ -187,6 +193,7 @@ class WebViewCommentSource(
         StickResult.Success(emptyList())
 
     private companion object {
+        const val TAG = "StickDiag"
         const val SOURCE_ID = "tiktok-webview"
         val ASSET_ID_REGEX = Regex("""/([0-9a-f]{32})""")
         /**

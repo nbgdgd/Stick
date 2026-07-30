@@ -29,6 +29,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Emulators are x86_64; including it here (debug only) makes the app
+            // installable on one for real end-to-end testing, without adding
+            // ~30 MB of native libraries to the shipped release build.
+            ndk { abiFilters += "x86_64" }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

@@ -141,7 +141,30 @@ fun ScreenTitle(text: String, modifier: Modifier = Modifier, trailing: @Composab
 
 /** An icon in a rounded tile, then the section name over a short underline. */
 @Composable
-fun SectionHeader(icon: ImageVector, title: String, modifier: Modifier = Modifier) {
+fun SectionHeader(
+    icon: ImageVector,
+    title: String,
+    modifier: Modifier = Modifier,
+    tint: Color = Accents.Bright,
+    onTap: (() -> Unit)? = null,
+    tapEnabled: Boolean = true,
+) {
+    if (onTap != null) {
+        HeartTap(onTap = onTap, modifier = modifier, enabled = tapEnabled) {
+            SectionHeaderRow(icon, title, tint)
+        }
+    } else {
+        SectionHeaderRow(icon, title, tint, modifier)
+    }
+}
+
+@Composable
+private fun SectionHeaderRow(
+    icon: ImageVector,
+    title: String,
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier.padding(top = 8.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -154,7 +177,7 @@ fun SectionHeader(icon: ImageVector, title: String, modifier: Modifier = Modifie
                 .border(1.dp, Surfaces.TileBorder, RoundedCornerShape(11.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = Accents.Bright, modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(10.dp))
         Column {
@@ -169,7 +192,10 @@ fun SectionHeader(icon: ImageVector, title: String, modifier: Modifier = Modifie
                 modifier = Modifier
                     .size(width = 26.dp, height = 3.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Accents.Primary),
+                    // The section's own colour, not one shared accent: the rule
+                    // in a list of eight identical purple rules told you nothing
+                    // about which section you were looking at.
+                    .background(tint),
             )
         }
     }
@@ -194,10 +220,20 @@ fun MoneyPill(amount: Int, modifier: Modifier = Modifier, bump: Int = 0) {
         targetValue = if (shown == amount) 0.10f else 0.24f,
         label = "wallet-glow",
     )
-    // The hop when a flying coin lands on it.
+    // The hop, on a landing coin or on any rise in the wallet.
+    //
+    // Only the home screen throws coins at it, but the tip jar pays every three
+    // seconds wherever you are, and a wallet that silently grew while you were
+    // in the shop is money you did not notice arriving.
     val pop = remember { Animatable(1f) }
-    LaunchedEffect(bump) {
-        if (bump > 0) {
+    val previous = remember { mutableIntStateOf(amount) }
+    var rises by remember { mutableIntStateOf(0) }
+    LaunchedEffect(amount) {
+        if (amount > previous.intValue) rises++
+        previous.intValue = amount
+    }
+    LaunchedEffect(bump, rises) {
+        if (bump > 0 || rises > 0) {
             pop.snapTo(1.18f)
             pop.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 900f))
         }
@@ -263,6 +299,24 @@ fun EffectChip(
 /** The glowing rounded tile a shop item's icon sits in. */
 @Composable
 fun IconTile(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    size: Dp = 62.dp,
+    tint: Color = Accents.Primary,
+    onTap: (() -> Unit)? = null,
+    tapEnabled: Boolean = true,
+) {
+    if (onTap != null) {
+        HeartTap(onTap = onTap, modifier = modifier, enabled = tapEnabled) {
+            IconTileFace(icon, Modifier, size, tint)
+        }
+    } else {
+        IconTileFace(icon, modifier, size, tint)
+    }
+}
+
+@Composable
+private fun IconTileFace(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     size: Dp = 62.dp,

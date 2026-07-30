@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.Upgrades
 
-@Database(entities = [PetStateEntity::class], version = 4, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 5, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
@@ -80,6 +80,25 @@ abstract class PetDatabase : RoomDatabase() {
                     "eventSeenAt INTEGER NOT NULL DEFAULT 0",
                     "lastMealId TEXT",
                     "repeatedMeals INTEGER NOT NULL DEFAULT 0",
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+            }
+        }
+
+        /**
+         * The tip jar — loose change arriving every few seconds.
+         *
+         * `passiveSince` defaults to 0, which the simulation reads as "never
+         * settled" and restarts from the first tick after the update, so an
+         * upgrading save is never handed a lump sum for the years before the
+         * feature existed.
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "passiveSince INTEGER NOT NULL DEFAULT 0",
+                    "passiveBank REAL NOT NULL DEFAULT 0",
+                    "passiveDay INTEGER NOT NULL DEFAULT 0",
+                    "passivePaidToday INTEGER NOT NULL DEFAULT 0",
                 ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
             }
         }

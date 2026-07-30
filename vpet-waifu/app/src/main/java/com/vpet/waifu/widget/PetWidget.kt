@@ -37,6 +37,8 @@ import com.vpet.waifu.ui.character.ART_HEIGHT
 import com.vpet.waifu.ui.character.ART_WIDTH
 import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.PetRasterizer
+import com.vpet.waifu.ui.character.Prop
+import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.character.RoomColors
 import com.vpet.waifu.ui.character.RoomDetail
 import com.vpet.waifu.ui.theme.StageColors
@@ -88,6 +90,7 @@ class PetWidget : GlanceAppWidget() {
         val stageHeightDp = stageHeight(size, padding)
         val stageWidthDp = stageHeightDp * (ART_WIDTH / ART_HEIGHT)
         val tempo = FlipTempo.forState(state)
+        val workProp = workPropFor(snapshot.occupation?.id)
 
         // Both bitmaps depend only on what is in their keys, and neither
         // depends on a stat. Without the cache every redraw re-encoded the
@@ -98,9 +101,9 @@ class PetWidget : GlanceAppWidget() {
         val detail = if (size.height.value < 150f) RoomDetail.NONE else RoomDetail.WALL
 
         val frames = FRAMES.getOrPut(
-            "$state|$tempo|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density|${snapshot.outfit}",
+            "$state|$tempo|$workProp|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density|${snapshot.outfit}",
         ) {
-            renderFrames(state, tempo, stageWidthDp, stageHeightDp, density, snapshot.outfit)
+            renderFrames(state, tempo, stageWidthDp, stageHeightDp, density, snapshot.outfit, workProp)
         }
         val flipper = buildFlipper(context, tempo, frames)
         val room = ROOMS.getOrPut(
@@ -149,6 +152,7 @@ class PetWidget : GlanceAppWidget() {
         stageHeightDp: Float,
         density: Float,
         outfit: String,
+        workProp: Prop?,
     ): List<ByteArray> {
         // Transparent: the room is a separate layer underneath, so the frames
         // carry nothing but the character.
@@ -160,6 +164,7 @@ class PetWidget : GlanceAppWidget() {
             frameCount = FRAME_COUNT,
             loopSeconds = tempo.loopSeconds,
             palette = PetPalette.forOutfit(outfit),
+            workProp = workProp,
         )
 
         val full = render(1f)

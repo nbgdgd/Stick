@@ -102,8 +102,14 @@ class PetSimulationTest {
     @Test
     fun `a tick in the past changes nothing`() {
         val before = snapshot()
+        val after = sim.advanceTo(before, T0 - 10 * MINUTE)
 
-        assertEquals(before, sim.advanceTo(before, T0 - 10 * MINUTE))
+        // Everything about the pet is untouched. The one thing that does move
+        // is the tip jar's anchor: a clock that has run backwards leaves it
+        // pointing into the future, and it re-anchors rather than paying out
+        // the negative interval.
+        assertEquals(before, after.copy(passiveSince = before.passiveSince))
+        assertEquals(T0 - 10 * MINUTE, after.passiveSince)
     }
 
     @Test

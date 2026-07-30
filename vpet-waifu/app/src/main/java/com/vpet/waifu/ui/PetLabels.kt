@@ -110,6 +110,52 @@ fun shopItemIcon(id: String): ImageVector = when (id) {
     else -> Icons.Rounded.CardGiftcard
 }
 
+/**
+ * One colour per thing, from one harmonised palette.
+ *
+ * The icons stay one family — same weight, same rounding — but every item gets
+ * its own hue, because a shop where everything is the same purple reads as one
+ * product sold twelve times.
+ */
+fun occupationTint(id: String): Color = when (id) {
+    "cafe" -> Color(0xFFE8A15C)
+    "shop" -> Color(0xFF49C98E)
+    "office" -> Color(0xFF6E9CF5)
+    "idol" -> Color(0xFFF86FB2)
+    "school" -> Color(0xFFA8D95C)
+    "course" -> Color(0xFF3FD8E8)
+    "university" -> Color(0xFFB37BF0)
+    else -> Color(0xFFB9A8DC)
+}
+
+fun shopItemTint(id: String): Color = when (id) {
+    "onigiri" -> Color(0xFFDFF0C8)
+    "ramen" -> Color(0xFFF2913F)
+    "cake" -> Color(0xFFF7A8D8)
+    "bento" -> Color(0xFFCE4740)
+    "parfait" -> Color(0xFF72E3C0)
+    "energy_drink" -> Color(0xFF3FC8F0)
+    "flowers" -> Color(0xFFFF6E8E)
+    "teddy" -> Color(0xFF8A5A30)
+    "headphones" -> Color(0xFF8E7BF5)
+    "ring" -> Color(0xFFBFD8F0)
+    "advance" -> Color(0xFFDCE04A)
+    "exp_pill" -> Color(0xFFC455E0)
+    else -> Color(0xFFB9A8DC)
+}
+
+fun upgradeTint(id: String): Color = when (id) {
+    "fridge" -> Color(0xFF5ADCE8)
+    "bed" -> Color(0xFFA96FE8)
+    "console" -> Color(0xFFF477B8)
+    "cat" -> Color(0xFFE8A15C)
+    "coffee_machine" -> Color(0xFF8A5A30)
+    "laptop" -> Color(0xFF5D8DF5)
+    "textbooks" -> Color(0xFF8FCE73)
+    "studio" -> Color(0xFFF5D93A)
+    else -> Color(0xFFB9A8DC)
+}
+
 @StringRes
 fun upgradeNameRes(id: String): Int = when (id) {
     "fridge" -> R.string.upgrade_fridge

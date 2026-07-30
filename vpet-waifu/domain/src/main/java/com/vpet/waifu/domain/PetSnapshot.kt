@@ -3,6 +3,9 @@ package com.vpet.waifu.domain
 /** What she is doing right now. Timed activities also carry an [ActivitySession]. */
 enum class PetActivity { AWAKE, SLEEPING, WORKING, STUDYING, PLAYING }
 
+/** Why a shop item is greyed out. */
+enum class PurchaseBlock { LEVEL, MONEY, BUSY, STILL_PAYING }
+
 /** A short-lived reaction that overrides the idle animation. */
 enum class Emote { EATING, LOVED, CELEBRATING }
 
@@ -74,6 +77,12 @@ data class PetSnapshot(
     /** The last thing she was fed, and how many times running. */
     val lastMealId: String? = null,
     val repeatedMeals: Int = 0,
+    /** The instant the tip jar was last settled, and the fraction of a coin left over. */
+    val passiveSince: Long = 0L,
+    val passiveBank: Float = 0f,
+    /** Which day the jar is counting, and how much of that day's allowance is spent. */
+    val passiveDay: Long = 0L,
+    val passivePaidToday: Int = 0,
 ) {
     val isSleeping: Boolean get() = activity == PetActivity.SLEEPING
 
@@ -100,9 +109,29 @@ data class PetSnapshot(
             occupation.isUnlocked(level) &&
             stats.energy >= tuning.minimumEnergyToWork
 
-    fun canBuy(item: ShopItem): Boolean =
+    /**
+     * Whether [item] can be bought right now.
+     *
+     * The last clause is what stops the cash advance from being an infinite
+     * money printer. An advance costs 160 and pays 480, and the bill is three
+     * hours of doubled hunger drain — but buying a second one merely *replaced*
+     * that timer, so tapping it twenty times in a row banked 6,400 coins and
+     * still cost exactly three hours. A debt she has not finished paying blocks
+     * the next one, so the price is now unavoidably real.
+     */
+    fun canBuy(item: ShopItem, nowMillis: Long = 0L): Boolean =
         item.isUnlocked(level) && progress.canAfford(item.price) &&
-            (item.category != ShopCategory.FOOD || acceptsInteraction)
+            (item.category != ShopCategory.FOOD || acceptsInteraction) &&
+            (item.effect == null || !hasEffect(item.effect, nowMillis))
+
+    /** Why [item] cannot be bought, for the shop card to explain. */
+    fun blockedBy(item: ShopItem, nowMillis: Long): PurchaseBlock? = when {
+        !item.isUnlocked(level) -> PurchaseBlock.LEVEL
+        !progress.canAfford(item.price) -> PurchaseBlock.MONEY
+        item.category == ShopCategory.FOOD && !acceptsInteraction -> PurchaseBlock.BUSY
+        item.effect != null && hasEffect(item.effect, nowMillis) -> PurchaseBlock.STILL_PAYING
+        else -> null
+    }
 
     fun owns(upgradeId: String): Boolean = upgradeId in owned
 
@@ -121,6 +150,7 @@ data class PetSnapshot(
             stats = PetStats.INITIAL,
             lastTickAt = nowMillis,
             lastInteractionAt = nowMillis,
+            passiveSince = nowMillis,
         )
     }
 }

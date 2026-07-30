@@ -66,10 +66,14 @@ object Shop {
     )
 
     val PILLS: List<ShopItem> = listOf(
-        // Net +320, paid for with three hours of double hunger drain.
+        // Net +320, paid for with a bite out of her right now and three hours
+        // of doubled hunger drain after. The instant cost matters as much as
+        // the timer: a debt that is purely a countdown costs nothing at all if
+        // you take the next advance the moment the last one clears.
         ShopItem(
             "advance", ShopCategory.PILL, price = 160,
-            money = 480, effect = EffectKind.HUNGER_SURGE, effectMinutes = 180,
+            money = 480, hunger = -18f,
+            effect = EffectKind.HUNGER_SURGE, effectMinutes = 180,
         ),
         // A level's worth of EXP now, an exhausted evening after.
         ShopItem(

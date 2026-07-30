@@ -88,6 +88,74 @@ class PetSoundsTest {
         }
     }
 
+    /**
+     * The tap sample must actually be a tap, and the coin a coin.
+     *
+     * These two shipped wired to each other's files: the import matched them by
+     * name, and the names were the wrong way round, so every button chimed like
+     * a till and every coin landing went *tok*. Nothing in the code was wrong,
+     * which is why nothing caught it — so the check has to be on the audio.
+     *
+     * A coin is a bright metallic ring: lots of high-frequency content, so lots
+     * of zero crossings per second. A tap is a low dry click with a fraction of
+     * that. The gap between them is enormous (about four to one), so this
+     * cannot go off by accident, and it fails immediately if the two files are
+     * ever swapped again.
+     */
+    @Test
+    fun `the tap sample is duller than the coin sample`() {
+        val tap = brightness(R.raw.sfx_tap)
+        val coin = brightness(R.raw.sfx_coin)
+
+        assertTrue("tap=$tap coin=$coin — the samples are swapped", coin > tap * 2)
+    }
+
+    @Test
+    fun `a tap is short enough to survive being mashed`() {
+        // The clicker fires this as fast as a finger moves, and SoundPool only
+        // gives four streams. A sample longer than about half a second means
+        // rapid taps cut each other off mid-ring.
+        assertTrue(seconds(R.raw.sfx_tap) <= 0.55f)
+    }
+
+    /** Zero crossings per second of a 16-bit PCM raw resource. */
+    private fun brightness(resId: Int): Float {
+        val samples = pcm(resId)
+        if (samples.isEmpty()) return 0f
+        var crossings = 0
+        for (i in 1 until samples.size) {
+            if ((samples[i - 1] < 0) != (samples[i] < 0)) crossings++
+        }
+        return crossings / seconds(resId)
+    }
+
+    private fun seconds(resId: Int): Float = pcm(resId).size / 44_100f
+
+    private fun pcm(resId: Int): ShortArray {
+        val bytes = context.resources.openRawResource(resId).use { it.readBytes() }
+        // Walk the RIFF chunks to the data payload rather than assuming a
+        // 44-byte header — ffmpeg writes a LIST/INFO chunk before it.
+        var i = 12
+        while (i + 8 <= bytes.size) {
+            val id = String(bytes, i, 4, Charsets.US_ASCII)
+            val size = (bytes[i + 4].toInt() and 0xFF) or
+                ((bytes[i + 5].toInt() and 0xFF) shl 8) or
+                ((bytes[i + 6].toInt() and 0xFF) shl 16) or
+                ((bytes[i + 7].toInt() and 0xFF) shl 24)
+            if (id == "data") {
+                val end = minOf(bytes.size, i + 8 + size)
+                val out = ShortArray((end - i - 8) / 2)
+                for (s in out.indices) {
+                    val b = i + 8 + s * 2
+                    out[s] = ((bytes[b].toInt() and 0xFF) or (bytes[b + 1].toInt() shl 8)).toShort()
+                }
+                return out
+            }
+            i += 8 + size + (size and 1)
+        }
+        return ShortArray(0)
+    }
+
     @Test
     fun `a cue plays once its sample is loaded`() {
         finishLoading()

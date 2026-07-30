@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.AnimatedPet
 import com.vpet.waifu.ui.character.PetPalette
+import com.vpet.waifu.ui.character.Prop
 import com.vpet.waifu.ui.character.drawPetRoom
 import com.vpet.waifu.ui.theme.StageColors
 
@@ -37,6 +38,7 @@ fun PetStage(
     palette: PetPalette = PetPalette.Default,
     /** The tap bounce, anchored at her feet so she dips rather than shrinks. */
     characterScale: Float = 1f,
+    workProp: Prop? = null,
 ) {
     val night = state == PetState.SLEEPING
     val top by animateColorAsState(
@@ -66,6 +68,7 @@ fun PetStage(
         AnimatedPet(
             state = state,
             palette = palette,
+            workProp = workProp,
             modifier = Modifier
                 .fillMaxSize()
                 // The top band is reserved for the speech bubble; pushing her

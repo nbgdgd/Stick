@@ -41,12 +41,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.EffectKind
 import com.vpet.waifu.domain.PetSnapshot
+import com.vpet.waifu.domain.PurchaseBlock
 import com.vpet.waifu.domain.Shop
 import com.vpet.waifu.domain.ShopCategory
 import com.vpet.waifu.domain.ShopItem
@@ -63,6 +65,8 @@ import com.vpet.waifu.ui.components.SectionHeader
 import com.vpet.waifu.ui.formatMinutes
 import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.shopItemIcon
+import com.vpet.waifu.ui.shopItemTint
+import com.vpet.waifu.ui.upgradeTint
 import com.vpet.waifu.ui.upgradeIcon
 import com.vpet.waifu.ui.upgradeNameRes
 import com.vpet.waifu.ui.shopItemNameRes
@@ -78,11 +82,17 @@ import kotlin.math.roundToInt
 @Composable
 fun ShopScreen(
     snapshot: PetSnapshot,
+    nowMillis: Long,
     onBuy: (ShopItem) -> Unit,
     onBuyUpgrade: (Upgrade) -> Unit,
     onWear: (String) -> Unit,
+    onCategoryTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Every category header and every item tile is also a place to pat her:
+    // a tap is worth a point or two of mood, a click and a puff of hearts. She
+    // has to be free to notice, so it is off while she is asleep or on a shift.
+    val patting = snapshot.acceptsInteraction
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
@@ -94,9 +104,9 @@ fun ShopScreen(
             }
         }
 
-        section(R.string.section_food, Icons.Rounded.RamenDining, Shop.FOOD, snapshot, onBuy)
-        section(R.string.section_gifts, Icons.Rounded.CardGiftcard, Shop.GIFTS, snapshot, onBuy)
-        section(R.string.section_pills, Icons.Rounded.Medication, Shop.PILLS, snapshot, onBuy)
+        section(R.string.section_food, Icons.Rounded.RamenDining, Color(0xFFF2A65A), Shop.FOOD, snapshot, nowMillis, onBuy, onCategoryTap, patting)
+        section(R.string.section_gifts, Icons.Rounded.CardGiftcard, Color(0xFFF477B8), Shop.GIFTS, snapshot, nowMillis, onBuy, onCategoryTap, patting)
+        section(R.string.section_pills, Icons.Rounded.Medication, Color(0xFFE8756A), Shop.PILLS, snapshot, nowMillis, onBuy, onCategoryTap, patting)
 
         item {
             Text(
@@ -109,23 +119,26 @@ fun ShopScreen(
 
         // Everything above is eaten within the hour. Everything below is kept,
         // which is what makes the money worth earning in the first place.
-        upgrades(R.string.section_room, Icons.Rounded.Chair, Upgrades.ROOM, snapshot, onBuyUpgrade, onWear)
-        upgrades(R.string.section_gear, Icons.Rounded.Handyman, Upgrades.GEAR, snapshot, onBuyUpgrade, onWear)
-        upgrades(R.string.section_outfits, Icons.Rounded.Checkroom, Upgrades.OUTFITS, snapshot, onBuyUpgrade, onWear)
+        upgrades(R.string.section_room, Icons.Rounded.Chair, Color(0xFF7FD1E8), Upgrades.ROOM, snapshot, onBuyUpgrade, onWear, onCategoryTap, patting)
+        upgrades(R.string.section_gear, Icons.Rounded.Handyman, Color(0xFFF0C860), Upgrades.GEAR, snapshot, onBuyUpgrade, onWear, onCategoryTap, patting)
+        upgrades(R.string.section_outfits, Icons.Rounded.Checkroom, Color(0xFF9B8CF0), Upgrades.OUTFITS, snapshot, onBuyUpgrade, onWear, onCategoryTap, patting)
     }
 }
 
 private fun LazyListScope.upgrades(
     titleRes: Int,
     icon: ImageVector,
+    tint: Color,
     items: List<Upgrade>,
     snapshot: PetSnapshot,
     onBuy: (Upgrade) -> Unit,
     onWear: (String) -> Unit,
+    onCategoryTap: () -> Unit,
+    patting: Boolean,
 ) {
-    item { SectionHeaderRow(icon, titleRes) }
+    item { SectionHeaderRow(icon, tint, titleRes, onCategoryTap, patting) }
     items(items, key = { it.id }) { upgrade ->
-        UpgradeCard(upgrade, snapshot, onBuy, onWear, modifier = Modifier.animateItem())
+        UpgradeCard(upgrade, snapshot, onBuy, onWear, onCategoryTap, patting, modifier = Modifier.animateItem())
     }
 }
 
@@ -142,6 +155,8 @@ private fun UpgradeCard(
     snapshot: PetSnapshot,
     onBuy: (Upgrade) -> Unit,
     onWear: (String) -> Unit,
+    onCategoryTap: () -> Unit,
+    patting: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val owned = snapshot.owns(upgrade.id)
@@ -153,7 +168,7 @@ private fun UpgradeCard(
     // wardrobe entries read as six different clothes rather than six hangers.
     val tint = when {
         outfit -> PetPalette.forOutfit(upgrade.id).ribbon
-        else -> StatColors.Money
+        else -> upgradeTint(upgrade.id)
     }
 
     PanelCard(
@@ -164,6 +179,8 @@ private fun UpgradeCard(
             IconTile(
                 icon = if (unlocked || owned) upgradeIcon(upgrade.id) else Icons.Rounded.Lock,
                 tint = tint,
+                onTap = onCategoryTap,
+                tapEnabled = patting,
             )
             Spacer(Modifier.width(14.dp))
 
@@ -244,33 +261,53 @@ private fun upgradeEffectRes(upgrade: Upgrade): Int {
 private fun LazyListScope.section(
     titleRes: Int,
     icon: ImageVector,
+    tint: Color,
     items: List<ShopItem>,
     snapshot: PetSnapshot,
+    nowMillis: Long,
     onBuy: (ShopItem) -> Unit,
+    onCategoryTap: () -> Unit,
+    patting: Boolean,
 ) {
-    item { SectionHeaderRow(icon, titleRes) }
+    item { SectionHeaderRow(icon, tint, titleRes, onCategoryTap, patting) }
     items(items, key = { it.id }) { item ->
         // Cards slide into place when a level-up unlocks one mid-list.
-        ShopCard(item, snapshot, onBuy, modifier = Modifier.animateItem())
+        ShopCard(item, snapshot, nowMillis, onBuy, onCategoryTap, patting, modifier = Modifier.animateItem())
     }
 }
 
 @Composable
-private fun SectionHeaderRow(icon: ImageVector, titleRes: Int) {
-    SectionHeader(icon = icon, title = stringResource(titleRes))
+private fun SectionHeaderRow(
+    icon: ImageVector,
+    tint: Color,
+    titleRes: Int,
+    onCategoryTap: () -> Unit,
+    patting: Boolean,
+) {
+    SectionHeader(
+        icon = icon,
+        title = stringResource(titleRes),
+        tint = tint,
+        onTap = onCategoryTap,
+        tapEnabled = patting,
+    )
 }
 
 @Composable
 private fun ShopCard(
     item: ShopItem,
     snapshot: PetSnapshot,
+    nowMillis: Long,
     onBuy: (ShopItem) -> Unit,
+    onCategoryTap: () -> Unit,
+    patting: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val unlocked = item.isUnlocked(snapshot.level)
     val affordable = snapshot.progress.canAfford(item.price)
-    val enabled = snapshot.canBuy(item)
-    val tint = if (item.category == ShopCategory.PILL) Accents.Danger else Accents.Primary
+    val enabled = snapshot.canBuy(item, nowMillis)
+    val block = snapshot.blockedBy(item, nowMillis)
+    val tint = shopItemTint(item.id)
 
     PanelCard(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -280,6 +317,8 @@ private fun ShopCard(
             IconTile(
                 icon = if (unlocked) shopItemIcon(item.id) else Icons.Rounded.Lock,
                 tint = tint,
+                onTap = onCategoryTap,
+                tapEnabled = patting,
             )
             Spacer(Modifier.width(14.dp))
 
@@ -295,10 +334,12 @@ private fun ShopCard(
                 // Why the button is dead, said once, in the column that has the
                 // room for it — the button itself always shows the price so
                 // that a scrolled list of them stays a straight edge.
-                val blocker = when {
-                    !unlocked -> stringResource(R.string.unlocks_at_level, item.requiredLevel)
-                    !affordable -> stringResource(R.string.not_enough_money)
-                    else -> null
+                val blocker = when (block) {
+                    PurchaseBlock.LEVEL -> stringResource(R.string.unlocks_at_level, item.requiredLevel)
+                    PurchaseBlock.MONEY -> stringResource(R.string.not_enough_money)
+                    PurchaseBlock.BUSY -> stringResource(R.string.section_busy)
+                    PurchaseBlock.STILL_PAYING -> stringResource(R.string.still_paying_it_off)
+                    null -> null
                 }
                 if (blocker != null) {
                     Spacer(Modifier.height(7.dp))

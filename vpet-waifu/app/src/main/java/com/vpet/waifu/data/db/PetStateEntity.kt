@@ -63,6 +63,11 @@ data class PetStateEntity(
     val outcomeAt: Long = 0,
     val emote: String? = null,
     val emoteUntil: Long = 0,
+    /** The tip jar: when it was last settled, and the fraction of a coin left over. */
+    val passiveSince: Long = 0,
+    val passiveBank: Float = 0f,
+    val passiveDay: Long = 0,
+    val passivePaidToday: Int = 0,
 ) {
     companion object {
         const val SINGLETON_ID = 0
@@ -108,6 +113,10 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
     event = enumOrNull<EventKind>(eventKind)?.let { PetEvent(it, eventDay, eventSeenAt) },
     lastMealId = lastMealId,
     repeatedMeals = repeatedMeals.coerceAtLeast(0),
+    passiveSince = passiveSince,
+    passiveBank = passiveBank.coerceIn(0f, 1f),
+    passiveDay = passiveDay,
+    passivePaidToday = passivePaidToday.coerceAtLeast(0),
 )
 
 fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
@@ -143,6 +152,10 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     eventSeenAt = event?.seenAt ?: 0,
     lastMealId = lastMealId,
     repeatedMeals = repeatedMeals,
+    passiveSince = passiveSince,
+    passiveBank = passiveBank,
+    passiveDay = passiveDay,
+    passivePaidToday = passivePaidToday,
 )
 
 private fun decodeIds(raw: String): Set<String> =

@@ -50,6 +50,10 @@ class PetPersistenceTest {
             event = PetEvent(EventKind.COLD, day = 19_680, seenAt = 42L),
             lastMealId = "ramen",
             repeatedMeals = 3,
+            passiveSince = 1_700_000_000_000L,
+            passiveBank = 0.4f,
+            passiveDay = 19_681,
+            passivePaidToday = 640,
         )
 
         val restored = rich.toEntity().toSnapshot()
@@ -59,6 +63,23 @@ class PetPersistenceTest {
         assertEquals(rich.event, restored.event)
         assertEquals(rich.lastMealId, restored.lastMealId)
         assertEquals(rich.repeatedMeals, restored.repeatedMeals)
+        // The tip jar's bookkeeping, which is the difference between "she saved
+        // up while you watched" and "the day's allowance resets on every launch".
+        assertEquals(rich.passiveSince, restored.passiveSince)
+        assertEquals(rich.passiveBank, restored.passiveBank, 0.001f)
+        assertEquals(rich.passiveDay, restored.passiveDay)
+        assertEquals(rich.passivePaidToday, restored.passivePaidToday)
+    }
+
+    @Test
+    fun `the tip jar pays into the save file, not just into the screen`() = runBlocking {
+        val before = pet.repository.snapshotNow().progress.money
+
+        pet.clock.nowMillis += 15 * 3_000L
+        pet.repository.tick()
+
+        val stored = pet.database.petStateDao().load()!!.toSnapshot()
+        assertEquals(before + 15, stored.progress.money)
     }
 
     @Test

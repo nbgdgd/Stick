@@ -26,8 +26,82 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
      * ticking sixty times a second never drops fractions of a minute.
      */
     fun advanceTo(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
-        val owedMinutes = (nowMillis - snapshot.lastTickAt) / MS_PER_MINUTE
-        if (owedMinutes <= 0) return snapshot.withExpiredEffectsDropped(nowMillis)
+        val settled = settlePassive(snapshot, nowMillis)
+        val owedMinutes = (nowMillis - settled.lastTickAt) / MS_PER_MINUTE
+        if (owedMinutes <= 0) return settled.withExpiredEffectsDropped(nowMillis)
+        return advanceMinutes(settled, nowMillis, owedMinutes)
+    }
+
+    /**
+     * The tip jar: a few coins every [PetTuning.passiveTickMillis].
+     *
+     * Same "pay off whole units, keep the remainder" shape as the minute loop
+     * above, just at a three-second unit, so the wallet is exact no matter how
+     * often anything calls in.
+     *
+     * The one difference is the grace window. Minutes are owed whether or not
+     * the phone was on — she gets hungry in a pocket. Loose change is not: it
+     * is paid for *watching* her, so a gap wider than
+     * [PetTuning.passiveGraceMillis] means nobody was, and the clock simply
+     * restarts. That is what keeps this from being both the best-paid job in
+     * the game and the only one you can do while asleep.
+     */
+    fun settlePassive(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        val since = snapshot.passiveSince
+        // A fresh save, or a clock that went backwards: start counting here.
+        if (since <= 0L || nowMillis < since) return snapshot.copy(passiveSince = nowMillis)
+
+        val elapsed = nowMillis - since
+        if (elapsed > tuning.passiveGraceMillis) {
+            return snapshot.copy(passiveSince = nowMillis, passiveBank = 0f)
+        }
+        val ticks = elapsed / tuning.passiveTickMillis
+        if (ticks <= 0L) return snapshot
+
+        // The day's allowance. Without it, leaving the app open on a charger
+        // out-earns every job in the catalogue by six to one, which is the same
+        // shape of hole the cash advance used to be.
+        val day = Events.dayOf(nowMillis)
+        val paidToday = if (snapshot.passiveDay == day) snapshot.passivePaidToday else 0
+        val room = (passiveDailyCap(snapshot) - paidToday).coerceAtLeast(0)
+
+        val bank = snapshot.passiveBank + ticks * passivePerTick(snapshot)
+        val coins = min(bank.toInt(), room)
+        return snapshot.copy(
+            progress = if (coins > 0) snapshot.progress.plus(money = coins) else snapshot.progress,
+            // Once the day is spent the remainder is dropped rather than saved:
+            // a bank that keeps filling would pay the whole day out again the
+            // instant the date rolled over.
+            passiveBank = if (coins >= room) 0f else bank - coins,
+            passiveSince = since + ticks * tuning.passiveTickMillis,
+            passiveDay = day,
+            passivePaidToday = paidToday + coins,
+        )
+    }
+
+    /** All the jar will pay in one day, at her level and with her gear. */
+    fun passiveDailyCap(snapshot: PetSnapshot): Int =
+        (passivePerTick(snapshot) * ticksPerMinute * tuning.passiveMinutesPerDay).roundToInt()
+
+    /** What is left of today's allowance. */
+    fun passiveLeftToday(snapshot: PetSnapshot, nowMillis: Long): Int {
+        val paid = if (snapshot.passiveDay == Events.dayOf(nowMillis)) snapshot.passivePaidToday else 0
+        return (passiveDailyCap(snapshot) - paid).coerceAtLeast(0)
+    }
+
+    private val ticksPerMinute: Float
+        get() = MS_PER_MINUTE.toFloat() / tuning.passiveTickMillis
+
+    /** What one tick of the tip jar is worth. Grows with her level and her gear. */
+    fun passivePerTick(snapshot: PetSnapshot): Float =
+        (tuning.passiveCoinsPerTick + tuning.passiveCoinsPerLevel * (snapshot.level - 1)) *
+            snapshot.modifiers().pay
+
+    /** Coins per minute of watching, which is the number worth showing a player. */
+    fun passivePerMinute(snapshot: PetSnapshot): Int =
+        (passivePerTick(snapshot) * ticksPerMinute).roundToInt()
+
+    private fun advanceMinutes(snapshot: PetSnapshot, nowMillis: Long, owedMinutes: Long): PetSnapshot {
 
         // A long absence saturates the stats long before the cap, so simulating
         // the tail of the window (rather than the head) keeps the neglect
@@ -365,11 +439,19 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     /** Buys and immediately applies [item]. There is no inventory to manage. */
     fun buy(snapshot: PetSnapshot, item: ShopItem, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
-        if (!current.canBuy(item)) return current
+        if (!current.canBuy(item, nowMillis)) return current
 
+        // A second dose *extends* the debt from where the first one ends rather
+        // than restarting it from now. Nothing in the shop can stack today —
+        // [PetSnapshot.canBuy] refuses a pill while its effect is still
+        // running — but a rule that silently forgives the overlap is exactly
+        // how the cash advance became free money, and it must not come back
+        // the next time something is allowed to double up.
         val effects = if (item.effect != null) {
+            val running = current.effects.firstOrNull { it.kind == item.effect && it.isActive(nowMillis) }
+            val from = max(nowMillis, running?.expiresAt ?: nowMillis)
             current.effects.filterNot { it.kind == item.effect } +
-                ActiveEffect(item.effect, nowMillis + item.effectMinutes * MS_PER_MINUTE)
+                ActiveEffect(item.effect, from + item.effectMinutes * MS_PER_MINUTE)
         } else {
             current.effects
         }

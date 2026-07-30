@@ -16,10 +16,28 @@ enum class EyeShape { OPEN, HAPPY_ARC, SLEEPING, HEART, SPARKLE, HALF_LIDDED, FO
 enum class MouthShape { SMILE, BIG_SMILE, CAT, WAVY, SMALL_O, FLAT, CHEWING }
 
 /** The object she is holding or sitting at. */
-enum class Prop { BOWL, LAPTOP, BOOK, CONTROLLER, PILLOW }
+enum class Prop { BOWL, LAPTOP, BOOK, CONTROLLER, PILLOW, TRAY, BAG, MIC, NOTEBOOK, BOOKSTACK }
+
+/**
+ * Which prop a job puts in her hands.
+ *
+ * Every occupation used to reuse the laptop, so the café, the shop floor and
+ * the idol stage were all one scene with a different caption. Now each job has
+ * its own pantomime.
+ */
+fun workPropFor(occupationId: String?): Prop? = when (occupationId) {
+    "cafe" -> Prop.TRAY
+    "shop" -> Prop.BAG
+    "office" -> Prop.LAPTOP
+    "idol" -> Prop.MIC
+    "school" -> Prop.NOTEBOOK
+    "course" -> Prop.LAPTOP
+    "university" -> Prop.BOOKSTACK
+    else -> null
+}
 
 /** Floating decoration around her. */
-enum class ParticleKind { HEARTS, SPARKLES, SLEEP_Z, SWEAT, NOTES, CRUMBS, COINS, CODE }
+enum class ParticleKind { HEARTS, SPARKLES, SLEEP_Z, SWEAT, NOTES, CRUMBS, COINS, CODE, STEAM }
 
 /**
  * Everything the renderer needs for one frame.
@@ -80,8 +98,8 @@ data class PetPose(
  */
 object PetPoseFactory {
 
-    fun pose(state: PetState, seconds: Float): PetPose =
-        pose(state, seconds, idleBase(seconds, state))
+    fun pose(state: PetState, seconds: Float, workProp: Prop? = null): PetPose =
+        pose(state, seconds, idleBase(seconds, state), workProp)
 
     /**
      * The same, but on a caller-supplied base.
@@ -90,7 +108,7 @@ object PetPoseFactory {
      * so the only reliable way to make a state loop is to hand it a base that
      * already does, rather than trying to repair the result afterwards.
      */
-    private fun pose(state: PetState, seconds: Float, base: PetPose): PetPose {
+    private fun pose(state: PetState, seconds: Float, base: PetPose, workProp: Prop? = null): PetPose {
         return when (state) {
             PetState.IDLE -> base
             PetState.HAPPY -> happy(base, seconds)
@@ -99,8 +117,23 @@ object PetPoseFactory {
             PetState.SLEEPING -> sleeping(base, seconds)
             PetState.EATING -> eating(base, seconds)
             PetState.LOVED -> loved(base, seconds)
-            PetState.WORKING -> working(base, seconds)
-            PetState.STUDYING -> studying(base, seconds)
+            PetState.WORKING -> when (workProp) {
+                Prop.TRAY -> serving(base, seconds)
+                Prop.BAG -> clerking(base, seconds)
+                Prop.MIC -> performing(base, seconds)
+                else -> working(base, seconds)
+            }
+            PetState.STUDYING -> when (workProp) {
+                Prop.NOTEBOOK -> writing(base, seconds)
+                Prop.LAPTOP -> working(base, seconds).copy(
+                    // The online course: same typing, but it earns knowledge,
+                    // not coins, so the money rain stays out of it.
+                    particles = null,
+                    blushAlpha = 0.35f,
+                )
+                Prop.BOOKSTACK -> studying(base, seconds).copy(prop = Prop.BOOKSTACK)
+                else -> studying(base, seconds)
+            }
             PetState.PLAYING -> playing(base, seconds)
             PetState.CELEBRATING -> celebrating(base, seconds)
         }
@@ -292,6 +325,117 @@ object PetPoseFactory {
         )
     }
 
+    /**
+     * The café: a tray held high on the left palm, a little bow of the head
+     * to an invisible customer on the beat of the sway.
+     */
+    private fun serving(base: PetPose, t: Float): PetPose {
+        val sway = sin(t * 2.2f)
+        val bow = spike(loop(t, TWO_PI / 2.2f), 0.3f, 0.14f)
+        return base.copy(
+            headTiltDegrees = sway * 4f + bow * 8f,
+            headBob = base.headBob + bow * 2.5f,
+            bodyLean = sway * 2f,
+            hairSwayDegrees = sin(t * 2.2f - 0.7f) * 7f,
+            leftArmDegrees = 108f,
+            rightArmDegrees = -14f - sway * 5f,
+            leftElbowDegrees = 18f,
+            rightElbowDegrees = -26f,
+            eyes = if (base.blink > 0.5f) EyeShape.HAPPY_ARC else EyeShape.OPEN,
+            mouth = MouthShape.SMILE,
+            blushAlpha = 0.55f,
+            prop = Prop.TRAY,
+            propProgress = (sway + 1f) / 2f,
+            particles = ParticleKind.STEAM,
+        )
+    }
+
+    /**
+     * The shop floor: a paper bag carried in both hands, hefted a little on
+     * each step of a cheerful side-to-side rock.
+     */
+    private fun clerking(base: PetPose, t: Float): PetPose {
+        val rock = sin(t * 2f)
+        val heft = abs(sin(t * 2f)).pow(1.5f)
+        return base.copy(
+            headTiltDegrees = rock * 5f,
+            bodyLean = rock * 3f,
+            bodyBounce = base.bodyBounce - heft * 2f,
+            hairSwayDegrees = sin(t * 2f - 0.8f) * 8f,
+            // Folded up to the belly, not hanging at the hips: the angles below
+            // land both hands on the rim of the bag at (±16, 158) in art space,
+            // which is what makes it read as carried rather than as a box
+            // floating over her skirt.
+            leftArmDegrees = 30f,
+            rightArmDegrees = -30f,
+            leftElbowDegrees = 131f + heft * 7f,
+            rightElbowDegrees = -131f - heft * 7f,
+            eyes = EyeShape.OPEN,
+            mouth = MouthShape.CAT,
+            blushAlpha = 0.5f,
+            prop = Prop.BAG,
+            propProgress = heft,
+            particles = ParticleKind.SPARKLES,
+        )
+    }
+
+    /**
+     * The idol stage: mic in the right hand at her mouth, the free arm thrown
+     * up to the crowd, everything bouncing on the same beat.
+     */
+    private fun performing(base: PetPose, t: Float): PetPose {
+        val beat = abs(sin(t * 1.2f)).pow(1.4f)
+        val sway = sin(t * 1.2f)
+        return base.copy(
+            headTiltDegrees = sway * 7f,
+            bodyLean = sway * 3f,
+            bodyBounce = base.bodyBounce - beat * 7f,
+            hairSwayDegrees = sin(t * 1.2f - 0.9f) * 14f,
+            ahogeDegrees = sin(t * 2.4f) * 16f,
+            leftArmDegrees = 138f + sway * 14f,
+            // Elbow out to the side, forearm folded back across: the singer's
+            // carry, which puts the hand just under her jaw so the mic lands at
+            // her mouth instead of at her hip.
+            rightArmDegrees = -100f + sway * 5f,
+            leftElbowDegrees = 12f,
+            rightElbowDegrees = -200f - beat * 6f,
+            eyes = EyeShape.SPARKLE,
+            mouth = MouthShape.BIG_SMILE,
+            blushAlpha = 0.6f,
+            prop = Prop.MIC,
+            propProgress = beat,
+            particles = ParticleKind.NOTES,
+        )
+    }
+
+    /**
+     * School: an open notebook and a pencil that actually scribbles — the
+     * wiggle rides a harmonic of the six-second page cycle so the widget's
+     * loop still closes.
+     */
+    private fun writing(base: PetPose, t: Float): PetPose {
+        val scribble = sin(t * (TWO_PI * 7f / 6f))
+        val turn = spike((t % 6f) / 6f, 0.5f, 0.06f)
+        return base.copy(
+            headTiltDegrees = 7f,
+            headBob = base.headBob + 3f,
+            bodyLean = 2f,
+            leftArmDegrees = 38f,
+            rightArmDegrees = -44f,
+            leftElbowDegrees = 68f,
+            rightElbowDegrees = -74f - scribble * 4f,
+            eyes = EyeShape.FOCUSED,
+            mouth = MouthShape.SMALL_O,
+            lookY = 0.6f,
+            lookX = 0.2f + scribble * 0.1f,
+            blushAlpha = 0.35f,
+            browWorry = -0.2f,
+            prop = Prop.NOTEBOOK,
+            propProgress = (scribble + 1f) / 2f + turn,
+            particles = null,
+        )
+    }
+
     private fun studying(base: PetPose, t: Float): PetPose {
         // Reading: eyes track across the page, a page turns every few seconds.
         // Five sweeps per page, so the eyes land back where they started.
@@ -367,7 +511,15 @@ object PetPoseFactory {
      * a state over a whole number of *its own* cycles is what makes the last
      * frame join back onto the first.
      */
-    private fun periodSeconds(state: PetState): Float = when (state) {
+    /**
+     * How long one cycle of a state's motion takes.
+     *
+     * Internal rather than private so the widget's seam test can ask for the
+     * period it is about to be looped at: each job's pantomime runs on its own
+     * beat now, and a test that guessed 2.5 seconds for all of them would pass
+     * while the tray job jolted once a cycle on a real home screen.
+     */
+    internal fun periodSeconds(state: PetState, workProp: Prop? = null): Float = when (state) {
         // Idle is entirely the shared base, which already loops.
         PetState.IDLE -> 2.5f
         PetState.HAPPY -> TWO_PI / 3.1f
@@ -376,8 +528,14 @@ object PetPoseFactory {
         PetState.SLEEPING -> TWO_PI / 0.8f
         PetState.EATING -> 1.6f
         PetState.LOVED -> TWO_PI / 2.4f
-        PetState.WORKING -> TWO_PI / 9f
-        PetState.STUDYING -> 6f
+        // Each job's pantomime has its own dominant beat.
+        PetState.WORKING -> when (workProp) {
+            Prop.TRAY -> TWO_PI / 2.2f
+            Prop.BAG -> TWO_PI / 2f
+            Prop.MIC -> TWO_PI / 1.2f
+            else -> TWO_PI / 9f
+        }
+        PetState.STUDYING -> if (workProp == Prop.LAPTOP) TWO_PI / 9f else 6f
         // The lean is the slowest thing she does while playing; the mash at
         // 11 and the bounce at 4.4 are both multiples of it.
         PetState.PLAYING -> TWO_PI / 2.2f
@@ -399,9 +557,10 @@ object PetPoseFactory {
         index: Int,
         frameCount: Int,
         loopSeconds: Float = 2.4f,
+        workProp: Prop? = null,
     ): PetPose {
         val phase = index.toFloat() / frameCount.coerceAtLeast(1)
-        val period = periodSeconds(state)
+        val period = periodSeconds(state, workProp)
         val cycles = max(1f, (loopSeconds / period).roundToInt().toFloat())
         val t = phase * period * cycles
         val turns = TWO_PI * phase
@@ -424,7 +583,7 @@ object PetPoseFactory {
             // in half at the seam.
             blink = spike(phase, 0.42f, 0.05f),
         )
-        return pose(state, t, base)
+        return pose(state, t, base, workProp)
     }
 
     private const val TWO_PI = (2.0 * PI).toFloat()

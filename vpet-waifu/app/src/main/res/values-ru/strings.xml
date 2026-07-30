@@ -66,6 +66,16 @@
     <string name="duration_minutes">смена %1$d мин</string>
     <string name="pay_scales_with_mood">настроение</string>
     <string name="too_tired_to_work">Она слишком вымоталась, чтобы куда-то идти. Сначала покорми или уложи спать.</string>
+    <string name="still_paying_it_off">Она ещё не расплатилась за прошлый</string>
+    <string name="section_busy">Она сейчас занята</string>
+    <string name="tip_jar_title">Копилка</string>
+    <string name="tip_jar_body">Мелочь капает, пока ты за ней смотришь: %1$d ¥ в минуту, но не больше %2$d ¥ в день. Растёт с уровнем.</string>
+    <string name="exp_title">Уровень %1$d</string>
+    <string name="exp_progress">%1$d / %2$d опыта</string>
+    <string name="exp_from_study">Учёба даёт опыт напрямую — она для этого и нужна.</string>
+    <string name="exp_from_work">Работа тоже немного учит: +%1$s опыта за минуту смены.</string>
+    <string name="exp_next_level">%1$d опыта до %2$d уровня</string>
+    <string name="exp_maxed">Максимальный уровень. Учить больше нечему.</string>
     <string name="not_enough_money">Дорого</string>
     <string name="pills_warning">Таблетки дают всё сразу, а счёт приходит потом. Бери, когда понимаешь, что делаешь.</string>
     <string name="effect_hunger_surge">голод падает быстрее %1$s</string>

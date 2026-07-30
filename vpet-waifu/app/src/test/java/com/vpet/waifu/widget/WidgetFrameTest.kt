@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.PetPoseFactory
+import com.vpet.waifu.ui.character.Prop
 import com.vpet.waifu.ui.character.PetRasterizer
 import com.vpet.waifu.ui.character.RoomColors
 import com.vpet.waifu.ui.theme.StageColors
@@ -69,6 +70,58 @@ class WidgetFrameTest {
             assertEquals("$state hair", first.hairSwayDegrees, wrapped.hairSwayDegrees, 0.8f)
             assertEquals("$state ahoge", first.ahogeDegrees, wrapped.ahogeDegrees, 0.8f)
         }
+    }
+
+    /**
+     * …and so does every job's pantomime.
+     *
+     * Each one now runs on its own frequency — the tray sways at 2.2 rad/s, the
+     * mic beats at 1.2, the pencil scribbles on a harmonic of the page turn —
+     * so the loop length the widget uses is derived per prop. Get that wrong
+     * for one job and only that job's widget jolts once a cycle, which is
+     * exactly the kind of bug nobody reports and everybody notices.
+     */
+    @Test
+    fun `every job's pantomime loops seamlessly too`() {
+        val scenes = listOf(
+            PetState.WORKING to Prop.TRAY,
+            PetState.WORKING to Prop.BAG,
+            PetState.WORKING to Prop.LAPTOP,
+            PetState.WORKING to Prop.MIC,
+            PetState.STUDYING to Prop.NOTEBOOK,
+            PetState.STUDYING to Prop.LAPTOP,
+            PetState.STUDYING to Prop.BOOKSTACK,
+        )
+        scenes.forEach { (state, prop) ->
+            val period = PetPoseFactory.periodSeconds(state, prop)
+            val first = PetPoseFactory.widgetLoopFrame(state, 0, frameCount, period, prop)
+            val wrapped = PetPoseFactory.widgetLoopFrame(state, frameCount, frameCount, period, prop)
+
+            assertEquals("$state/$prop breath", first.breath, wrapped.breath, 0.05f)
+            assertEquals("$state/$prop bounce", first.bodyBounce, wrapped.bodyBounce, 0.4f)
+            assertEquals("$state/$prop hair", first.hairSwayDegrees, wrapped.hairSwayDegrees, 0.8f)
+            assertEquals("$state/$prop left arm", first.leftArmDegrees, wrapped.leftArmDegrees, 0.8f)
+            assertEquals("$state/$prop right arm", first.rightArmDegrees, wrapped.rightArmDegrees, 0.8f)
+            assertEquals("$state/$prop prop", first.propProgress, wrapped.propProgress, 0.05f)
+        }
+    }
+
+    @Test
+    fun `each job draws a different picture`() {
+        // The complaint that started this: every job showed the same scene.
+        val byProp = listOf(Prop.TRAY, Prop.BAG, Prop.LAPTOP, Prop.MIC).associateWith { prop ->
+            PetRasterizer.animationFrames(
+                state = PetState.WORKING,
+                widthPx = 300,
+                heightPx = 420,
+                density = density,
+                frameCount = 2,
+                loopSeconds = 2.4f,
+                workProp = prop,
+            ).first().contentHashCode()
+        }
+
+        assertEquals("two jobs render identically: $byProp", 4, byProp.values.distinct().size)
     }
 
     @Test

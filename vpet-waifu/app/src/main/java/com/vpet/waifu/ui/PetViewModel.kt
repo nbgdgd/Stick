@@ -76,6 +76,16 @@ class PetViewModel @Inject constructor(
      */
     fun tap() = act(Cue.TAP) { repository.pet() }
 
+    /**
+     * Tapping a category — a tab, a section header, an item's tile.
+     *
+     * The same pat as tapping her directly. She is not on that screen, but the
+     * app is one pet: an idle game wants every surface to be worth touching,
+     * and the alternative — a tap that does nothing but navigate — is the one
+     * interaction in the app that gives nothing back.
+     */
+    fun categoryTap() = act(Cue.TAP) { repository.pet() }
+
     /** A flying coin reaching the wallet. */
     fun coinLanded() = sounds.play(Cue.COIN)
 
@@ -142,14 +152,17 @@ class PetViewModel @Inject constructor(
 
     private companion object {
         /**
-         * Faster than the simulation's own minute.
+         * The tip jar's own interval.
          *
-         * The world only ever moves in whole minutes, so a slower tick would
-         * not lose anything — but a wage that landed at the top of the minute
-         * would sit unnoticed for up to a minute before the screen showed it,
-         * which makes paying by the minute look like paying at random. A tick
-         * with nothing owed is a single indexed read and no write at all.
+         * Was twenty seconds, which was plenty for a world that only moves in
+         * whole minutes. Loose change arrives every three, and it is settled by
+         * the same `advanceTo` every other caller goes through, so this loop is
+         * what actually pays it while the app is open — and the grace window in
+         * [com.vpet.waifu.domain.PetSimulation.settlePassive] is what stops
+         * anything slower from paying it in a lump afterwards.
+         *
+         * A tick with nothing owed is one indexed read and no write at all.
          */
-        const val TICK_INTERVAL_MILLIS = 20_000L
+        const val TICK_INTERVAL_MILLIS = 3_000L
     }
 }

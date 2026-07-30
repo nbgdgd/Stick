@@ -50,6 +50,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -65,7 +69,10 @@ import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.occupationIcon
+import com.vpet.waifu.ui.occupationTint
+import com.vpet.waifu.ui.components.HeartLayer
 import com.vpet.waifu.ui.components.PrimaryButton
+import com.vpet.waifu.ui.components.rememberHeartTapState
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
 import com.vpet.waifu.ui.theme.Surfaces
@@ -123,10 +130,12 @@ fun VPetApp(
         modifier = Modifier.fillMaxSize(),
         containerColor = Surfaces.Screen,
         bottomBar = {
-            PetNavBar(tab) {
-                if (it != tab) viewModel.uiTap()
-                tab = it
-            }
+            PetNavBar(
+                selected = tab,
+                patting = snapshot.acceptsInteraction,
+                onSelect = { tab = it },
+                onCategoryTap = viewModel::categoryTap,
+            )
         },
     ) { insets ->
         // Tabs slide in the direction they sit in the bar, so the four screens
@@ -150,6 +159,7 @@ fun VPetApp(
             when (current) {
                 Tab.HOME -> HomeScreen(
                     snapshot = snapshot,
+                    simulation = viewModel.simulation,
                     tuning = viewModel.tuning,
                     nowMillis = nowMillis,
                     settings = state.settings,
@@ -176,12 +186,15 @@ fun VPetApp(
                     nowMillis = nowMillis,
                     onStart = viewModel::startOccupation,
                     onCancel = viewModel::cancelOccupation,
+                    onCategoryTap = viewModel::categoryTap,
                 )
                 Tab.SHOP -> ShopScreen(
                     snapshot = snapshot,
+                    nowMillis = nowMillis,
                     onBuy = viewModel::buy,
                     onBuyUpgrade = viewModel::buyUpgrade,
                     onWear = viewModel::wear,
+                    onCategoryTap = viewModel::categoryTap,
                 )
                 Tab.GAME -> GameScreen(
                     snapshot = snapshot,
@@ -207,12 +220,25 @@ fun VPetApp(
  * component's indicator does not express.
  */
 @Composable
-private fun PetNavBar(selected: Tab, onSelect: (Tab) -> Unit) {
+private fun PetNavBar(
+    selected: Tab,
+    patting: Boolean,
+    onSelect: (Tab) -> Unit,
+    onCategoryTap: () -> Unit,
+) {
+    // The bar is a category picker, so tapping it is also a pat: hearts come
+    // off the tab you pressed, wherever in the bar it is.
+    val hearts = rememberHeartTapState()
+    // The heart layer and the tabs live in different boxes, so both are
+    // measured against the window and differenced — anything else puts the
+    // hearts a padding's worth off the tab that was actually pressed.
+    var barOrigin by remember { mutableStateOf(Offset.Zero) }
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 10.dp)
-            .navigationBarsPadding(),
+            .navigationBarsPadding()
+            .onGloballyPositioned { barOrigin = it.positionInRoot() },
     ) {
         Surface(
             color = Surfaces.Card,
@@ -225,15 +251,30 @@ private fun PetNavBar(selected: Tab, onSelect: (Tab) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Tab.entries.forEach { entry ->
+                    var centre by remember { mutableStateOf(Offset.Zero) }
                     NavItem(
                         entry = entry,
                         selected = entry == selected,
-                        onClick = { onSelect(entry) },
-                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            onSelect(entry)
+                            // The pat also *is* the click sound, so this must
+                            // not double up with uiTap().
+                            if (patting) {
+                                onCategoryTap()
+                                hearts.pop(centre)
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .onGloballyPositioned { c ->
+                                val b = c.boundsInRoot()
+                                centre = Offset(b.center.x, b.top) - barOrigin
+                            },
                     )
                 }
             }
         }
+        HeartLayer(hearts)
     }
 }
 
@@ -312,7 +353,7 @@ private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
             Icon(
                 imageVector = occupationIcon(outcome.occupationId),
                 contentDescription = null,
-                tint = Accents.Bright,
+                tint = occupationTint(outcome.occupationId),
                 modifier = Modifier.size(40.dp).scale(pop),
             )
         },

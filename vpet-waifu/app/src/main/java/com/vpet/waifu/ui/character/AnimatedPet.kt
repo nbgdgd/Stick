@@ -64,8 +64,10 @@ fun AnimatedPet(
     state: PetState,
     modifier: Modifier = Modifier,
     palette: PetPalette = PetPalette.Default,
+    /** Which job's pantomime to play while she is working or studying. */
+    workProp: Prop? = null,
 ) {
     val seconds = rememberPetPhaseSeconds()
 
-    Canvas(modifier) { drawPet(PetPoseFactory.pose(state, seconds.floatValue), palette) }
+    Canvas(modifier) { drawPet(PetPoseFactory.pose(state, seconds.floatValue, workProp), palette) }
 }

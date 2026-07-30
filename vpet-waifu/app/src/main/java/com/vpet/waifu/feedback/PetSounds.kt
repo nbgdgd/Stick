@@ -33,7 +33,17 @@ enum class Cue(
     val buzzTimings: LongArray,
     val buzzAmplitudes: IntArray,
 ) {
-    TAP(R.raw.sfx_tap, 0.8f, longArrayOf(0, 25), intArrayOf(0, 255)),
+    /**
+     * A dry click. Tapping her, tapping a category, tapping anything.
+     *
+     * This and [COIN] were wired to each other's samples: the import matched
+     * them up by filename, and the two files had been named the other way
+     * round, so every tap chimed like a cash register and every coin landing
+     * went *tok*. The samples were swapped on disk rather than the resource ids
+     * here, so that `sfx_tap` is the file that actually sounds like a tap.
+     */
+    TAP(R.raw.sfx_tap, 0.85f, longArrayOf(0, 25), intArrayOf(0, 255)),
+    /** A coin landing in the wallet. The bright one. */
     COIN(R.raw.sfx_coin, 1f, longArrayOf(0, 30, 50, 35), intArrayOf(0, 180, 0, 255)),
     EAT(R.raw.sfx_eat, 0.9f, longArrayOf(0, 35), intArrayOf(0, 200)),
     HAPPY(R.raw.sfx_happy, 1f, longArrayOf(0, 30, 60, 45), intArrayOf(0, 200, 0, 255)),

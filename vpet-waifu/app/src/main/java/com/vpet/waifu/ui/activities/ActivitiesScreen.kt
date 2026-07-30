@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,7 @@ import com.vpet.waifu.ui.components.SectionHeader
 import com.vpet.waifu.ui.components.StatBarTrack
 import com.vpet.waifu.ui.formatRemaining
 import com.vpet.waifu.ui.occupationIcon
+import com.vpet.waifu.ui.occupationTint
 import com.vpet.waifu.ui.occupationNameRes
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
@@ -76,8 +78,11 @@ fun ActivitiesScreen(
     nowMillis: Long,
     onStart: (Occupation) -> Unit,
     onCancel: () -> Unit,
+    onCategoryTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Same as the shop: headers and tiles are places to pat her.
+    val patting = snapshot.acceptsInteraction
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
@@ -95,14 +100,30 @@ fun ActivitiesScreen(
             item { Notice(stringResource(R.string.too_tired_to_work)) }
         }
 
-        item { SectionHeader(Icons.Rounded.Work, stringResource(R.string.section_work)) }
+        item {
+            SectionHeader(
+                Icons.Rounded.Work,
+                stringResource(R.string.section_work),
+                tint = Color(0xFF7DA7F5),
+                onTap = onCategoryTap,
+                tapEnabled = patting,
+            )
+        }
         items(Occupations.WORK, key = { it.id }) { occupation ->
-            OccupationCard(occupation, snapshot, simulation, tuning, onStart, Modifier.animateItem())
+            OccupationCard(occupation, snapshot, simulation, tuning, onStart, onCategoryTap, patting, Modifier.animateItem())
         }
 
-        item { SectionHeader(Icons.AutoMirrored.Rounded.MenuBook, stringResource(R.string.section_study)) }
+        item {
+            SectionHeader(
+                Icons.AutoMirrored.Rounded.MenuBook,
+                stringResource(R.string.section_study),
+                tint = Color(0xFF8FCE73),
+                onTap = onCategoryTap,
+                tapEnabled = patting,
+            )
+        }
         items(Occupations.STUDY, key = { it.id }) { occupation ->
-            OccupationCard(occupation, snapshot, simulation, tuning, onStart, Modifier.animateItem())
+            OccupationCard(occupation, snapshot, simulation, tuning, onStart, onCategoryTap, patting, Modifier.animateItem())
         }
     }
 }
@@ -156,7 +177,7 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
                     Icon(
                         imageVector = occupationIcon(occupation.id),
                         contentDescription = null,
-                        tint = Accents.Bright,
+                        tint = occupationTint(occupation.id),
                         modifier = Modifier.size(22.dp),
                     )
                 }
@@ -221,6 +242,8 @@ private fun OccupationCard(
     simulation: PetSimulation,
     tuning: PetTuning,
     onStart: (Occupation) -> Unit,
+    onCategoryTap: () -> Unit,
+    patting: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val unlocked = occupation.isUnlocked(snapshot.level)
@@ -233,8 +256,10 @@ private fun OccupationCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconTile(
                     icon = if (unlocked) occupationIcon(occupation.id) else Icons.Rounded.Lock,
-                    tint = if (isWork) StatColors.Money else StatColors.Exp,
+                    tint = occupationTint(occupation.id),
                     size = 54.dp,
+                    onTap = onCategoryTap,
+                    tapEnabled = patting,
                 )
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {

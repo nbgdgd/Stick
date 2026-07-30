@@ -81,7 +81,10 @@ private fun DrawScope.drawCharacter(pose: PetPose, palette: PetPalette) {
         drawTwinTail(pose, palette, mirrored = false)
         drawTwinTail(pose, palette, mirrored = true)
 
-        if (pose.prop == Prop.LAPTOP || pose.prop == Prop.BOOK) drawDesk(palette)
+        when (pose.prop) {
+            Prop.LAPTOP, Prop.BOOK, Prop.NOTEBOOK, Prop.BOOKSTACK -> drawDesk(palette)
+            else -> Unit
+        }
 
         drawLegs(pose, palette)
         drawSkirt(pose, palette)
@@ -588,9 +591,26 @@ private fun DrawScope.drawPillow(palette: PetPalette) {
     )
 }
 
+/**
+ * The desk she works and studies at.
+ *
+ * It grew legs: as a bare plank it read as a dark bar floating across her
+ * thighs rather than as furniture, and every seated scene inherited that. The
+ * legs sit at ±70, well outside her own legs at ±14, so nothing of her is
+ * hidden by them.
+ */
 private fun DrawScope.drawDesk(palette: PetPalette) {
-    drawRoundRectPath(Rect(CX - 76f, 194f, CX + 76f, 208f), radius = 5f, color = palette.propDark)
-    drawRoundRectPath(Rect(CX - 76f, 194f, CX + 76f, 198f), radius = 2f, color = palette.prop)
+    for (side in listOf(-1f, 1f)) {
+        drawRoundRectPath(
+            Rect(CX + side * 74f - 5f, 206f, CX + side * 74f + 5f, GROUND_Y - 4f),
+            radius = 3f,
+            color = palette.propDark,
+        )
+    }
+    // Top: the surface, its lit front edge, and a shadow under the overhang.
+    drawRoundRectPath(Rect(CX - 80f, 194f, CX + 80f, 210f), radius = 5f, color = palette.propDark)
+    drawRoundRectPath(Rect(CX - 80f, 194f, CX + 80f, 199f), radius = 2f, color = palette.prop)
+    drawRoundRectPath(Rect(CX - 76f, 210f, CX + 76f, 214f), radius = 2f, color = palette.propDark.copy(alpha = 0.35f))
 }
 
 private fun DrawScope.drawPropInFront(prop: Prop, pose: PetPose, palette: PetPalette) {
@@ -600,7 +620,173 @@ private fun DrawScope.drawPropInFront(prop: Prop, pose: PetPose, palette: PetPal
         Prop.BOOK -> drawBook(pose, palette)
         Prop.CONTROLLER -> drawController(pose, palette)
         Prop.PILLOW -> drawBlanket(pose, palette)
+        Prop.TRAY -> drawTray(pose, palette)
+        Prop.BAG -> drawShoppingBag(pose, palette)
+        Prop.MIC -> drawMicrophone(pose, palette)
+        Prop.NOTEBOOK -> drawNotebook(pose, palette)
+        Prop.BOOKSTACK -> {
+            drawBookPile(palette)
+            drawBook(pose, palette)
+        }
     }
+}
+
+/** The café tray: balanced on the raised left palm, coffee steaming on top. */
+private fun DrawScope.drawTray(pose: PetPose, palette: PetPalette) {
+    val hand = handOf(pose, left = true)
+    val trayY = hand.y - 4f
+
+    drawOval(palette.propDark, Offset(hand.x - 24f, trayY - 3f), Size(48f, 10f))
+    drawOval(palette.collar, Offset(hand.x - 21f, trayY - 4.5f), Size(42f, 8f))
+
+    // The cup, with a saucer and a curl of a handle.
+    val cupX = hand.x + 6f
+    drawOval(palette.propDark.copy(alpha = 0.5f), Offset(cupX - 10f, trayY - 5f), Size(20f, 5f))
+    drawRoundRectPath(Rect(cupX - 7f, trayY - 16f, cupX + 7f, trayY - 3f), radius = 3f, color = palette.white)
+    drawArcHandle(Offset(cupX + 7f, trayY - 10f), palette.white)
+    drawOval(palette.prop, Offset(cupX - 5f, trayY - 15f), Size(10f, 4f))
+
+    // A macaron for the other side of the tray, because a bare tray is sad.
+    drawOval(palette.ribbon.copy(alpha = 0.9f), Offset(hand.x - 18f, trayY - 9f), Size(11f, 7f))
+    drawOval(palette.blush, Offset(hand.x - 17f, trayY - 7.5f), Size(9f, 3f))
+}
+
+private fun DrawScope.drawArcHandle(at: Offset, color: Color) {
+    drawArc(
+        color = color,
+        startAngle = -70f,
+        sweepAngle = 140f,
+        useCenter = false,
+        topLeft = Offset(at.x - 2f, at.y - 4f),
+        size = Size(8f, 8f),
+        style = Stroke(width = 2.2f, cap = StrokeCap.Round),
+    )
+}
+
+/**
+ * The shop job: a paper bag hugged against her, hefted on the beat.
+ *
+ * Kraft brown rather than the off-white it started as — against white socks and
+ * a white collar a pale bag was a hole in the drawing, not an object. It is
+ * clasped between both hands instead of swinging from handles, because at this
+ * scale a handle is two pixels and a hug reads instantly.
+ */
+private fun DrawScope.drawShoppingBag(pose: PetPose, palette: PetPalette) {
+    val left = handOf(pose, left = true)
+    val right = handOf(pose, left = false)
+    val c = Offset((left.x + right.x) / 2f, (left.y + right.y) / 2f)
+    val top = c.y
+
+    // Handles: two short loops standing up off the rim.
+    for (side in listOf(-1f, 1f)) {
+        drawArc(
+            color = palette.propDark,
+            startAngle = 180f,
+            sweepAngle = 180f,
+            useCenter = false,
+            topLeft = Offset(c.x + side * 11f - 7f, top - 11f),
+            size = Size(14f, 14f),
+            style = Stroke(width = 2.6f, cap = StrokeCap.Round),
+        )
+    }
+
+    val bag = Path().apply {
+        moveTo(c.x - 20f, top)
+        lineTo(c.x + 20f, top)
+        lineTo(c.x + 24f, top + 36f)
+        lineTo(c.x - 24f, top + 36f)
+        close()
+    }
+    drawPath(bag, palette.accent)
+    // A folded rim and a shaded side panel so it reads as paper, not a slab.
+    drawRoundRectPath(Rect(c.x - 20f, top, c.x + 20f, top + 6f), radius = 1.5f, color = palette.white.copy(alpha = 0.35f))
+    val fold = Path().apply {
+        moveTo(c.x + 8f, top + 6f)
+        lineTo(c.x + 20f, top + 6f)
+        lineTo(c.x + 24f, top + 36f)
+        lineTo(c.x + 10f, top + 36f)
+        close()
+    }
+    drawPath(fold, palette.propDark.copy(alpha = 0.16f))
+    drawHeart(Offset(c.x - 4f, top + 21f), radius = 6.5f, color = palette.ribbon.copy(alpha = 0.9f))
+    // Something bought peeking over the rim.
+    drawCircle(palette.irisLight, radius = 5.5f, center = Offset(c.x - 9f, top - 3f))
+    drawOval(palette.ribbon.copy(alpha = 0.75f), Offset(c.x + 3f, top - 8f), Size(8f, 9f))
+}
+
+/**
+ * The idol stage: a mic *at her mouth*, sized to read from a widget away.
+ *
+ * The head is placed off the chin rather than off the hand. The hand is put
+ * there by [PetPoseFactory.performing], but the head group also tilts and bobs
+ * with the beat, and hanging the mic off the jaw is what keeps it at her mouth
+ * through the whole swing instead of drifting toward her shoulder.
+ */
+private fun DrawScope.drawMicrophone(pose: PetPose, palette: PetPalette) {
+    val hand = handOf(pose, left = false)
+    val head = Offset(CX + 24f + pose.bodyLean, HEAD_CY + 41f + pose.headBob * 0.6f)
+
+    drawLine(palette.propDark, hand, Offset(head.x + 3f, head.y + 6f), 5f, StrokeCap.Round)
+    drawCircle(palette.prop, radius = 8f, center = head)
+    // The grille: a lighter cap with a cross-hatch dot.
+    drawCircle(palette.irisLight.copy(alpha = 0.8f), radius = 5.5f, center = Offset(head.x - 1f, head.y - 1.5f))
+    drawCircle(palette.propDark.copy(alpha = 0.35f), radius = 2f, center = Offset(head.x - 1f, head.y - 1.5f))
+
+    // A spark hopping off the raised hand on the beat.
+    if (pose.propProgress > 0.6f) {
+        val flare = (pose.propProgress - 0.6f) / 0.4f
+        val up = handOf(pose, left = true)
+        drawStar(Offset(up.x + 4f, up.y - 10f - flare * 6f), 3f + flare * 3f, palette.accent.copy(alpha = flare))
+    }
+}
+
+/** School: an open notebook flat on the desk and a pencil that scribbles. */
+private fun DrawScope.drawNotebook(pose: PetPose, palette: PetPalette) {
+    val top = 176f
+    val bottom = 197f
+    // Splayed open: the near edge is wider than the spine, which is the whole
+    // difference between "an open book" and "a white rectangle".
+    val page = Path().apply {
+        moveTo(CX - 32f, top)
+        lineTo(CX + 32f, top)
+        lineTo(CX + 38f, bottom)
+        lineTo(CX - 38f, bottom)
+        close()
+    }
+    drawPath(page, palette.white)
+    drawPath(page, palette.propDark.copy(alpha = 0.18f), style = Stroke(width = 1.4f))
+    drawLine(palette.propDark.copy(alpha = 0.5f), Offset(CX, top + 1f), Offset(CX, bottom - 1f), 2f)
+
+    for (i in 0..3) {
+        val y = top + 5f + i * 4.4f
+        val spread = 26f + i * 2f
+        drawLine(palette.prop.copy(alpha = 0.35f), Offset(CX - spread, y), Offset(CX - 5f, y), 1.5f)
+        // The right page fills in as she writes.
+        val filled = (pose.propProgress * 4f - i).coerceIn(0f, 1f)
+        if (filled > 0f) {
+            drawLine(
+                palette.iris.copy(alpha = 0.6f),
+                Offset(CX + 5f, y),
+                Offset(CX + 5f + (spread - 5f) * filled, y),
+                1.5f,
+            )
+        }
+    }
+    // The pencil rides the writing hand.
+    val hand = handOf(pose, left = false)
+    val tip = Offset(CX + 14f + pose.propProgress * 9f, top + 12f)
+    drawLine(palette.accent, hand, tip, 3.4f, StrokeCap.Round)
+    drawCircle(palette.propDark, radius = 1.6f, center = tip)
+}
+
+/** The university pile: three fat books beside the open one. */
+private fun DrawScope.drawBookPile(palette: PetPalette) {
+    val deskY = 188f
+    val x = CX - 44f
+    drawRoundRectPath(Rect(x - 14f, deskY - 6f, x + 14f, deskY), radius = 2f, color = palette.prop)
+    drawRoundRectPath(Rect(x - 12f, deskY - 12f, x + 12f, deskY - 6f), radius = 2f, color = palette.ribbon.copy(alpha = 0.8f))
+    drawRoundRectPath(Rect(x - 13f, deskY - 18f, x + 13f, deskY - 12f), radius = 2f, color = palette.irisLight)
+    drawLine(palette.white.copy(alpha = 0.6f), Offset(x - 10f, deskY - 3f), Offset(x + 10f, deskY - 3f), 1.2f)
 }
 
 private fun DrawScope.drawBowlAndBite(pose: PetPose, palette: PetPalette) {
@@ -788,6 +974,7 @@ private fun DrawScope.drawParticles(kind: ParticleKind, pose: PetPose, palette: 
         ParticleKind.SLEEP_Z -> 3
         ParticleKind.SWEAT -> 1
         ParticleKind.CODE -> 6
+        ParticleKind.STEAM -> 3
         else -> 4
     }
     // Whole cycles per particle phase, so a looping phase gives a looping
@@ -841,6 +1028,16 @@ private fun DrawScope.drawParticles(kind: ParticleKind, pose: PetPose, palette: 
                 fade,
                 palette,
             )
+            // Coffee steam: soft beads rising and swelling off the cup on the
+            // tray, anchored to the hand so they follow the sway.
+            ParticleKind.STEAM -> {
+                val cup = handOf(pose, left = true)
+                drawCircle(
+                    color = palette.white.copy(alpha = fade * 0.7f),
+                    radius = 2f + phase * 3f,
+                    center = Offset(cup.x + 6f + drift * 0.4f, cup.y - 22f - phase * 26f),
+                )
+            }
             // Her output, leaving the screen — scraps of code, and every third
             // one a coin, because the shift pays while it runs.
             //

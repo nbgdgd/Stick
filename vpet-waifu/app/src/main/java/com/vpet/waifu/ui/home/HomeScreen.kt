@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -81,10 +82,13 @@ import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.domain.Dialogue
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.PetSnapshot
+import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetState
+import com.vpet.waifu.domain.Progression
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.components.ActionButton
 import com.vpet.waifu.ui.character.PetPalette
+import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.EventCard
 import com.vpet.waifu.ui.components.GainPop
@@ -101,6 +105,7 @@ import com.vpet.waifu.ui.components.StatusChip
 import com.vpet.waifu.ui.dialogueRes
 import com.vpet.waifu.ui.formatRemaining
 import com.vpet.waifu.ui.occupationIcon
+import com.vpet.waifu.ui.occupationTint
 import com.vpet.waifu.ui.occupationNameRes
 import com.vpet.waifu.ui.stateLabelRes
 import com.vpet.waifu.ui.theme.Accents
@@ -119,6 +124,7 @@ import kotlin.math.sin
 @Composable
 fun HomeScreen(
     snapshot: PetSnapshot,
+    simulation: PetSimulation,
     tuning: PetTuning,
     nowMillis: Long,
     settings: PetSettings,
@@ -186,6 +192,7 @@ fun HomeScreen(
                 height = 320.dp,
                 palette = PetPalette.forOutfit(snapshot.outfit),
                 characterScale = petScale.value,
+                workProp = workPropFor(snapshot.occupation?.id),
             )
             // The tap layer sits over the room but under the chips and bubble.
             Box(
@@ -254,6 +261,7 @@ fun HomeScreen(
         }
 
         StatsCard(snapshot)
+        ProgressCard(snapshot, simulation, tuning)
         CareRow(snapshot, tuning, onFeed, onPet, onToggleSleep)
         SettingsCard(
             settings = settings,
@@ -272,8 +280,10 @@ fun HomeScreen(
     // Wages arrive as actual coins: they pop out of the room and arc up into
     // the wallet, which hops as each one lands.
     CoinFlights(
-        sessionKey = snapshot.session?.startedAt ?: 0L,
-        paidTotal = snapshot.session?.paidOut ?: 0,
+        // The wallet itself, not just the shift's tally: the tip jar pays every
+        // three seconds whether or not she is on the clock, and every coin that
+        // reaches the wallet should be a coin you watched get there.
+        walletTotal = snapshot.progress.money,
         start = {
             Offset(
                 stageBounds.left - overlayOrigin.x + stageBounds.width * 0.5f,
@@ -351,7 +361,7 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
                     Icon(
                         imageVector = occupationIcon(occupation.id),
                         contentDescription = null,
-                        tint = Accents.Bright,
+                        tint = occupationTint(occupation.id),
                         modifier = Modifier.size(22.dp),
                     )
                 }
@@ -394,6 +404,109 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
             )
         }
     }
+}
+
+/**
+ * Where her level and her loose change come from.
+ *
+ * Both were invisible mechanics. EXP arrived from somewhere and the ring in the
+ * corner filled up; the tip jar pays every three seconds and nothing said so.
+ * A player asking "how does experience even work?" is a missing screen, not a
+ * missing explanation, so this is the screen.
+ */
+@Composable
+private fun ProgressCard(snapshot: PetSnapshot, simulation: PetSimulation, tuning: PetTuning) {
+    val exp = snapshot.progress.exp
+    val (earned, needed) = Progression.levelProgress(exp)
+    val maxed = snapshot.level >= Progression.MAX_LEVEL
+
+    PanelCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.Star,
+                    contentDescription = null,
+                    tint = StatColors.Exp,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringResource(R.string.exp_title, snapshot.level),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Accents.Text,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = if (maxed) "" else stringResource(R.string.exp_progress, earned, needed),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Accents.TextMuted,
+                )
+            }
+            StatBarTrack(
+                fraction = if (maxed) 1f else earned.toFloat() / needed,
+                color = StatColors.Exp,
+                height = 7.dp,
+            )
+            Text(
+                text = if (maxed) {
+                    stringResource(R.string.exp_maxed)
+                } else {
+                    stringResource(R.string.exp_next_level, needed - earned, snapshot.level + 1)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = Accents.TextMuted,
+            )
+            Text(
+                text = stringResource(R.string.exp_from_study),
+                style = MaterialTheme.typography.bodySmall,
+                color = Accents.TextDim,
+            )
+            Text(
+                text = stringResource(
+                    R.string.exp_from_work,
+                    formatRate(tuning.workExpPerMinute),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = Accents.TextDim,
+            )
+
+            Spacer(Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.Savings,
+                    contentDescription = null,
+                    tint = StatColors.Money,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringResource(R.string.tip_jar_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Accents.Text,
+                )
+            }
+            Text(
+                text = stringResource(
+                    R.string.tip_jar_body,
+                    simulation.passivePerMinute(snapshot),
+                    simulation.passiveDailyCap(snapshot),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = Accents.TextDim,
+            )
+        }
+    }
+}
+
+/** "0.5", not "0.5000001" — one decimal, and no trailing ".0". */
+private fun formatRate(value: Float): String {
+    val rounded = kotlin.math.round(value * 10f) / 10f
+    return if (rounded == rounded.toInt().toFloat()) rounded.toInt().toString() else rounded.toString()
 }
 
 @Composable
@@ -484,6 +597,7 @@ private fun SettingsCard(
 
             SettingRow(
                 icon = Icons.Rounded.PictureInPictureAlt,
+                tint = Color(0xFF7FD1E8),
                 title = stringResource(R.string.bubble_title),
                 subtitle = stringResource(R.string.bubble_subtitle),
                 checked = settings.bubbleEnabled && overlayPermissionGranted,
@@ -506,24 +620,28 @@ private fun SettingsCard(
 
             SettingRow(
                 icon = Icons.Rounded.Notifications,
+                tint = Color(0xFFF0C860),
                 title = stringResource(R.string.settings_notifications),
                 checked = settings.notificationsEnabled,
                 onCheckedChange = onNotificationsChange,
             )
             SettingRow(
                 icon = Icons.AutoMirrored.Rounded.VolumeUp,
+                tint = Color(0xFFF477B8),
                 title = stringResource(R.string.settings_sound),
                 checked = settings.soundEnabled,
                 onCheckedChange = onSoundChange,
             )
             SettingRow(
                 icon = Icons.Rounded.MusicNote,
+                tint = Color(0xFF9B8CF0),
                 title = stringResource(R.string.settings_music),
                 checked = settings.musicEnabled,
                 onCheckedChange = onMusicChange,
             )
             SettingRow(
                 icon = Icons.Rounded.Vibration,
+                tint = Color(0xFF8FCE73),
                 title = stringResource(R.string.settings_haptics),
                 checked = settings.hapticsEnabled,
                 onCheckedChange = onHapticsChange,
@@ -577,6 +695,7 @@ private fun NameField(current: String, onNameChange: (String) -> Unit) {
 @Composable
 private fun SettingRow(
     icon: ImageVector,
+    tint: Color,
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
@@ -588,10 +707,10 @@ private fun SettingRow(
             modifier = Modifier
                 .size(38.dp)
                 .clip(CircleShape)
-                .background(Accents.Primary.copy(alpha = 0.14f)),
+                .background(tint.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = Accents.Bright, modifier = Modifier.size(19.dp))
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(19.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -668,29 +787,32 @@ private fun DrawScope.drawSpark(center: Offset, radius: Float, color: Color) {
 }
 
 /**
- * The wages, visibly travelling.
+ * Money, visibly travelling.
  *
- * Watches the session's paid-out total; every coin of an increment becomes a
- * little gold disc that arcs from the room up to the wallet, staggered so a
- * batch reads as a stream rather than a clump. Capped per batch — a two-hour
- * payout must not carpet-bomb the screen.
+ * Watches the wallet; every coin of an increase becomes a little gold disc that
+ * arcs from the room up into the pill, staggered so a batch reads as a stream
+ * rather than a clump. Capped per batch — a two-hour payout landing at once
+ * must not carpet-bomb the screen.
+ *
+ * Spending is deliberately silent here: the shop has its own sound, and coins
+ * flying *out* of the wallet on every purchase would read as a loss animation
+ * in a game whose whole feedback vocabulary is "gold moving means good".
  */
 @Composable
 private fun CoinFlights(
-    sessionKey: Long,
-    paidTotal: Int,
+    walletTotal: Int,
     start: () -> Offset,
     end: () -> Offset,
     onArrive: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val previous = remember(sessionKey) { mutableIntStateOf(paidTotal) }
+    val previous = remember { mutableIntStateOf(walletTotal) }
     val coins = remember { mutableStateListOf<FlyingCoin>() }
     var nextCoin by remember { mutableLongStateOf(0L) }
 
-    LaunchedEffect(paidTotal, sessionKey) {
-        val delta = paidTotal - previous.intValue
-        previous.intValue = paidTotal
+    LaunchedEffect(walletTotal) {
+        val delta = walletTotal - previous.intValue
+        previous.intValue = walletTotal
         if (delta <= 0) return@LaunchedEffect
         repeat(minOf(delta, 5)) { i -> coins += FlyingCoin(nextCoin++, i * 240L) }
     }

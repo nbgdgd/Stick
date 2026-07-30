@@ -68,6 +68,7 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.domain.TapGame
 import com.vpet.waifu.ui.character.AnimatedPet
+import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PanelCard
@@ -211,6 +212,7 @@ fun GameScreen(
 
             AnimatedPet(
                 state = if (running) PetState.PLAYING else snapshot.state(nowMillis),
+                workProp = workPropFor(snapshot.occupation?.id),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .height(boardHeight * 0.55f)

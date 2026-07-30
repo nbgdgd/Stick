@@ -47,7 +47,7 @@ export function AsteroidBelt({ real, compress }: Props) {
 
   const mainBelt = useMemo(() => buildBelt({
     seed: 1337,
-    count: 5200,
+    count: 3000,
     aMin: 2.0,
     aMax: 3.4,
     inclSigmaDeg: 9,
@@ -55,12 +55,12 @@ export function AsteroidBelt({ real, compress }: Props) {
     applyGaps: true,
     real,
     compress,
-    color: new THREE.Color('#b6a894'),
+    color: new THREE.Color('#8a7f6e'),
   }), [real, compress])
 
   const kuiper = useMemo(() => buildBelt({
     seed: 4242,
-    count: 6400,
+    count: 3600,
     aMin: 30,
     aMax: 50,
     inclSigmaDeg: 14,
@@ -69,7 +69,7 @@ export function AsteroidBelt({ real, compress }: Props) {
     plutinoBump: true,
     real,
     compress,
-    color: new THREE.Color('#8fb3cc'),
+    color: new THREE.Color('#5b748c'),
   }), [real, compress])
 
   // Облако Оорта: только в реальном масштабе. В сжатом сжатие r^0.42
@@ -90,15 +90,18 @@ export function AsteroidBelt({ real, compress }: Props) {
             vColor = color;
             vec4 mv = modelViewMatrix * vec4(position, 1.0);
             gl_Position = projectionMatrix * mv;
-            gl_PointSize = clamp(aSize * 220.0 / -mv.z, 0.7, 5.0);
+            gl_PointSize = clamp(aSize * 150.0 / -mv.z, 0.6, 2.6);
           }
         `,
         fragmentShader: /* glsl */ `
           varying vec3 vColor;
           void main() {
             vec2 c = gl_PointCoord - 0.5;
-            if (length(c) > 0.5) discard;
-            gl_FragColor = vec4(vColor, 0.85);
+            float d = length(c);
+            if (d > 0.5) discard;
+            // Мягкий край и умеренная альфа: при плоских 0,85 тысячи точек
+            // сливались в непрозрачный диск и перекрывали внутренние планеты
+            gl_FragColor = vec4(vColor, exp(-d * d * 8.0) * 0.55);
           }
         `,
       }),
@@ -259,7 +262,7 @@ function buildBelt(p: BeltParams): THREE.BufferGeometry {
     pos.push(xo * k, z * k, -y * k)
     const shade = 0.6 + rnd() * 0.7
     col.push(p.color.r * shade, p.color.g * shade, p.color.b * shade)
-    size.push(0.6 + Math.pow(rnd(), 4) * 2.2)
+    size.push(0.5 + Math.pow(rnd(), 4) * 1.6)
     placed++
   }
 

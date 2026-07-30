@@ -20,6 +20,7 @@ export function Hud() {
   const toggleLabels = useStore((s) => s.toggleLabels)
   const setSearchOpen = useStore((s) => s.setSearchOpen)
   const selected = useStore((s) => s.selected)
+  const setSandboxOpen = useStore((s) => s.setSandboxOpen)
 
   const level = LEVELS[levelIndex]
 
@@ -46,6 +47,19 @@ export function Hud() {
         </div>
 
         <div className="hud__actions">
+          <button
+            className="icon-btn"
+            onClick={() => setSandboxOpen(true)}
+            aria-label="Гравитационная песочница"
+            title="Гравитационная песочница (G)"
+          >
+            {/* Две массы и виток орбиты между ними */}
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <ellipse cx="12" cy="12" rx="9" ry="5" />
+              <circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" />
+              <circle cx="21" cy="12" r="1.6" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
           <button className="icon-btn" onClick={() => setSearchOpen(true)} aria-label="Поиск объекта" title="Поиск (/)">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="7" />

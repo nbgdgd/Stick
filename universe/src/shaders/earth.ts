@@ -187,7 +187,7 @@ export const sunFragment = /* glsl */ `
     // Яркая кромка хромосферы
     col += vec3(1.0, 0.45, 0.15) * pow(1.0 - mu, 4.0) * 0.7;
 
-    gl_FragColor = vec4(col * 1.7, 1.0);
+    gl_FragColor = vec4(col * 1.35, 1.0);
   }
 `
 

@@ -31,10 +31,13 @@ import {
   solveKepler,
 } from '../lib/astro'
 import { sunVertex, sunFragment, coronaFragment } from '../shaders/earth'
+import { sunGeometry } from '../lib/sun'
 import { Label } from '../components/Label'
 import { registerFocus } from '../lib/focus'
 import { Starfield } from '../components/Starfield'
 import { AsteroidBelt } from '../components/AsteroidBelt'
+
+const EARTH_ELEMENTS = PLANETS.find((p) => p.id === 'earth')!.elements!
 
 /** Сжатие радиуса для читаемого режима. */
 const COMPRESS_EXP = 0.42
@@ -47,11 +50,20 @@ export function compressRadius(au: number, real: boolean): number {
 /** Экранный размер тела. Настоящие радиусы отличаются в 200 раз — сжимаем логарифмом. */
 function bodyRadius(p: Planet, real: boolean): number {
   const km = p.radiusKm
-  if (p.kind === 'star') return real ? 0.02 : 0.5
+  if (p.kind === 'star') return real ? 0.02 : 0.3
   // логарифмическое сжатие: Юпитер остаётся заметно крупнее Меркурия,
   // но не в 28 раз, иначе мелкие планеты пропадут
   const base = Math.pow(km / 6371, 0.52)
   return (real ? 0.006 : 0.075) * base
+}
+
+/** Расстояние от Земли до тела, а.е. — именно его подписывает панель фактов. */
+function distanceFromEarthAu(p: Planet, unixMs: number): number {
+  const T = centuriesSinceJ2000(jdFromUnixMs(unixMs))
+  if (p.id === 'earth') return 0
+  const target = p.elements ? jplPosition(p.elements, T) : ([0, 0, 0] as [number, number, number])
+  const earth = jplPosition(EARTH_ELEMENTS, T)
+  return Math.hypot(target[0] - earth[0], target[1] - earth[1], target[2] - earth[2])
 }
 
 /** Положение планеты в а.е. на момент времени, эклиптические координаты. */
@@ -91,6 +103,7 @@ export function SolarSystemScene() {
   const select = useStore((s) => s.select)
   const setFocus = useStore((s) => s.setFocus)
   const cameraDist = useStore((s) => s.cameraDist)
+  const focusId = useStore((s) => s.focusId)
 
   const bodies = useMemo(() => [...PLANETS, ...DWARF_PLANETS], [])
 
@@ -126,7 +139,7 @@ export function SolarSystemScene() {
           сделало бы Нептун полностью чёрным. */}
       <pointLight position={[0, 0, 0]} intensity={realScale ? 6 : 3.2} distance={0} decay={0} color="#fff4e0" />
 
-      <SunBody texture={texMap.get(SUN.texture!)!} real={realScale} />
+      <SunBody texture={texMap.get(SUN.texture!)!} real={realScale} simTime={simTime} />
 
       {bodies.map((p) => (
         <PlanetBody
@@ -135,7 +148,12 @@ export function SolarSystemScene() {
           simTime={simTime}
           real={realScale}
           showOrbit={showOrbits}
-          showLabel={showLabels}
+          // Html-подписи рисуются поверх канваса и не перекрываются геометрией,
+          // поэтому при наезде на планету надписи далёких тел ложились ей на диск.
+          // Пока есть выбранный объект, подписываем только его.
+          showLabel={showLabels && (!focusId || focusId === p.id)}
+          focused={focusId === p.id}
+          focusedAny={!!focusId}
           cameraDist={cameraDist}
           texMap={texMap}
           onSelect={(o) => {
@@ -150,7 +168,7 @@ export function SolarSystemScene() {
   )
 }
 
-function SunBody({ texture, real }: { texture: THREE.Texture; real: boolean }) {
+function SunBody({ texture, real, simTime }: { texture: THREE.Texture; real: boolean; simTime: number }) {
   const select = useStore((s) => s.select)
   const setFocus = useStore((s) => s.setFocus)
   const showLabels = useStore((s) => s.showLabels)
@@ -206,7 +224,9 @@ function SunBody({ texture, real }: { texture: THREE.Texture; real: boolean }) {
       source: SUN.source,
       texture: SUN.texture,
       artistic: true,
-      distanceM: AU_M,
+      // Расстояние Земля — Солнце меняется от 0,983 до 1,017 а.е.,
+      // поэтому берём фактическое на выбранную дату
+      distanceM: sunGeometry(simTime).distanceAu * AU_M,
     })
   }
 
@@ -230,11 +250,15 @@ interface PlanetBodyProps {
   showOrbit: boolean
   showLabel: boolean
   cameraDist: number
+  /** камера наведена именно на эту планету */
+  focused: boolean
+  /** вообще есть выбранный объект */
+  focusedAny: boolean
   texMap: Map<string, THREE.Texture>
   onSelect: (o: Parameters<ReturnType<typeof useStore.getState>['select']>[0]) => void
 }
 
-function PlanetBody({ planet, simTime, real, showOrbit, showLabel, cameraDist, texMap, onSelect }: PlanetBodyProps) {
+function PlanetBody({ planet, simTime, real, showOrbit, showLabel, cameraDist, focused, focusedAny, texMap, onSelect }: PlanetBodyProps) {
   const groupRef = useRef<THREE.Group>(null)
   const meshRef = useRef<THREE.Mesh>(null)
   const r = bodyRadius(planet, real)
@@ -285,6 +309,7 @@ function PlanetBody({ planet, simTime, real, showOrbit, showLabel, cameraDist, t
 
   const au = planetAu(planet, simTime)
   const distFromSunAu = Math.hypot(au[0], au[1], au[2])
+  const distFromEarthAu = distanceFromEarthAu(planet, simTime)
 
   // Подписи прячем, когда камера далеко: иначе на общем виде каша из текста
   const labelVisible = showLabel && (real ? cameraDist > 0.2 : true)
@@ -300,11 +325,18 @@ function PlanetBody({ planet, simTime, real, showOrbit, showLabel, cameraDist, t
       blurb: planet.blurb,
       texture: planet.texture,
       artistic: planet.textureIsArtistic,
-      distanceM: distFromSunAu * AU_M,
+      distanceM: distFromEarthAu * AU_M,
       facts: [
         ...planet.facts,
         { label: '— на выбранный момент —', value: '' },
         { label: 'Расстояние от Солнца', value: `${distFromSunAu.toFixed(3)} а.е.` },
+        {
+          label: 'Расстояние от Земли',
+          value:
+            planet.id === 'earth'
+              ? '—'
+              : `${distFromEarthAu.toFixed(3)} а.е. (${(distFromEarthAu * 499.005).toFixed(1)} с светового пути)`,
+        },
         {
           label: 'Спутников в модели',
           value: moons.length > 0 ? `${moons.length} (${moons.map((m) => m.name).join(', ')})` : 'нет',
@@ -322,7 +354,9 @@ function PlanetBody({ planet, simTime, real, showOrbit, showLabel, cameraDist, t
           <lineBasicMaterial
             color={planet.color}
             transparent
-            opacity={planet.kind === 'dwarf' ? 0.16 : 0.3}
+            // При наезде на объект орбиты уводим почти в ноль: вблизи они
+            // проходят через весь кадр и мешают смотреть на планету
+            opacity={(focused || !focusedAny ? 1 : 0.28) * (planet.kind === 'dwarf' ? 0.16 : 0.3)}
           />
         </line>
       )}
@@ -359,10 +393,11 @@ function PlanetBody({ planet, simTime, real, showOrbit, showLabel, cameraDist, t
             key={m.id}
             moon={m}
             simTime={simTime}
-            real={real}
+            planet={planet}
             planetRadius={r}
+            planetRadiusKm={planet.radiusKm}
             texture={m.texture ? texMap.get(m.texture) : undefined}
-            showLabel={labelVisible && cameraDist < (real ? 0.6 : 2.2)}
+            showLabel={showLabel && focused}
           />
         ))}
 
@@ -433,32 +468,36 @@ function Rings({
 function MoonBody({
   moon,
   simTime,
-  real,
+  planet,
   planetRadius,
+  planetRadiusKm,
   texture,
   showLabel,
 }: {
   moon: Moon
+  planet: Planet
   simTime: number
-  real: boolean
   planetRadius: number
+  /** физический радиус планеты, км — нужен для орбит в радиусах планеты */
+  planetRadiusKm: number
   texture?: THREE.Texture
   showLabel: boolean
 }) {
   const ref = useRef<THREE.Group>(null)
   const select = useStore((s) => s.select)
 
-  // Орбиты спутников в масштабе а.е. микроскопические — раздуваем,
-  // чтобы спутник не сидел внутри планеты, но сохраняем их порядок
-  const orbitScale = real ? 24 : 260
-  const rMoon = Math.max(planetRadius * 0.09, planetRadius * Math.pow(moon.radiusKm / 2000, 0.5) * 0.32)
+  // Орбиты спутников считаем не в а.е., а в радиусах планеты: это та
+  // величина, которая реально осмысленна (Фобос — 2,8 радиуса Марса,
+  // Титан — 21 радиус Сатурна). Разброс в 20 раз сжимаем степенью 0,42,
+  // иначе близкие спутники сидят в планете, а далёкие уходят из кадра.
+  const ratio = moon.aKm / planetRadiusKm
+  const orbitR = planetRadius * (1.7 + Math.pow(ratio, 0.42) * 1.1)
+  const rMoon = Math.max(planetRadius * 0.045, planetRadius * Math.pow(moon.radiusKm / 2000, 0.5) * 0.15)
 
   useFrame(() => {
-    const p = moonAu(moon, simTime).multiplyScalar(orbitScale)
-    // не даём спутнику уйти внутрь планеты
-    const minR = planetRadius * 1.6
-    if (p.length() < minR) p.normalize().multiplyScalar(minR)
-    if (ref.current) ref.current.position.copy(p)
+    // Направление берём из кеплеровой орбиты, радиус — сжатый
+    const dir = moonAu(moon, simTime).normalize()
+    if (ref.current) ref.current.position.copy(dir.multiplyScalar(orbitR))
   })
 
   return (
@@ -474,10 +513,17 @@ function MoonBody({
             blurb: moon.blurb,
             texture: moon.texture,
             artistic: !moon.texture,
-            distanceM: moon.aKm * 1000,
+            // Панель подписывает это как расстояние от Земли, поэтому берём
+            // расстояние до планеты-хозяина: смещение спутника от неё
+            // пренебрежимо мало на фоне межпланетных расстояний
+            distanceM: distanceFromEarthAu(planet, simTime) * AU_M,
             facts: [
               ...moon.facts,
               { label: 'Приливный захват', value: moon.tidallyLocked ? 'да' : 'нет' },
+              {
+                label: 'Расстояние от Земли',
+                value: `${distanceFromEarthAu(planet, simTime).toFixed(3)} а.е. (до ${planet.name})`,
+              },
             ],
             source: moon.source,
           })

@@ -9,6 +9,7 @@ import { SearchOverlay } from './components/SearchOverlay'
 import { TimeControls } from './components/TimeControls'
 import { LevelRail } from './components/LevelRail'
 import { LoadingVeil } from './components/LoadingVeil'
+import { Sandbox } from './components/Sandbox'
 
 export default function App() {
   const levelIndex = useStore((s) => s.levelIndex)
@@ -44,9 +45,12 @@ export default function App() {
       } else if (e.key === '/') {
         e.preventDefault()
         s.setSearchOpen(true)
+      } else if (e.key === 'g') {
+        s.setSandboxOpen(!s.sandboxOpen)
       } else if (e.key === 'Escape') {
         s.setSearchOpen(false)
         s.select(null)
+        s.setSandboxOpen(false)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -73,6 +77,7 @@ export default function App() {
       <TimeControls />
       <FactPanel />
       <SearchOverlay />
+      <Sandbox />
     </div>
   )
 }

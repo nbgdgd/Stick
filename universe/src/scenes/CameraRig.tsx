@@ -54,6 +54,8 @@ export function CameraRig() {
     dragging: false,
     lastPointers: new Map<number, { x: number; y: number }>(),
     pinchDist: 0,
+    // объект, на который надо навестись, как только сцена сообщит его радиус
+    pendingFocus: null as string | null,
   })
 
   // Смена уровня: наезд от «продолжения» предыдущего масштаба к штатному виду.
@@ -68,6 +70,7 @@ export function CameraRig() {
     s.dist = from
     s.vDist = 0
     s.edgePressure = 0
+    s.pendingFocus = null
     s.target.set(0, 0, 0)
 
     // На уровнях Земли ставим камеру со стороны Солнца: иначе при открытии
@@ -84,18 +87,12 @@ export function CameraRig() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [levelIndex])
 
-  // Наведение на выбранный объект
+  // Наведение на выбранный объект.
+  // Радиус объекта появляется в реестре только после первого кадра сцены
+  // (его пишет useFrame), поэтому здесь лишь помечаем цель, а сам наезд
+  // запускается в useFrame, когда радиус станет известен.
   useEffect(() => {
-    if (!focusId) return
-    const s = state.current
-    const r = getFocusRadius(focusId)
-    if (r > 0) {
-      s.animFrom = s.dist
-      s.animTo = Math.max(level.minDist, r * 4)
-      s.animStart = performance.now()
-      s.animating = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    state.current.pendingFocus = focusId
   }, [focusId])
 
   // Ввод: мышь, колесо и мультитач
@@ -222,6 +219,32 @@ export function CameraRig() {
         }
       } else {
         s.edgePressure = Math.max(0, s.edgePressure - dt * 2)
+      }
+    }
+
+    // Наезд на объект: ждём, пока сцена зарегистрирует его радиус
+    if (s.pendingFocus) {
+      const r = getFocusRadius(s.pendingFocus)
+      if (r > 0) {
+        s.animFrom = s.dist
+        // Коэффициент 6 оставляет объект примерно на половине высоты кадра
+        // и не режет кольца и спутники по краям
+        s.animTo = Math.max(lvl.minDist, r * 10)
+        s.animStart = performance.now()
+        s.animating = true
+
+        // В Солнечной системе Солнце стоит в начале координат. Освещённая
+        // сторона планеты обращена к центру, поэтому камеру надо ставить
+        // между Солнцем и планетой: если отвести её по радиусу наружу,
+        // в кадр попадёт ночная сторона.
+        if (lvl.id === 'solar-system') {
+          const fp = getFocusPosition(s.pendingFocus)
+          if (fp && fp.length() > 1e-6) {
+            s.theta = Math.atan2(fp.z, fp.x) + Math.PI
+            s.phi = 1.32
+          }
+        }
+        s.pendingFocus = null
       }
     }
 

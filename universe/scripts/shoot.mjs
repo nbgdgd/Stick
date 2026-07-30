@@ -39,7 +39,7 @@ const SHOTS = [
 const errors = []
 
 const browser = await chromium.launch({
-  executablePath: process.env.CHROMIUM_PATH || undefined,
+  executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium',
   args: [
     // Программный WebGL: в контейнере нет GPU, но SwiftShader рендерит
     // тот же результат, только медленнее

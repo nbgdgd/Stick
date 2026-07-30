@@ -195,15 +195,19 @@ export function Starfield({
             float sinB = dot(vDir, uGalZ);
             // Экспоненциальный профиль по широте — как у поверхностной
             // яркости диска, наблюдаемого изнутри
-            float band = exp(-abs(sinB) * 11.0);
+            // Крутой спад по широте: реальная полоса узкая, при показателе 11
+            // она расплывалась на полнеба и читалась как туман
+            float band = exp(-abs(sinB) * 26.0);
             // К центру Галактики ярче, к антицентру тусклее
             float toCenter = dot(vDir, uGalX);
             band *= 0.45 + 0.55 * smoothstep(-1.0, 1.0, toCenter);
 
             // Клочковатость и тёмные пылевые прожилки
-            float cl = noise(vDir * 24.0);
-            float dust = smoothstep(0.35, 0.75, noise(vDir * 40.0 + 11.0));
-            band *= (0.55 + cl * 0.85) * (1.0 - dust * 0.5);
+            // Высокие частоты: на низких получались мутные пятна размером
+            // в десятки градусов, ничем не похожие на Млечный Путь
+            float cl = noise(vDir * 95.0);
+            float dust = smoothstep(0.40, 0.80, noise(vDir * 150.0 + 11.0));
+            band *= (0.6 + cl * 0.8) * (1.0 - dust * 0.6);
 
             vec3 col = mix(vec3(0.42, 0.46, 0.62), vec3(0.72, 0.66, 0.55), toCenter * 0.5 + 0.5);
             gl_FragColor = vec4(col * band * uAmp, band * uAmp);
@@ -212,7 +216,7 @@ export function Starfield({
         uniforms: {
           uGalZ: { value: new THREE.Vector3() },
           uGalX: { value: new THREE.Vector3() },
-          uAmp: { value: 0.5 * brightness },
+          uAmp: { value: 0.30 * brightness },
         },
       }),
     [brightness],

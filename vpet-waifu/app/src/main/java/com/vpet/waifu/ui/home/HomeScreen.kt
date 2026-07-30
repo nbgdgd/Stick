@@ -18,9 +18,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -37,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,7 +78,7 @@ import com.vpet.waifu.ui.components.SpeechBubble
 import com.vpet.waifu.ui.components.StatusChip
 import com.vpet.waifu.ui.dialogueRes
 import com.vpet.waifu.ui.formatRemaining
-import com.vpet.waifu.ui.occupationEmoji
+import com.vpet.waifu.ui.occupationIcon
 import com.vpet.waifu.ui.occupationNameRes
 import com.vpet.waifu.ui.stateLabelRes
 import com.vpet.waifu.ui.theme.Accents
@@ -118,22 +129,25 @@ fun HomeScreen(
                 height = 320.dp,
                 palette = PetPalette.forOutfit(snapshot.outfit),
             )
+            // Bottom-left, over the floor: the one region of the room that
+            // never has her or the furniture behind text.
             StatusChip(
                 text = stringResource(stateLabelRes(state)),
                 dot = statusDot(state),
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(12.dp),
             )
-            // She talks. One line, over her head, changing with the situation.
+            // She talks — in the sky band above her head. The first cut hung
+            // the bubble at her eye level and it sat straight across her face.
             SpeechBubble(
                 text = stringResource(dialogueRes(line)),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 56.dp),
+                    .padding(top = 8.dp, start = 16.dp, end = 16.dp),
             )
-            // Every minute she is on the clock, what she just earned floats up
-            // off her. Wages arriving during the shift is the whole point of
-            // paying by the minute, and a number ticking in a pill is not
-            // something anyone looks at.
+            // Every minute she is on the clock, what she just earned floats up.
+            // Top-right corner: visible, and never over her.
             snapshot.session?.let { session ->
                 val isWork = snapshot.occupation?.kind == OccupationKind.WORK
                 GainPop(
@@ -141,8 +155,8 @@ fun HomeScreen(
                     label = if (isWork) "¥" else "EXP",
                     tint = if (isWork) StatColors.Money else StatColors.Exp,
                     modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 96.dp),
+                        .align(Alignment.TopEnd)
+                        .padding(top = 84.dp, end = 18.dp),
                 )
             }
         }
@@ -220,7 +234,12 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
                         .background(Accents.Primary.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(occupationEmoji(occupation.id), fontSize = 22.sp)
+                    Icon(
+                        imageVector = occupationIcon(occupation.id),
+                        contentDescription = null,
+                        tint = Accents.Bright,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -244,7 +263,7 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
                 // the card — otherwise the only sign she is being paid is the
                 // wallet quietly ticking up somewhere else on the screen.
                 EffectChip(
-                    emoji = if (occupation.kind == OccupationKind.WORK) "💰" else "⭐",
+                    icon = if (occupation.kind == OccupationKind.WORK) Icons.Rounded.Paid else Icons.Rounded.Star,
                     text = "+${if (occupation.kind == OccupationKind.WORK) session.paidOut else session.paidExp}",
                     tint = if (occupation.kind == OccupationKind.WORK) StatColors.Money else StatColors.Exp,
                 )
@@ -271,19 +290,19 @@ private fun StatsCard(snapshot: PetSnapshot) {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             StatRow(
-                emoji = "🍽",
+                icon = Icons.Rounded.Restaurant,
                 label = stringResource(R.string.stat_hunger),
                 value = snapshot.stats.hunger,
                 color = StatColors.Hunger,
             )
             StatRow(
-                emoji = "⚡",
+                icon = Icons.Rounded.Bolt,
                 label = stringResource(R.string.stat_energy),
                 value = snapshot.stats.energy,
                 color = StatColors.Energy,
             )
             StatRow(
-                emoji = "💜",
+                icon = Icons.Rounded.Favorite,
                 label = stringResource(R.string.stat_mood),
                 value = snapshot.stats.mood,
                 color = StatColors.Mood,
@@ -349,7 +368,7 @@ private fun SettingsCard(
             NameField(settings.petName, onNameChange)
 
             SettingRow(
-                emoji = "\uD83E\uDEE7",
+                icon = Icons.Rounded.PictureInPictureAlt,
                 title = stringResource(R.string.bubble_title),
                 subtitle = stringResource(R.string.bubble_subtitle),
                 checked = settings.bubbleEnabled && overlayPermissionGranted,
@@ -371,19 +390,19 @@ private fun SettingsCard(
             }
 
             SettingRow(
-                emoji = "\uD83D\uDD14",
+                icon = Icons.Rounded.Notifications,
                 title = stringResource(R.string.settings_notifications),
                 checked = settings.notificationsEnabled,
                 onCheckedChange = onNotificationsChange,
             )
             SettingRow(
-                emoji = "\uD83D\uDD0A",
+                icon = Icons.AutoMirrored.Rounded.VolumeUp,
                 title = stringResource(R.string.settings_sound),
                 checked = settings.soundEnabled,
                 onCheckedChange = onSoundChange,
             )
             SettingRow(
-                emoji = "\uD83D\uDCF3",
+                icon = Icons.Rounded.Vibration,
                 title = stringResource(R.string.settings_haptics),
                 checked = settings.hapticsEnabled,
                 onCheckedChange = onHapticsChange,
@@ -436,7 +455,7 @@ private fun NameField(current: String, onNameChange: (String) -> Unit) {
 
 @Composable
 private fun SettingRow(
-    emoji: String,
+    icon: ImageVector,
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
@@ -451,7 +470,7 @@ private fun SettingRow(
                 .background(Accents.Primary.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(emoji, fontSize = 17.sp)
+            Icon(icon, contentDescription = null, tint = Accents.Bright, modifier = Modifier.size(19.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {

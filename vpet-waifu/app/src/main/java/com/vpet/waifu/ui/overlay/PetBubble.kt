@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +26,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +50,7 @@ import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.components.StatBarTrack
 import com.vpet.waifu.ui.components.StatRow
 import com.vpet.waifu.ui.formatRemaining
-import com.vpet.waifu.ui.occupationEmoji
+import com.vpet.waifu.ui.occupationIcon
 import com.vpet.waifu.ui.occupationNameRes
 import com.vpet.waifu.ui.stateLabelRes
 import com.vpet.waifu.ui.theme.Accents
@@ -178,13 +182,21 @@ private fun PetPanel(
             snapshot.session?.let { session ->
                 val occupation = snapshot.occupation
                 if (occupation != null) {
-                    Text(
-                        text = "${occupationEmoji(occupation.id)} " +
-                            stringResource(occupationNameRes(occupation.id)) +
-                            " · " + formatRemaining(session.remainingMillis(nowMillis)),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Accents.Text,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = occupationIcon(occupation.id),
+                            contentDescription = null,
+                            tint = Accents.Bright,
+                            modifier = Modifier.size(12.dp),
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            text = stringResource(occupationNameRes(occupation.id)) +
+                                " · " + formatRemaining(session.remainingMillis(nowMillis)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Accents.Text,
+                        )
+                    }
                     StatBarTrack(
                         fraction = session.progress(nowMillis),
                         color = Accents.Bright,
@@ -195,21 +207,21 @@ private fun PetPanel(
             }
 
             StatRow(
-                emoji = "🍽",
+                icon = Icons.Rounded.Restaurant,
                 label = stringResource(R.string.stat_hunger),
                 value = snapshot.stats.hunger,
                 color = StatColors.Hunger,
                 compact = true,
             )
             StatRow(
-                emoji = "⚡",
+                icon = Icons.Rounded.Bolt,
                 label = stringResource(R.string.stat_energy),
                 value = snapshot.stats.energy,
                 color = StatColors.Energy,
                 compact = true,
             )
             StatRow(
-                emoji = "💜",
+                icon = Icons.Rounded.FavoriteBorder,
                 label = stringResource(R.string.stat_mood),
                 value = snapshot.stats.mood,
                 color = StatColors.Mood,

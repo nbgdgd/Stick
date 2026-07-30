@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import com.vpet.waifu.R
 import com.vpet.waifu.data.PetPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -16,15 +17,29 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Every noise the app can make. */
-enum class Cue(val resId: Int, val volume: Float, val buzzMillis: Long) {
-    TAP(R.raw.sfx_tap, volume = 0.5f, buzzMillis = 8),
-    COIN(R.raw.sfx_coin, volume = 0.7f, buzzMillis = 14),
-    EAT(R.raw.sfx_eat, volume = 0.6f, buzzMillis = 10),
-    HAPPY(R.raw.sfx_happy, volume = 0.7f, buzzMillis = 18),
+/**
+ * Every noise the app can make, with the buzz that goes with it.
+ *
+ * The haptic patterns are `(off, on, off, on…)` millisecond timings plus an
+ * amplitude per segment. The first cut of this used single pulses of 8–30 ms at
+ * default amplitude, which is below what a phone's motor can physically render —
+ * the code ran, the motor never moved, and the feature read as absent. Every
+ * pulse is now ≥25 ms and pinned to full amplitude, with the character of the
+ * cue carried by the rhythm rather than by strength.
+ */
+enum class Cue(
+    val resId: Int,
+    val volume: Float,
+    val buzzTimings: LongArray,
+    val buzzAmplitudes: IntArray,
+) {
+    TAP(R.raw.sfx_tap, 0.8f, longArrayOf(0, 25), intArrayOf(0, 255)),
+    COIN(R.raw.sfx_coin, 1f, longArrayOf(0, 30, 50, 35), intArrayOf(0, 180, 0, 255)),
+    EAT(R.raw.sfx_eat, 0.9f, longArrayOf(0, 35), intArrayOf(0, 200)),
+    HAPPY(R.raw.sfx_happy, 1f, longArrayOf(0, 30, 60, 45), intArrayOf(0, 200, 0, 255)),
     /** Buying something permanent, or gaining a level. */
-    FANFARE(R.raw.sfx_fanfare, volume = 0.8f, buzzMillis = 30),
-    DENIED(R.raw.sfx_denied, volume = 0.5f, buzzMillis = 22),
+    FANFARE(R.raw.sfx_fanfare, 1f, longArrayOf(0, 40, 70, 40, 70, 70), intArrayOf(0, 160, 0, 210, 0, 255)),
+    DENIED(R.raw.sfx_denied, 0.8f, longArrayOf(0, 60, 80, 60), intArrayOf(0, 255, 0, 255)),
 }
 
 /**
@@ -34,9 +49,10 @@ enum class Cue(val resId: Int, val volume: Float, val buzzMillis: Long) {
  * overlap constantly during the mini-game, and the pool decodes them once up
  * front so a tap never waits on IO.
  *
- * Loading is asynchronous and deliberately unguarded — a cue asked for before
- * its sample has finished decoding is simply dropped. Blocking a tap to wait
- * for a click sound would be a worse bug than a missing click.
+ * Loading is asynchronous, so the very first cue of a cold start can arrive
+ * before its sample has decoded. Rather than dropping it — which made the first
+ * button of every session silently mute — the cue is parked and fired from the
+ * load-complete callback. Blocking the tap to wait would be the worse bug.
  */
 @Singleton
 class PetSounds @Inject constructor(
@@ -56,6 +72,7 @@ class PetSounds @Inject constructor(
 
     private val sampleIds = mutableMapOf<Cue, Int>()
     private val ready = mutableSetOf<Int>()
+    private var pendingCue: Cue? = null
 
     private val soundOn = MutableStateFlow(true)
     private val hapticsOn = MutableStateFlow(true)
@@ -71,11 +88,27 @@ class PetSounds @Inject constructor(
 
     fun start(scope: CoroutineScope) {
         pool.setOnLoadCompleteListener { _, sampleId, status ->
-            if (status == 0) synchronized(ready) { ready += sampleId }
+            if (status == 0) {
+                val toReplay: Cue?
+                synchronized(ready) {
+                    ready += sampleId
+                    toReplay = pendingCue?.takeIf { sampleIds[it] == sampleId }
+                    if (toReplay != null) pendingCue = null
+                }
+                // Sound only: the buzz already fired when the cue was asked
+                // for, and a second one here would double-tap the first press
+                // of every session.
+                toReplay?.let(::playSample)
+            } else {
+                // A sample that fails to decode turns into permanent silence
+                // for that cue; that must be visible in a bug report.
+                Log.w(TAG, "sound sample $sampleId failed to load: status $status")
+            }
         }
         Cue.entries.forEach { cue ->
             runCatching { pool.load(context, cue.resId, 1) }
                 .onSuccess { sampleIds[cue] = it }
+                .onFailure { Log.w(TAG, "could not load ${cue.name}", it) }
         }
         scope.launch {
             preferences.settings.collect {
@@ -86,20 +119,31 @@ class PetSounds @Inject constructor(
     }
 
     fun play(cue: Cue) {
-        if (soundOn.value) {
-            val sample = sampleIds[cue]
-            val loaded = sample != null && synchronized(ready) { sample in ready }
-            if (loaded) pool.play(sample, cue.volume, cue.volume, 1, 0, 1f)
-        }
-        if (hapticsOn.value) buzz(cue.buzzMillis)
+        if (soundOn.value) playSample(cue)
+        if (hapticsOn.value) buzz(cue)
     }
 
-    private fun buzz(millis: Long) {
-        if (millis <= 0) return
+    private fun playSample(cue: Cue) {
+        val sample = sampleIds[cue]
+        val loaded: Boolean = synchronized(ready) {
+            val ok = sample != null && sample in ready
+            if (!ok) pendingCue = cue
+            ok
+        }
+        if (loaded && sample != null) {
+            pool.play(sample, cue.volume, cue.volume, 1, 0, 1f)
+        }
+    }
+
+    private fun buzz(cue: Cue) {
         val v = vibrator ?: return
         if (!v.hasVibrator()) return
         runCatching {
-            v.vibrate(VibrationEffect.createOneShot(millis, VibrationEffect.DEFAULT_AMPLITUDE))
-        }
+            v.vibrate(VibrationEffect.createWaveform(cue.buzzTimings, cue.buzzAmplitudes, -1))
+        }.onFailure { Log.w(TAG, "vibration failed", it) }
+    }
+
+    private companion object {
+        const val TAG = "PetSounds"
     }
 }

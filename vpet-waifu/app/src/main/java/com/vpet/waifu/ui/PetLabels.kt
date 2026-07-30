@@ -1,7 +1,44 @@
 package com.vpet.waifu.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Backpack
+import androidx.compose.material.icons.rounded.Bed
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Cake
+import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.material.icons.rounded.Checkroom
+import androidx.compose.material.icons.rounded.Coffee
+import androidx.compose.material.icons.rounded.Computer
+import androidx.compose.material.icons.rounded.Diamond
+import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Icecream
+import androidx.compose.material.icons.rounded.Kitchen
+import androidx.compose.material.icons.rounded.Laptop
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.LocalCafe
+import androidx.compose.material.icons.rounded.LocalFlorist
+import androidx.compose.material.icons.rounded.LunchDining
+import androidx.compose.material.icons.rounded.MarkEmailUnread
+import androidx.compose.material.icons.rounded.Medication
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material.icons.rounded.Pets
+import androidx.compose.material.icons.rounded.Piano
+import androidx.compose.material.icons.rounded.RamenDining
+import androidx.compose.material.icons.rounded.RiceBowl
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.SentimentVeryDissatisfied
+import androidx.compose.material.icons.rounded.Sick
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Storefront
+import androidx.compose.material.icons.rounded.Toys
+import androidx.compose.material.icons.rounded.Work
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.DialogueLine
 import com.vpet.waifu.domain.DialogueTopic
@@ -14,8 +51,8 @@ import com.vpet.waifu.ui.theme.StatColors
  * The bridge between domain ids and user-facing text.
  *
  * The domain deliberately knows nothing about Android, so `"cafe"` becomes
- * "Кафе" here and nowhere else. An emoji per entry gives the shop and the job
- * list some colour without needing an icon set.
+ * "Кафе" here and nowhere else. Each id also maps to a Material icon so the
+ * lists read as UI rather than as a chat message full of emoji.
  */
 @StringRes
 fun occupationNameRes(id: String): Int = when (id) {
@@ -29,15 +66,15 @@ fun occupationNameRes(id: String): Int = when (id) {
     else -> R.string.job_cafe
 }
 
-fun occupationEmoji(id: String): String = when (id) {
-    "cafe" -> "☕"
-    "shop" -> "🛍"
-    "office" -> "💼"
-    "idol" -> "🎤"
-    "school" -> "🎒"
-    "course" -> "💻"
-    "university" -> "🎓"
-    else -> "⭐"
+fun occupationIcon(id: String): ImageVector = when (id) {
+    "cafe" -> Icons.Rounded.LocalCafe
+    "shop" -> Icons.Rounded.Storefront
+    "office" -> Icons.Rounded.Work
+    "idol" -> Icons.Rounded.Mic
+    "school" -> Icons.Rounded.Backpack
+    "course" -> Icons.Rounded.Computer
+    "university" -> Icons.Rounded.School
+    else -> Icons.Rounded.Star
 }
 
 @StringRes
@@ -57,20 +94,20 @@ fun shopItemNameRes(id: String): Int = when (id) {
     else -> R.string.item_onigiri
 }
 
-fun shopItemEmoji(id: String): String = when (id) {
-    "onigiri" -> "🍙"
-    "ramen" -> "🍜"
-    "cake" -> "🍰"
-    "bento" -> "🍱"
-    "parfait" -> "🍨"
-    "energy_drink" -> "🥤"
-    "flowers" -> "💐"
-    "teddy" -> "🧸"
-    "headphones" -> "🎧"
-    "ring" -> "💍"
-    "advance" -> "💊"
-    "exp_pill" -> "💊"
-    else -> "🎁"
+fun shopItemIcon(id: String): ImageVector = when (id) {
+    "onigiri" -> Icons.Rounded.RiceBowl
+    "ramen" -> Icons.Rounded.RamenDining
+    "cake" -> Icons.Rounded.Cake
+    "bento" -> Icons.Rounded.LunchDining
+    "parfait" -> Icons.Rounded.Icecream
+    "energy_drink" -> Icons.Rounded.Bolt
+    "flowers" -> Icons.Rounded.LocalFlorist
+    "teddy" -> Icons.Rounded.Toys
+    "headphones" -> Icons.Rounded.Headphones
+    "ring" -> Icons.Rounded.Diamond
+    "advance" -> Icons.Rounded.Payments
+    "exp_pill" -> Icons.Rounded.Medication
+    else -> Icons.Rounded.CardGiftcard
 }
 
 @StringRes
@@ -91,21 +128,18 @@ fun upgradeNameRes(id: String): Int = when (id) {
     else -> R.string.upgrade_outfit_gold
 }
 
-fun upgradeEmoji(id: String): String = when (id) {
-    "fridge" -> "\uD83E\uDDCA"
-    "bed" -> "\uD83D\uDECF"
-    "console" -> "\uD83C\uDFAE"
-    "cat" -> "\uD83D\uDC08"
-    "coffee_machine" -> "\u2615"
-    "laptop" -> "\uD83D\uDCBB"
-    "textbooks" -> "\uD83D\uDCDA"
-    "studio" -> "\uD83C\uDFB9"
-    "outfit_uniform" -> "\uD83C\uDF93"
-    "outfit_cocoa" -> "\uD83E\uDD5B"
-    "outfit_mint" -> "\uD83C\uDF3F"
-    "outfit_sakura" -> "\uD83C\uDF38"
-    "outfit_midnight" -> "\uD83C\uDF19"
-    else -> "\u2728"
+fun upgradeIcon(id: String): ImageVector = when (id) {
+    "fridge" -> Icons.Rounded.Kitchen
+    "bed" -> Icons.Rounded.Bed
+    "console" -> Icons.Rounded.SportsEsports
+    "cat" -> Icons.Rounded.Pets
+    "coffee_machine" -> Icons.Rounded.Coffee
+    "laptop" -> Icons.Rounded.Laptop
+    "textbooks" -> Icons.AutoMirrored.Rounded.MenuBook
+    "studio" -> Icons.Rounded.Piano
+    // Every outfit is the same wardrobe icon; the tile's tint carries which
+    // one it is, taken from the outfit's own ribbon colour.
+    else -> Icons.Rounded.Checkroom
 }
 
 @StringRes
@@ -126,12 +160,12 @@ fun eventBodyRes(kind: EventKind): Int = when (kind) {
     EventKind.RESTLESS -> R.string.event_restless
 }
 
-fun eventEmoji(kind: EventKind): String = when (kind) {
-    EventKind.LUCKY_DAY -> "\uD83C\uDF40"
-    EventKind.COLD -> "\uD83E\uDD12"
-    EventKind.LETTER -> "\u2709\uFE0F"
-    EventKind.INSPIRED -> "\uD83D\uDCA1"
-    EventKind.RESTLESS -> "\uD83D\uDE2B"
+fun eventIcon(kind: EventKind): ImageVector = when (kind) {
+    EventKind.LUCKY_DAY -> Icons.Rounded.AutoAwesome
+    EventKind.COLD -> Icons.Rounded.Sick
+    EventKind.LETTER -> Icons.Rounded.MarkEmailUnread
+    EventKind.INSPIRED -> Icons.Rounded.Lightbulb
+    EventKind.RESTLESS -> Icons.Rounded.SentimentVeryDissatisfied
 }
 
 /**

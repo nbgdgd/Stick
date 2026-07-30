@@ -12,16 +12,36 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.material.icons.rounded.Chair
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Checkroom
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Handyman
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Medication
+import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.RamenDining
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.WarningAmber
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
@@ -34,15 +54,16 @@ import com.vpet.waifu.domain.Upgrade
 import com.vpet.waifu.domain.UpgradeKind
 import com.vpet.waifu.domain.Upgrades
 import com.vpet.waifu.ui.components.EffectChip
-import com.vpet.waifu.ui.components.EmojiTile
+import com.vpet.waifu.ui.components.IconTile
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PanelCard
 import com.vpet.waifu.ui.components.ScreenTitle
 import com.vpet.waifu.ui.components.SectionHeader
 import com.vpet.waifu.ui.formatMinutes
-import com.vpet.waifu.ui.shopItemEmoji
-import com.vpet.waifu.ui.upgradeEmoji
+import com.vpet.waifu.ui.character.PetPalette
+import com.vpet.waifu.ui.shopItemIcon
+import com.vpet.waifu.ui.upgradeIcon
 import com.vpet.waifu.ui.upgradeNameRes
 import com.vpet.waifu.ui.shopItemNameRes
 import com.vpet.waifu.ui.theme.Accents
@@ -73,9 +94,9 @@ fun ShopScreen(
             }
         }
 
-        section(R.string.section_food, "🍜", Shop.FOOD, snapshot, onBuy)
-        section(R.string.section_gifts, "🎁", Shop.GIFTS, snapshot, onBuy)
-        section(R.string.section_pills, "💊", Shop.PILLS, snapshot, onBuy)
+        section(R.string.section_food, Icons.Rounded.RamenDining, Shop.FOOD, snapshot, onBuy)
+        section(R.string.section_gifts, Icons.Rounded.CardGiftcard, Shop.GIFTS, snapshot, onBuy)
+        section(R.string.section_pills, Icons.Rounded.Medication, Shop.PILLS, snapshot, onBuy)
 
         item {
             Text(
@@ -88,21 +109,21 @@ fun ShopScreen(
 
         // Everything above is eaten within the hour. Everything below is kept,
         // which is what makes the money worth earning in the first place.
-        upgrades(R.string.section_room, "\uD83C\uDFE0", Upgrades.ROOM, snapshot, onBuyUpgrade, onWear)
-        upgrades(R.string.section_gear, "\uD83D\uDEE0", Upgrades.GEAR, snapshot, onBuyUpgrade, onWear)
-        upgrades(R.string.section_outfits, "\uD83D\uDC57", Upgrades.OUTFITS, snapshot, onBuyUpgrade, onWear)
+        upgrades(R.string.section_room, Icons.Rounded.Chair, Upgrades.ROOM, snapshot, onBuyUpgrade, onWear)
+        upgrades(R.string.section_gear, Icons.Rounded.Handyman, Upgrades.GEAR, snapshot, onBuyUpgrade, onWear)
+        upgrades(R.string.section_outfits, Icons.Rounded.Checkroom, Upgrades.OUTFITS, snapshot, onBuyUpgrade, onWear)
     }
 }
 
 private fun LazyListScope.upgrades(
     titleRes: Int,
-    emoji: String,
+    icon: ImageVector,
     items: List<Upgrade>,
     snapshot: PetSnapshot,
     onBuy: (Upgrade) -> Unit,
     onWear: (String) -> Unit,
 ) {
-    item { SectionHeaderRow(emoji, titleRes) }
+    item { SectionHeaderRow(icon, titleRes) }
     items(items, key = { it.id }) { upgrade ->
         UpgradeCard(upgrade, snapshot, onBuy, onWear, modifier = Modifier.animateItem())
     }
@@ -128,15 +149,20 @@ private fun UpgradeCard(
     val affordable = snapshot.progress.canAfford(upgrade.price)
     val outfit = upgrade.kind == UpgradeKind.OUTFIT
     val worn = outfit && snapshot.outfit == upgrade.id
-    val tint = if (outfit) StatColors.Mood else StatColors.Money
+    // An outfit tile is tinted with the outfit's own ribbon colour, so the six
+    // wardrobe entries read as six different clothes rather than six hangers.
+    val tint = when {
+        outfit -> PetPalette.forOutfit(upgrade.id).ribbon
+        else -> StatColors.Money
+    }
 
     PanelCard(
         modifier = modifier.fillMaxWidth(),
         border = if (owned) tint.copy(alpha = 0.45f) else Surfaces.CardBorder,
     ) {
         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            EmojiTile(
-                emoji = if (unlocked || owned) upgradeEmoji(upgrade.id) else "\uD83D\uDD12",
+            IconTile(
+                icon = if (unlocked || owned) upgradeIcon(upgrade.id) else Icons.Rounded.Lock,
                 tint = tint,
             )
             Spacer(Modifier.width(14.dp))
@@ -151,12 +177,16 @@ private fun UpgradeCard(
                 Spacer(Modifier.height(7.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     EffectChip(
-                        emoji = if (outfit) "\u2728" else "\u2B06",
+                        icon = if (outfit) Icons.Rounded.AutoAwesome else Icons.AutoMirrored.Rounded.TrendingUp,
                         text = stringResource(upgradeEffectRes(upgrade)),
                         tint = tint,
                     )
                     if (owned) {
-                        EffectChip(emoji = "\u2714", text = stringResource(R.string.upgrade_owned), tint = tint)
+                        EffectChip(
+                            icon = Icons.Rounded.Check,
+                            text = stringResource(R.string.upgrade_owned),
+                            tint = tint,
+                        )
                     }
                 }
                 if (!unlocked && !owned) {
@@ -171,7 +201,11 @@ private fun UpgradeCard(
 
             Spacer(Modifier.width(10.dp))
             when {
-                worn -> EffectChip(emoji = "\uD83D\uDC57", text = stringResource(R.string.action_worn), tint = tint)
+                worn -> EffectChip(
+                    icon = Icons.Rounded.Checkroom,
+                    text = stringResource(R.string.action_worn),
+                    tint = tint,
+                )
                 owned && outfit -> OutlineButton(
                     text = stringResource(R.string.action_wear),
                     onClick = { onWear(upgrade.id) },
@@ -209,12 +243,12 @@ private fun upgradeEffectRes(upgrade: Upgrade): Int {
 
 private fun LazyListScope.section(
     titleRes: Int,
-    emoji: String,
+    icon: ImageVector,
     items: List<ShopItem>,
     snapshot: PetSnapshot,
     onBuy: (ShopItem) -> Unit,
 ) {
-    item { SectionHeaderRow(emoji, titleRes) }
+    item { SectionHeaderRow(icon, titleRes) }
     items(items, key = { it.id }) { item ->
         // Cards slide into place when a level-up unlocks one mid-list.
         ShopCard(item, snapshot, onBuy, modifier = Modifier.animateItem())
@@ -222,8 +256,8 @@ private fun LazyListScope.section(
 }
 
 @Composable
-private fun SectionHeaderRow(emoji: String, titleRes: Int) {
-    SectionHeader(emoji = emoji, title = stringResource(titleRes))
+private fun SectionHeaderRow(icon: ImageVector, titleRes: Int) {
+    SectionHeader(icon = icon, title = stringResource(titleRes))
 }
 
 @Composable
@@ -243,8 +277,8 @@ private fun ShopCard(
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            EmojiTile(
-                emoji = if (unlocked) shopItemEmoji(item.id) else "🔒",
+            IconTile(
+                icon = if (unlocked) shopItemIcon(item.id) else Icons.Rounded.Lock,
                 tint = tint,
             )
             Spacer(Modifier.width(14.dp))
@@ -269,7 +303,12 @@ private fun ShopCard(
                 if (blocker != null) {
                     Spacer(Modifier.height(7.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (unlocked) "💰" else "🔒", style = MaterialTheme.typography.labelSmall)
+                        Icon(
+                            imageVector = if (unlocked) Icons.Rounded.Paid else Icons.Rounded.Lock,
+                            contentDescription = null,
+                            tint = Accents.Danger,
+                            modifier = Modifier.size(13.dp),
+                        )
                         Spacer(Modifier.width(6.dp))
                         Text(
                             text = blocker,
@@ -303,24 +342,24 @@ private fun ShopCard(
 private fun EffectChips(item: ShopItem) {
     val chips = buildList {
         if (item.hunger != 0f) {
-            add(Triple("🍽", "${signed(item.hunger)} ${label(R.string.stat_hunger)}", StatColors.Hunger))
+            add(Triple(Icons.Rounded.Restaurant, "${signed(item.hunger)} ${label(R.string.stat_hunger)}", StatColors.Hunger))
         }
         if (item.energy != 0f) {
-            add(Triple("⚡", "${signed(item.energy)} ${label(R.string.stat_energy)}", StatColors.Energy))
+            add(Triple(Icons.Rounded.Bolt, "${signed(item.energy)} ${label(R.string.stat_energy)}", StatColors.Energy))
         }
         if (item.mood != 0f) {
-            add(Triple("💜", "${signed(item.mood)} ${label(R.string.stat_mood)}", StatColors.Mood))
+            add(Triple(Icons.Rounded.Favorite, "${signed(item.mood)} ${label(R.string.stat_mood)}", StatColors.Mood))
         }
-        if (item.money != 0) add(Triple("💰", "+${item.money} ¥", StatColors.Money))
-        if (item.exp != 0) add(Triple("⭐", "+${item.exp} EXP", StatColors.Exp))
+        if (item.money != 0) add(Triple(Icons.Rounded.Paid, "+${item.money} ¥", StatColors.Money))
+        if (item.exp != 0) add(Triple(Icons.Rounded.Star, "+${item.exp} EXP", StatColors.Exp))
         // Matched exhaustively including null: `effect` lives in another module,
         // so Kotlin will not smart-cast the property to non-null.
         when (item.effect) {
             EffectKind.HUNGER_SURGE -> add(
-                Triple("⚠", label(R.string.effect_hunger_surge, formatMinutes(item.effectMinutes)), Accents.Danger),
+                Triple(Icons.Rounded.WarningAmber, label(R.string.effect_hunger_surge, formatMinutes(item.effectMinutes)), Accents.Danger),
             )
             EffectKind.EXHAUSTION -> add(
-                Triple("⚠", label(R.string.effect_exhaustion, formatMinutes(item.effectMinutes)), Accents.Danger),
+                Triple(Icons.Rounded.WarningAmber, label(R.string.effect_exhaustion, formatMinutes(item.effectMinutes)), Accents.Danger),
             )
             null -> Unit
         }
@@ -330,7 +369,7 @@ private fun EffectChips(item: ShopItem) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        chips.forEach { (emoji, text, tint) -> EffectChip(emoji, text, tint) }
+        chips.forEach { (icon, text, tint) -> EffectChip(icon, text, tint) }
     }
 }
 

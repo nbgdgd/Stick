@@ -2,6 +2,7 @@ package com.vpet.waifu
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -49,6 +50,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // The game's cues play on the media stream; without this the hardware
+        // volume keys adjust the ringer instead, so a player who "turns the
+        // volume up" changes nothing and concludes the sound is broken.
+        volumeControlStream = AudioManager.STREAM_MUSIC
         overlayPermissionGranted = OverlayPermission.isGranted(this)
         requestNotificationPermissionIfNeeded()
         bindBubbleToggleToService()

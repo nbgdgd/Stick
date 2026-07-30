@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +27,7 @@ import com.vpet.waifu.R
 import com.vpet.waifu.domain.EventKind
 import com.vpet.waifu.domain.PetEvent
 import com.vpet.waifu.ui.eventBodyRes
-import com.vpet.waifu.ui.eventEmoji
+import com.vpet.waifu.ui.eventIcon
 import com.vpet.waifu.ui.eventTitleRes
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
@@ -57,7 +58,12 @@ fun EventCard(event: PetEvent, onDismiss: () -> Unit, modifier: Modifier = Modif
                         .background(tint.copy(alpha = 0.16f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(eventEmoji(event.kind), fontSize = 21.sp)
+                    Icon(
+                        imageVector = eventIcon(event.kind),
+                        contentDescription = null,
+                        tint = tint,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {

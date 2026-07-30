@@ -64,7 +64,9 @@ fun PetStage(
             palette = palette,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 8.dp, top = 14.dp),
+                // The top band is reserved for the speech bubble; pushing her
+                // start line down keeps the bubble in the sky and off her face.
+                .padding(bottom = 8.dp, top = 48.dp),
         )
     }
 }

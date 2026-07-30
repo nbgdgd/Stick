@@ -22,12 +22,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Cookie
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.LocalFlorist
+import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.Redeem
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +56,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -73,9 +85,27 @@ private const val TARGET_SIZE_DP = 56
 private const val TARGET_LIFETIME_MILLIS = 1_100L
 private const val SPAWN_INTERVAL_MILLIS = 520L
 private const val FRAME_MILLIS = 50L
-private val TARGET_EMOJI = listOf("💜", "⭐", "🍬", "🌸", "🎀")
 
-private data class Target(val id: Long, val xFraction: Float, val yFraction: Float, val emoji: String)
+/** What a target looks like: an icon and the colour it glows. */
+private enum class TargetKind(val tint: Color) {
+    HEART(Color(0xFFB388FF)),
+    STAR(Color(0xFFFFC46B)),
+    COOKIE(Color(0xFFE8A87C)),
+    FLOWER(Color(0xFFF48FB1)),
+    GIFT(Color(0xFFFF80AB)),
+    ;
+
+    val icon: ImageVector
+        get() = when (this) {
+            HEART -> Icons.Rounded.Favorite
+            STAR -> Icons.Rounded.Star
+            COOKIE -> Icons.Rounded.Cookie
+            FLOWER -> Icons.Rounded.LocalFlorist
+            GIFT -> Icons.Rounded.Redeem
+        }
+}
+
+private data class Target(val id: Long, val xFraction: Float, val yFraction: Float, val kind: TargetKind)
 
 /**
  * The tap mini-game.
@@ -118,7 +148,7 @@ fun GameScreen(
                         id = nextId++,
                         xFraction = 0.08f + random.nextFloat() * 0.84f,
                         yFraction = 0.08f + random.nextFloat() * 0.78f,
-                        emoji = TARGET_EMOJI[random.nextInt(TARGET_EMOJI.size)],
+                        kind = TargetKind.entries[random.nextInt(TargetKind.entries.size)],
                     )
                     nextSpawn = elapsed + SPAWN_INTERVAL_MILLIS
                 }
@@ -149,7 +179,11 @@ fun GameScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ScreenTitle(stringResource(R.string.tab_game)) {
-            EffectChip(emoji = "💜", text = "${snapshot.stats.mood.roundToInt()}", tint = StatColors.Mood)
+            EffectChip(
+                icon = Icons.Rounded.Favorite,
+                text = "${snapshot.stats.mood.roundToInt()}",
+                tint = StatColors.Mood,
+            )
         }
 
         GameHeader(
@@ -198,12 +232,15 @@ fun GameScreen(
                 }
             }
 
+            // Top of the board, not the centre: she stands in the middle, and
+            // the centred button sat straight across her face with the "she is
+            // busy" line under it on her chin.
             StartOverlay(
                 visible = !running,
                 canPlay = snapshot.acceptsInteraction,
                 played = lastScore != null,
                 onStart = { running = true },
-                modifier = Modifier.align(Alignment.Center),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 26.dp),
             )
         }
     }
@@ -225,7 +262,9 @@ private fun GameHeader(
     lastScore: Int?,
     onStop: () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxWidth().height(78.dp)) {
+    // A minimum rather than a fixed height: the idle hint runs to three lines
+    // in Russian and a fixed 78dp cropped the last one mid-glyph.
+    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 78.dp)) {
         AnimatedVisibility(
             visible = running,
             enter = fadeIn() + scaleIn(initialScale = 0.94f),
@@ -339,7 +378,12 @@ private fun IdleHeader(lastScore: Int?) {
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("🎮", fontSize = 22.sp)
+            Icon(
+                imageVector = Icons.Rounded.SportsEsports,
+                contentDescription = null,
+                tint = Accents.Bright,
+                modifier = Modifier.size(24.dp),
+            )
             Spacer(Modifier.width(12.dp))
             if (lastScore == null) {
                 Text(
@@ -359,12 +403,12 @@ private fun IdleHeader(lastScore: Int?) {
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         EffectChip(
-                            emoji = "💜",
+                            icon = Icons.Rounded.Favorite,
                             text = "+${TapGame.moodGain(lastScore).roundToInt()}",
                             tint = StatColors.Mood,
                         )
                         EffectChip(
-                            emoji = "💰",
+                            icon = Icons.Rounded.Paid,
                             text = "+${TapGame.coins(lastScore)}",
                             tint = StatColors.Money,
                         )
@@ -407,10 +451,10 @@ private fun TargetBubble(
             .clip(CircleShape)
             .background(
                 Brush.verticalGradient(
-                    listOf(Accents.Primary.copy(alpha = 0.55f), Accents.Deep.copy(alpha = 0.75f)),
+                    listOf(target.kind.tint.copy(alpha = 0.30f), Accents.Deep.copy(alpha = 0.75f)),
                 ),
             )
-            .border(1.dp, Accents.Bright.copy(alpha = 0.6f), CircleShape)
+            .border(1.dp, target.kind.tint.copy(alpha = 0.7f), CircleShape)
             // No ripple: it lags behind a target that vanishes on the same tap.
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -419,6 +463,11 @@ private fun TargetBubble(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Text(target.emoji, fontSize = 24.sp)
+        Icon(
+            imageVector = target.kind.icon,
+            contentDescription = null,
+            tint = target.kind.tint,
+            modifier = Modifier.size(28.dp),
+        )
     }
 }

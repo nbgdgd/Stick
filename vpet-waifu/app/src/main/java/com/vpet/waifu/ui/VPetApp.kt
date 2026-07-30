@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.WorkOutline
+import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +63,7 @@ import com.vpet.waifu.domain.ActivityOutcome
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.ui.components.EffectChip
+import com.vpet.waifu.ui.occupationIcon
 import com.vpet.waifu.ui.components.PrimaryButton
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
@@ -288,10 +291,11 @@ private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
             PrimaryButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
         },
         icon = {
-            Text(
-                text = occupationEmoji(outcome.occupationId),
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.scale(pop),
+            Icon(
+                imageVector = occupationIcon(outcome.occupationId),
+                contentDescription = null,
+                tint = Accents.Bright,
+                modifier = Modifier.size(40.dp).scale(pop),
             )
         },
         title = {
@@ -315,10 +319,10 @@ private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (outcome.money > 0) {
-                        EffectChip(emoji = "💰", text = "+${outcome.money}", tint = StatColors.Money)
+                        EffectChip(icon = Icons.Rounded.Paid, text = "+${outcome.money}", tint = StatColors.Money)
                     }
                     if (outcome.exp > 0) {
-                        EffectChip(emoji = "⭐", text = "+${outcome.exp}", tint = StatColors.Exp)
+                        EffectChip(icon = Icons.Rounded.Star, text = "+${outcome.exp}", tint = StatColors.Exp)
                     }
                 }
                 if (outcome.quality == OutcomeQuality.BAD) {

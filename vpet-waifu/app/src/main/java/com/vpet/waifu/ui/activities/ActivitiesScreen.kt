@@ -18,6 +18,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.SentimentVeryDissatisfied
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Work
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,7 +46,7 @@ import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.components.EffectChip
-import com.vpet.waifu.ui.components.EmojiTile
+import com.vpet.waifu.ui.components.IconTile
 import com.vpet.waifu.ui.components.GainPop
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.OutlineButton
@@ -46,7 +56,7 @@ import com.vpet.waifu.ui.components.ScreenTitle
 import com.vpet.waifu.ui.components.SectionHeader
 import com.vpet.waifu.ui.components.StatBarTrack
 import com.vpet.waifu.ui.formatRemaining
-import com.vpet.waifu.ui.occupationEmoji
+import com.vpet.waifu.ui.occupationIcon
 import com.vpet.waifu.ui.occupationNameRes
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
@@ -85,12 +95,12 @@ fun ActivitiesScreen(
             item { Notice(stringResource(R.string.too_tired_to_work)) }
         }
 
-        item { SectionHeader("💼", stringResource(R.string.section_work)) }
+        item { SectionHeader(Icons.Rounded.Work, stringResource(R.string.section_work)) }
         items(Occupations.WORK, key = { it.id }) { occupation ->
             OccupationCard(occupation, snapshot, simulation, tuning, onStart, Modifier.animateItem())
         }
 
-        item { SectionHeader("📚", stringResource(R.string.section_study)) }
+        item { SectionHeader(Icons.AutoMirrored.Rounded.MenuBook, stringResource(R.string.section_study)) }
         items(Occupations.STUDY, key = { it.id }) { occupation ->
             OccupationCard(occupation, snapshot, simulation, tuning, onStart, Modifier.animateItem())
         }
@@ -105,7 +115,12 @@ private fun Notice(text: String) {
         border = Accents.Danger.copy(alpha = 0.4f),
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("😵", fontSize = 20.sp)
+            Icon(
+                imageVector = Icons.Rounded.SentimentVeryDissatisfied,
+                contentDescription = null,
+                tint = Accents.Danger,
+                modifier = Modifier.size(22.dp),
+            )
             Spacer(Modifier.width(12.dp))
             Text(
                 text = text,
@@ -138,7 +153,12 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
                         .background(Accents.Primary.copy(alpha = 0.16f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(occupationEmoji(occupation.id), fontSize = 22.sp)
+                    Icon(
+                        imageVector = occupationIcon(occupation.id),
+                        contentDescription = null,
+                        tint = Accents.Bright,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -162,7 +182,7 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
                 // it lands — the shift visibly pays as it goes.
                 Box(contentAlignment = Alignment.Center) {
                     EffectChip(
-                        emoji = if (isWork) "💰" else "⭐",
+                        icon = if (isWork) Icons.Rounded.Paid else Icons.Rounded.Star,
                         text = "+$earned",
                         tint = tint,
                     )
@@ -211,8 +231,8 @@ private fun OccupationCard(
     PanelCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                EmojiTile(
-                    emoji = if (unlocked) occupationEmoji(occupation.id) else "🔒",
+                IconTile(
+                    icon = if (unlocked) occupationIcon(occupation.id) else Icons.Rounded.Lock,
                     tint = if (isWork) StatColors.Money else StatColors.Exp,
                     size = 54.dp,
                 )
@@ -251,17 +271,17 @@ private fun OccupationCard(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     EffectChip(
-                        emoji = if (isWork) "💰" else "⭐",
+                        icon = if (isWork) Icons.Rounded.Paid else Icons.Rounded.Star,
                         text = "+$payout",
                         tint = if (isWork) StatColors.Money else StatColors.Exp,
                     )
                     EffectChip(
-                        emoji = "⚡",
+                        icon = Icons.Rounded.Bolt,
                         text = "−${occupation.energyCost.toInt()}",
                         tint = StatColors.Energy,
                     )
                     EffectChip(
-                        emoji = "💜",
+                        icon = Icons.Rounded.Favorite,
                         text = stringResource(R.string.pay_scales_with_mood),
                         tint = StatColors.Mood,
                     )

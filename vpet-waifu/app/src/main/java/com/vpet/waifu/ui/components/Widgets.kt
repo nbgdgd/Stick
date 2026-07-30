@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -137,9 +139,9 @@ fun ScreenTitle(text: String, modifier: Modifier = Modifier, trailing: @Composab
     }
 }
 
-/** An emoji in a rounded tile, then the section name over a short underline. */
+/** An icon in a rounded tile, then the section name over a short underline. */
 @Composable
-fun SectionHeader(emoji: String, title: String, modifier: Modifier = Modifier) {
+fun SectionHeader(icon: ImageVector, title: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.padding(top = 8.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -152,7 +154,7 @@ fun SectionHeader(emoji: String, title: String, modifier: Modifier = Modifier) {
                 .border(1.dp, Surfaces.TileBorder, RoundedCornerShape(11.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(emoji, fontSize = 17.sp)
+            Icon(icon, contentDescription = null, tint = Accents.Bright, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(10.dp))
         Column {
@@ -203,8 +205,13 @@ fun MoneyPill(amount: Int, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("💰", fontSize = 15.sp)
-            Spacer(Modifier.width(7.dp))
+            Icon(
+                imageVector = Icons.Rounded.Paid,
+                contentDescription = null,
+                tint = StatColors.Money,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(6.dp))
             Text(
                 text = "$shown",
                 style = MaterialTheme.typography.titleMedium,
@@ -219,7 +226,7 @@ fun MoneyPill(amount: Int, modifier: Modifier = Modifier) {
 /** A small labelled pill — an item's effect, a projected payout. */
 @Composable
 fun EffectChip(
-    emoji: String,
+    icon: ImageVector,
     text: String,
     tint: Color,
     modifier: Modifier = Modifier,
@@ -234,7 +241,7 @@ fun EffectChip(
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(emoji, fontSize = 12.sp)
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(13.dp))
             Spacer(Modifier.width(5.dp))
             Text(
                 text = text,
@@ -245,10 +252,10 @@ fun EffectChip(
     }
 }
 
-/** The glowing rounded tile a shop item's emoji sits in. */
+/** The glowing rounded tile a shop item's icon sits in. */
 @Composable
-fun EmojiTile(
-    emoji: String,
+fun IconTile(
+    icon: ImageVector,
     modifier: Modifier = Modifier,
     size: Dp = 62.dp,
     tint: Color = Accents.Primary,
@@ -265,7 +272,12 @@ fun EmojiTile(
             .border(1.dp, tint.copy(alpha = 0.35f), RoundedCornerShape(18.dp)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(emoji, fontSize = (size.value * 0.46f).sp)
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(size * 0.48f),
+        )
     }
 }
 
@@ -274,7 +286,7 @@ fun EmojiTile(
  */
 @Composable
 fun StatRow(
-    emoji: String,
+    icon: ImageVector,
     label: String,
     value: Float,
     color: Color,
@@ -296,11 +308,11 @@ fun StatRow(
                     .border(1.dp, color.copy(alpha = 0.4f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(emoji, fontSize = 17.sp)
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             }
             Spacer(Modifier.width(12.dp))
         } else {
-            Text(emoji, fontSize = 13.sp)
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(13.dp))
             Spacer(Modifier.width(7.dp))
         }
 

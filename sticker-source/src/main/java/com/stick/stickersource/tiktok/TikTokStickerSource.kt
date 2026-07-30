@@ -27,8 +27,13 @@ class TikTokStickerSource(
     private val api: TikTokApi,
     private val downloader: AssetDownloader,
     private val httpClient: OkHttpClient,
-    private val maxCommentPages: Int = 20,
-    private val pageSize: Int = 50,
+    private val maxCommentPages: Int = 40,
+    /**
+     * Smaller pages measurably return *more* comments overall: TikTok advances the
+     * cursor by `count` and filters within that window, so 20 surfaces comments a
+     * 50-wide window drops.
+     */
+    private val pageSize: Int = 20,
 ) : StickerSource {
 
     override val id: String = TikTokMapper.SOURCE_ID
@@ -75,7 +80,10 @@ class TikTokStickerSource(
 
         suspend fun emitStickers(comment: com.stick.stickersource.tiktok.dto.CommentDto) {
             for (sticker in TikTokMapper.stickersFromComment(comment, video.canonicalUrl)) {
-                if (seen.add(sticker.downloadUrl)) {
+                // De-duplicate on the CDN asset id, not the full URL: the same
+                // sticker comes back with different signature/expiry params (and
+                // different CDN suffixes), which URL-based de-dup counted as new.
+                if (seen.add(assetKey(sticker.downloadUrl))) {
                     emittedAny = true
                     emit(StickResult.Success(sticker))
                 }
@@ -97,12 +105,26 @@ class TikTokStickerSource(
 
             for (comment in response.comments) {
                 emitStickers(comment)
-                // Comment stickers frequently sit in replies — scan a bounded number.
+                // Comment stickers frequently sit in replies. Page through ALL of
+                // them — a single page dropped stickers on busy threads.
                 if (comment.replyCount > 0 && replyThreads < MAX_REPLY_THREADS) {
                     replyThreads++
-                    runCatching {
-                        api.replies(commentId = comment.id, awemeId = video.videoId, count = pageSize)
-                    }.getOrNull()?.comments?.forEach { emitStickers(it) }
+                    var replyCursor = 0L
+                    var replyPage = 0
+                    while (replyPage < MAX_REPLY_PAGES) {
+                        val replies = runCatching {
+                            api.replies(
+                                commentId = comment.id,
+                                awemeId = video.videoId,
+                                count = REPLY_PAGE_SIZE,
+                                cursor = replyCursor,
+                            )
+                        }.getOrNull() ?: break
+                        replies.comments.forEach { emitStickers(it) }
+                        if (replies.hasMore != 1 || replies.comments.isEmpty()) break
+                        replyCursor = replies.cursor
+                        replyPage++
+                    }
                 }
             }
 
@@ -135,8 +157,18 @@ class TikTokStickerSource(
     private fun refFor(id: String, url: String): TikTokVideoRef =
         TikTokVideoRef(videoId = id, authorId = "", canonicalUrl = url)
 
+    /**
+     * Identity of a sticker asset: the 32-hex object name in the CDN path. Stable
+     * across signature params, resolutions and CDN hosts, unlike the full URL.
+     */
+    private fun assetKey(url: String): String =
+        ASSET_ID_REGEX.find(url)?.groupValues?.get(1) ?: url.substringBefore('?')
+
     private companion object {
-        const val MAX_REPLY_THREADS = 60
+        const val MAX_REPLY_THREADS = 200
+        const val MAX_REPLY_PAGES = 20
+        const val REPLY_PAGE_SIZE = 50
+        val ASSET_ID_REGEX = Regex("""/([0-9a-f]{32})""")
         const val BROWSER_UA =
             "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) " +
                 "Chrome/120.0.0.0 Mobile Safari/537.36"

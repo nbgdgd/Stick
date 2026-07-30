@@ -29,11 +29,12 @@ class ImportStickersUseCase @Inject constructor(
     /**
      * Stream stickers found in the video's comments, as they arrive.
      *
-     * Tries every comment-capable source in registration order and stops at the
-     * first one that actually yields something. The page scraper is registered
-     * first because it can reach comments the public API hides, but it depends on
-     * TikTok's markup — so when it comes up empty the API source still runs and
-     * the result is never worse than the API alone.
+     * Runs **every** comment-capable source and emits the de-duplicated union of
+     * what they find. The page scraper and the public API each reach comments the
+     * other misses (the scraper uses TikTok's own signed requests to page past the
+     * anonymous API cap; the API returns replies the scraper never scrolls to), so
+     * merging them yields strictly more stickers than either alone. Duplicates —
+     * the same asset seen by both sources — are collapsed by their asset id.
      */
     fun scanComments(video: com.stick.core.model.TikTokVideoRef): Flow<StickResult<RemoteSticker>> = flow {
         val sources = registry.withCapability(StickerSource.Capability.SCRAPE_COMMENTS)
@@ -42,25 +43,37 @@ class ImportStickersUseCase @Inject constructor(
             return@flow
         }
 
+        val seen = HashSet<String>()
+        var emitted = 0
         var lastFailure: StickResult.Failure? = null
         for (source in sources) {
-            var emitted = 0
             source.stickersFromComments(video)
-                .catch { /* try the next source instead of failing the whole scan */ }
+                .catch { /* a broken source must not abort the others */ }
                 .collect { result ->
                     when (result) {
                         is StickResult.Success -> {
-                            emitted++
-                            emit(result)
+                            if (seen.add(dedupKey(result.value))) {
+                                emitted++
+                                emit(result)
+                            }
                         }
                         is StickResult.Failure -> lastFailure = result
                     }
                 }
-            if (emitted > 0) return@flow
         }
-        // Nothing anywhere: surface the last real error, if there was one.
-        lastFailure?.let { emit(it) }
+        // Only surface an error when nothing at all came through.
+        if (emitted == 0) lastFailure?.let { emit(it) }
     }
+
+    /**
+     * Identity used to collapse the same sticker seen by more than one source.
+     * TikTok asset URLs carry a stable 32-hex id; when present it is the reliable
+     * key even though the two sources build slightly different URLs around it.
+     * Falls back to the download URL, then the source-local id.
+     */
+    private fun dedupKey(sticker: RemoteSticker): String =
+        ASSET_ID.find(sticker.downloadUrl)?.groupValues?.get(1)
+            ?: sticker.downloadUrl.ifBlank { sticker.id }
 
     /**
      * Download [stickers] and persist them, de-duplicating and probing accurate
@@ -98,4 +111,9 @@ class ImportStickersUseCase @Inject constructor(
 
     private fun primary(capability: StickerSource.Capability): StickerSource? =
         registry.primaryFor(capability)
+
+    private companion object {
+        /** The 32-hex asset id embedded in every TikTok sticker/image URL. */
+        val ASSET_ID = Regex("/([0-9a-f]{32})")
+    }
 }

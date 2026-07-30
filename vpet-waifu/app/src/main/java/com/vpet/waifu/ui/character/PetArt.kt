@@ -82,7 +82,7 @@ private fun DrawScope.drawCharacter(pose: PetPose, palette: PetPalette) {
         drawTwinTail(pose, palette, mirrored = true)
 
         when (pose.prop) {
-            Prop.LAPTOP, Prop.BOOK, Prop.NOTEBOOK, Prop.BOOKSTACK -> drawDesk(palette)
+            Prop.LAPTOP, Prop.BOOK, Prop.NOTEBOOK, Prop.BOOKSTACK, Prop.LECTURE -> drawDesk(palette)
             else -> Unit
         }
 
@@ -624,6 +624,7 @@ private fun DrawScope.drawPropInFront(prop: Prop, pose: PetPose, palette: PetPal
         Prop.BAG -> drawShoppingBag(pose, palette)
         Prop.MIC -> drawMicrophone(pose, palette)
         Prop.NOTEBOOK -> drawNotebook(pose, palette)
+        Prop.LECTURE -> drawLecture(pose, palette)
         Prop.BOOKSTACK -> {
             drawBookPile(palette)
             drawBook(pose, palette)
@@ -777,6 +778,104 @@ private fun DrawScope.drawNotebook(pose: PetPose, palette: PetPalette) {
     val tip = Offset(CX + 14f + pose.propProgress * 9f, top + 12f)
     drawLine(palette.accent, hand, tip, 3.4f, StrokeCap.Round)
     drawCircle(palette.propDark, radius = 1.6f, center = tip)
+}
+
+/**
+ * The online course: the same desk, a different person at it.
+ *
+ * The office and the course both sat her at a laptop, so two of the seven jobs
+ * were one picture — exactly what the props were added to stop. The screen is
+ * tilted toward her with a lecture playing on it rather than facing away, she
+ * wears headphones, and her hands are off the keys: she is watching, not
+ * typing, and that reads from a widget away.
+ */
+private fun DrawScope.drawLecture(pose: PetPose, palette: PetPalette) {
+    val baseY = 192f
+    val pulse = pose.propProgress
+
+    // Screen light spilling out — brighter than the office's, because here the
+    // screen is the point.
+    drawRoundRectPath(
+        Rect(CX - 48f, baseY - 54f, CX + 48f, baseY + 2f),
+        radius = 9f,
+        color = palette.irisLight.copy(alpha = 0.20f + pulse * 0.10f),
+    )
+
+    // The lid, seen from behind but angled: narrower on the far side, so it
+    // reads as turned toward her rather than square to the camera.
+    val lid = Path().apply {
+        moveTo(CX - 34f, baseY - 48f)
+        lineTo(CX + 40f, baseY - 44f)
+        lineTo(CX + 44f, baseY)
+        lineTo(CX - 38f, baseY - 2f)
+        close()
+    }
+    drawPath(lid, palette.prop)
+    val inset = Path().apply {
+        moveTo(CX - 29f, baseY - 43f)
+        lineTo(CX + 35f, baseY - 39f)
+        lineTo(CX + 38.5f, baseY - 6f)
+        lineTo(CX - 33f, baseY - 8f)
+        close()
+    }
+    drawPath(inset, palette.propDark.copy(alpha = 0.5f))
+
+    // A play triangle on the back of the lid: the one glyph that says "video".
+    val play = Path().apply {
+        moveTo(CX - 5f, baseY - 32f)
+        lineTo(CX + 9f, baseY - 24f)
+        lineTo(CX - 5f, baseY - 16f)
+        close()
+    }
+    drawPath(play, palette.accent.copy(alpha = 0.65f + pulse * 0.35f))
+
+    drawRoundRectPath(Rect(CX - 46f, baseY, CX + 46f, baseY + 6f), radius = 3f, color = palette.propDark)
+
+    // A notepad by her elbow — she is taking notes, just not on the laptop.
+    drawRoundRectPath(Rect(CX + 48f, baseY - 10f, CX + 74f, baseY), radius = 2f, color = palette.white)
+    for (i in 0..1) {
+        val y = baseY - 7f + i * 3.5f
+        drawLine(palette.prop.copy(alpha = 0.4f), Offset(CX + 52f, y), Offset(CX + 70f, y), 1.2f)
+    }
+
+    drawHeadphones(pose, palette)
+}
+
+/**
+ * Headphones, following the head.
+ *
+ * Drawn after the head group rather than inside it, so they sit over the hair —
+ * and given the same tilt-and-bob transform, because a headband that stayed put
+ * while she nodded would look like it was floating beside her.
+ */
+private fun DrawScope.drawHeadphones(pose: PetPose, palette: PetPalette) {
+    withTransform({
+        rotate(pose.headTiltDegrees, pivot = Offset(CX, NECK_Y))
+        translate(0f, pose.headBob)
+    }) {
+        drawArc(
+            color = palette.propDark,
+            startAngle = 190f,
+            sweepAngle = 160f,
+            useCenter = false,
+            topLeft = Offset(CX - 43f, HEAD_CY - 47f),
+            size = Size(86f, 84f),
+            style = Stroke(width = 6f, cap = StrokeCap.Round),
+        )
+        for (side in listOf(-1f, 1f)) {
+            val x = CX + side * 41f
+            drawRoundRectPath(
+                Rect(x - 8f, HEAD_CY - 10f, x + 8f, HEAD_CY + 14f),
+                radius = 7f,
+                color = palette.prop,
+            )
+            drawRoundRectPath(
+                Rect(x - 4.5f, HEAD_CY - 6f, x + 4.5f, HEAD_CY + 10f),
+                radius = 4.5f,
+                color = palette.irisLight.copy(alpha = 0.75f),
+            )
+        }
+    }
 }
 
 /** The university pile: three fat books beside the open one. */

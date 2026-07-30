@@ -69,7 +69,7 @@
     <string name="still_paying_it_off">She is still working the last one off</string>
     <string name="section_busy">She is busy right now</string>
     <string name="tip_jar_title">Tip jar</string>
-    <string name="tip_jar_body">Loose change while you are watching her: %1$d ¥ a minute, up to %2$d ¥ a day. It grows with her level.</string>
+    <string name="tip_jar_body">Loose change while you are watching her at home: %1$d ¥ a minute, up to %2$d ¥ a day. It stops while she is out on a shift — what a shift pays is all a shift pays.</string>
     <string name="exp_title">Level %1$d</string>
     <string name="exp_progress">%1$d / %2$d EXP</string>
     <string name="exp_from_study">Study pays EXP directly — that is what it is for.</string>
@@ -95,6 +95,14 @@
     <string name="game_stop">Stop</string>
     <string name="game_seconds_left" tools:ignore="PluralsCandidate">%1$ds left</string>
     <string name="game_result">Caught %1$d</string>
+    <string name="game_catch">Catch</string>
+    <string name="game_rhythm">Rhythm</string>
+    <string name="game_memory">Memory</string>
+    <string name="game_rhythm_hint">Tap anywhere the instant a ring lands on its target. Where you tap does not matter — only when.</string>
+    <string name="game_memory_hint">Watch the order the pads light up in, then repeat it. Three lives.</string>
+    <string name="game_memory_watch">Watch…</string>
+    <string name="game_memory_repeat">Your turn</string>
+    <string name="game_memory_wrong">Not that one!</string>
     <string name="game_hint">Tap what pops up. Playing lifts her mood but costs energy.</string>
     <string name="game_busy">She is busy right now.</string>
 

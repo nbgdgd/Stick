@@ -69,7 +69,7 @@
     <string name="still_paying_it_off">Она ещё не расплатилась за прошлый</string>
     <string name="section_busy">Она сейчас занята</string>
     <string name="tip_jar_title">Копилка</string>
-    <string name="tip_jar_body">Мелочь капает, пока ты за ней смотришь: %1$d ¥ в минуту, но не больше %2$d ¥ в день. Растёт с уровнем.</string>
+    <string name="tip_jar_body">Мелочь капает, пока ты за ней смотришь дома: %1$d ¥ в минуту, но не больше %2$d ¥ в день. На смене копилка молчит — смена платит только тем, что платит смена.</string>
     <string name="exp_title">Уровень %1$d</string>
     <string name="exp_progress">%1$d / %2$d опыта</string>
     <string name="exp_from_study">Учёба даёт опыт напрямую — она для этого и нужна.</string>
@@ -95,6 +95,14 @@
     <string name="game_stop">Стоп</string>
     <string name="game_seconds_left">осталось %1$dс</string>
     <string name="game_result">Поймано: %1$d</string>
+    <string name="game_catch">Ловкость</string>
+    <string name="game_rhythm">Ритм</string>
+    <string name="game_memory">Память</string>
+    <string name="game_rhythm_hint">Жми в тот момент, когда кольцо садится на круг. Куда жать — не важно, важно когда.</string>
+    <string name="game_memory_hint">Запомни порядок, в котором загораются кнопки, и повтори его. Три жизни.</string>
+    <string name="game_memory_watch">Смотри…</string>
+    <string name="game_memory_repeat">Твой ход</string>
+    <string name="game_memory_wrong">Не та!</string>
     <string name="game_hint">Лови всё, что выскакивает. Игра поднимает настроение, но тратит энергию.</string>
     <string name="game_busy">Она сейчас занята.</string>
 

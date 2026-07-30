@@ -3,6 +3,7 @@ package com.vpet.waifu.data
 import com.vpet.waifu.data.db.PetStateDao
 import com.vpet.waifu.data.db.toEntity
 import com.vpet.waifu.data.db.toSnapshot
+import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
@@ -80,9 +81,8 @@ class PetRepository @Inject constructor(
 
     suspend fun startPlaying(): PetSnapshot = mutate(simulation::startPlaying)
 
-    suspend fun finishPlaying(score: Int): PetSnapshot = mutate { current, now ->
-        simulation.finishPlaying(current, score, now)
-    }
+    suspend fun finishPlaying(score: Int, game: MiniGame = MiniGame.CATCH): PetSnapshot =
+        mutate { current, now -> simulation.finishPlaying(current, score, now, game) }
 
     /** Clears the "she finished her shift" card once the player has seen it. */
     suspend fun acknowledgeOutcome(): PetSnapshot = mutate { current, _ ->

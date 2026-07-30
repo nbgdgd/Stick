@@ -175,6 +175,7 @@ fun VPetApp(
                     onPet = viewModel::pet,
                     onTapPet = viewModel::tap,
                     onCoinLanded = viewModel::coinLanded,
+                    onExpLanded = viewModel::expLanded,
                     onToggleSleep = viewModel::toggleSleep,
                     onCancelOccupation = viewModel::cancelOccupation,
                     onDismissEvent = viewModel::acknowledgeEvent,
@@ -202,6 +203,7 @@ fun VPetApp(
                     onStart = viewModel::startPlaying,
                     onFinish = viewModel::finishPlaying,
                     onScored = viewModel::scored,
+                    onMiss = viewModel::missed,
                 )
             }
         }

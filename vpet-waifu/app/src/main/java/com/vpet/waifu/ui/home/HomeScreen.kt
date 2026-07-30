@@ -72,7 +72,9 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,6 +116,7 @@ import com.vpet.waifu.ui.theme.Surfaces
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.PI
+import kotlin.math.roundToInt
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -140,6 +143,7 @@ fun HomeScreen(
     onPet: () -> Unit,
     onTapPet: () -> Unit,
     onCoinLanded: () -> Unit,
+    onExpLanded: () -> Unit,
     onToggleSleep: () -> Unit,
     onCancelOccupation: () -> Unit,
     onDismissEvent: () -> Unit,
@@ -163,7 +167,9 @@ fun HomeScreen(
     var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
     var stageBounds by remember { mutableStateOf(Rect.Zero) }
     var pillCenter by remember { mutableStateOf(Offset.Zero) }
+    var ringCenter by remember { mutableStateOf(Offset.Zero) }
     var walletBumps by remember { mutableIntStateOf(0) }
+    var ringBumps by remember { mutableIntStateOf(0) }
 
     Box(
         modifier = modifier
@@ -181,7 +187,9 @@ fun HomeScreen(
             snapshot = snapshot,
             petName = settings.petName,
             walletBump = walletBumps,
+            ringBump = ringBumps,
             onPillPositioned = { pillCenter = it },
+            onRingPositioned = { ringCenter = it },
         )
 
         Box(
@@ -198,10 +206,15 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .pointerInput(Unit) {
+                    .pointerInput(snapshot.acceptsPat) {
+                        if (!snapshot.acceptsPat) return@pointerInput
                         detectTapGestures { offset ->
                             onTapPet()
-                            bursts += TapBurst(burstId++, offset)
+                            bursts += TapBurst(
+                                burstId++,
+                                offset,
+                                simulation.patMood(snapshot, nowMillis).roundToInt(),
+                            )
                             scope.launch {
                                 petScale.snapTo(0.955f)
                                 petScale.animateTo(
@@ -279,21 +292,38 @@ fun HomeScreen(
 
     // Wages arrive as actual coins: they pop out of the room and arc up into
     // the wallet, which hops as each one lands.
+    val fromHer = {
+        Offset(
+            stageBounds.left - overlayOrigin.x + stageBounds.width * 0.5f,
+            stageBounds.top - overlayOrigin.y + stageBounds.height * 0.62f,
+        )
+    }
     CoinFlights(
         // The wallet itself, not just the shift's tally: the tip jar pays every
         // three seconds whether or not she is on the clock, and every coin that
         // reaches the wallet should be a coin you watched get there.
         walletTotal = snapshot.progress.money,
-        start = {
-            Offset(
-                stageBounds.left - overlayOrigin.x + stageBounds.width * 0.5f,
-                stageBounds.top - overlayOrigin.y + stageBounds.height * 0.62f,
-            )
-        },
+        start = fromHer,
         end = { pillCenter - overlayOrigin },
         onArrive = {
             walletBumps++
             onCoinLanded()
+        },
+        modifier = Modifier.matchParentSize(),
+    )
+    // And the same for what studying pays in.
+    //
+    // Without this a study session looked like it paid *money*: the tip jar's
+    // coins flew past every few seconds while the EXP it was actually earning
+    // crept up a digit at a time inside a ring the size of a thumbnail. Now the
+    // thing she is earning is the thing you watch arrive.
+    StarFlights(
+        expTotal = snapshot.progress.exp,
+        start = fromHer,
+        end = { ringCenter - overlayOrigin },
+        onArrive = {
+            ringBumps++
+            onExpLanded()
         },
         modifier = Modifier.matchParentSize(),
     )
@@ -312,13 +342,19 @@ private fun Header(
     snapshot: PetSnapshot,
     petName: String,
     walletBump: Int,
+    ringBump: Int,
     onPillPositioned: (Offset) -> Unit,
+    onRingPositioned: (Offset) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LevelRing(exp = snapshot.progress.exp)
+        LevelRing(
+            exp = snapshot.progress.exp,
+            bump = ringBump,
+            modifier = Modifier.onGloballyPositioned { onRingPositioned(it.boundsInRoot().center) },
+        )
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -742,35 +778,88 @@ private fun SettingRow(
 }
 
 /** One tap's worth of stars, at the finger. */
-private data class TapBurst(val id: Long, val center: Offset)
+private data class TapBurst(val id: Long, val center: Offset, val mood: Int)
 
 /**
- * Six sparks fly out of the tap point and fade.
+ * What a tap on her actually looks like.
  *
- * Geometry is derived from the burst id, so every tap looks a little
- * different without carrying a random generator through composition.
+ * Sparks alone were the wrong answer: "the clicks are useless" was the report,
+ * and a shower of neutral glitter says *something happened* without saying
+ * *what*. Hearts rise out of the touch point and the mood the pat was worth
+ * floats up as a number beside them, so a tap now states its own value.
  */
 @Composable
 private fun SparkleBurst(burst: TapBurst, onDone: () -> Unit) {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        progress.animateTo(1f, tween(durationMillis = 520, easing = LinearOutSlowInEasing))
+        progress.animateTo(1f, tween(durationMillis = 780, easing = LinearOutSlowInEasing))
         onDone()
     }
+    val label = if (burst.mood > 0) "+${burst.mood}" else null
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.titleMedium.copy(
+        fontWeight = FontWeight.Bold,
+        color = StatColors.Mood,
+    )
 
     Canvas(Modifier.fillMaxSize()) {
         val p = progress.value
         if (p <= 0f || p >= 1f) return@Canvas
-        val fade = 1f - p
-        repeat(6) { i ->
-            val angle = (burst.id * 41 + i * 60 + 13).toFloat() * (PI.toFloat() / 180f)
-            val reach = 14.dp.toPx() + 52.dp.toPx() * p
-            val at = burst.center + Offset(cos(angle) * reach, sin(angle) * reach * 0.85f)
-            val r = (3.5.dp.toPx() + 2.dp.toPx() * fade) * (if (i % 2 == 0) 1f else 0.7f)
-            val tint = if (i % 3 == 0) StatColors.Mood else Accents.Bright
-            drawSpark(at, r, tint.copy(alpha = fade))
+        val fade = (1f - p) * (1f - p)
+
+        // Four hearts fanning up and out from the finger.
+        repeat(4) { i ->
+            val own = ((p - i * 0.10f) / (1f - i * 0.10f)).coerceIn(0f, 1f)
+            if (own <= 0f) return@repeat
+            val spread = ((burst.id * 37 + i * 53) % 7).toInt() - 3
+            val at = burst.center + Offset(
+                spread * 9.dp.toPx() * own + sin(own * 6f + i) * 4.dp.toPx(),
+                -own * 62.dp.toPx(),
+            )
+            val grow = if (own < 0.18f) own / 0.18f else 1f - (own - 0.18f) * 0.35f
+            val alpha = ((1f - own) * (1f - own)).coerceIn(0f, 1f)
+            drawTapHeart(at, 9.dp.toPx() * grow, StatColors.Mood.copy(alpha = alpha * 0.95f))
+        }
+
+        // Two sparks for shine — kept, just no longer doing the whole job.
+        repeat(2) { i ->
+            val angle = (burst.id * 41 + i * 150 + 13).toFloat() * (PI.toFloat() / 180f)
+            val reach = 12.dp.toPx() + 40.dp.toPx() * p
+            val at = burst.center + Offset(cos(angle) * reach, sin(angle) * reach * 0.8f)
+            drawSpark(at, 3.5.dp.toPx(), Accents.Bright.copy(alpha = fade))
+        }
+
+        // The number the pat was worth.
+        if (label != null) {
+            val laid = measurer.measure(label, style)
+            val rise = 20.dp.toPx() + 44.dp.toPx() * p
+            drawText(
+                textLayoutResult = laid,
+                color = StatColors.Mood.copy(alpha = fade),
+                topLeft = burst.center + Offset(14.dp.toPx(), -rise),
+            )
         }
     }
+}
+
+/** A plump heart — the tap's own, drawn a shade rounder than the particles'. */
+private fun DrawScope.drawTapHeart(center: Offset, radius: Float, color: Color) {
+    if (radius <= 0f) return
+    val path = Path().apply {
+        moveTo(center.x, center.y + radius * 0.9f)
+        cubicTo(
+            center.x - radius * 1.7f, center.y - radius * 0.3f,
+            center.x - radius * 0.6f, center.y - radius * 1.4f,
+            center.x, center.y - radius * 0.35f,
+        )
+        cubicTo(
+            center.x + radius * 0.6f, center.y - radius * 1.4f,
+            center.x + radius * 1.7f, center.y - radius * 0.3f,
+            center.x, center.y + radius * 0.9f,
+        )
+        close()
+    }
+    drawPath(path, color)
 }
 
 /** A four-point twinkle — two crossed teardrops read cleaner than a star. */
@@ -834,6 +923,55 @@ private fun CoinFlights(
     }
 }
 
+/**
+ * EXP, visibly travelling.
+ *
+ * The coin flight's twin, aimed at the level ring instead of the wallet.
+ * Batched harder: a finished study session can land two hundred EXP at once,
+ * and two hundred stars is a screen wipe, not a celebration.
+ */
+@Composable
+private fun StarFlights(
+    expTotal: Int,
+    start: () -> Offset,
+    end: () -> Offset,
+    onArrive: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val previous = remember { mutableIntStateOf(expTotal) }
+    val stars = remember { mutableStateListOf<FlyingCoin>() }
+    var nextStar by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(expTotal) {
+        val delta = expTotal - previous.intValue
+        previous.intValue = expTotal
+        if (delta <= 0) return@LaunchedEffect
+        // One star per point up to three, then a fixed handful for the rest, so
+        // a one-point tick and a whole semester both read at a glance.
+        val count = if (delta <= 3) delta else 4 + minOf(2, delta / 60)
+        repeat(count) { i -> stars += FlyingCoin(nextStar++, i * 190L) }
+    }
+
+    Box(modifier) {
+        stars.forEach { star ->
+            key(star.id) {
+                CoinSprite(
+                    coin = star,
+                    start = start,
+                    end = end,
+                    kind = FlightKind.STAR,
+                    onDone = {
+                        stars.remove(star)
+                        onArrive()
+                    },
+                )
+            }
+        }
+    }
+}
+
+private enum class FlightKind { COIN, STAR }
+
 private data class FlyingCoin(val id: Long, val delayMillis: Long)
 
 @Composable
@@ -842,6 +980,7 @@ private fun CoinSprite(
     start: () -> Offset,
     end: () -> Offset,
     onDone: () -> Unit,
+    kind: FlightKind = FlightKind.COIN,
 ) {
     val progress = remember { Animatable(0f) }
     var launched by remember { mutableStateOf(false) }
@@ -868,8 +1007,16 @@ private fun CoinSprite(
             inv * inv * s.y + 2 * inv * p * control.y + p * p * e.y,
         )
         val r = 7.dp.toPx() * (1f - p * 0.35f)
-        drawCircle(StatColors.Money, radius = r, center = pos)
-        drawCircle(Color(0xFFB8860B), radius = r, center = pos, style = Stroke(width = r * 0.22f))
-        drawCircle(Color.White.copy(alpha = 0.5f), radius = r * 0.3f, center = pos - Offset(r * 0.3f, r * 0.35f))
+        when (kind) {
+            FlightKind.COIN -> {
+                drawCircle(StatColors.Money, radius = r, center = pos)
+                drawCircle(Color(0xFFB8860B), radius = r, center = pos, style = Stroke(width = r * 0.22f))
+                drawCircle(Color.White.copy(alpha = 0.5f), radius = r * 0.3f, center = pos - Offset(r * 0.3f, r * 0.35f))
+            }
+            FlightKind.STAR -> {
+                drawSpark(pos, r * 1.6f, StatColors.Exp)
+                drawSpark(pos, r * 0.7f, Color.White.copy(alpha = 0.85f))
+            }
+        }
     }
 }

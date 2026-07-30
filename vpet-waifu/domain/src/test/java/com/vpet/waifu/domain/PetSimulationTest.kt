@@ -589,8 +589,24 @@ class PetSimulationTest {
 
     @Test
     fun `a better score is worth more mood`() {
-        assertTrue(TapGame.moodGain(30) > TapGame.moodGain(5))
-        assertEquals(32f, TapGame.moodGain(1_000), 0.001f)
+        MiniGame.entries.forEach { game ->
+            assertTrue("$game", game.moodGain(30) > game.moodGain(5))
+            assertEquals("$game", MiniGame.MAX_MOOD, game.moodGain(100_000), 0.001f)
+        }
+    }
+
+    @Test
+    fun `no game in the arcade is the one worth grinding`() {
+        // Three games only stay three games while none of them pays best. A
+        // strong round is roughly a third of each one's theoretical maximum;
+        // what they pay for that has to land within a hair of each other, or
+        // the other two become decoration.
+        val strong = mapOf(MiniGame.CATCH to 26, MiniGame.RHYTHM to 110, MiniGame.MEMORY to 32)
+        val moods = strong.map { (game, score) -> game.moodGain(score) }
+        val coins = strong.map { (game, score) -> game.coins(score) }
+
+        assertTrue("mood spread: $moods", moods.max() - moods.min() < 4f)
+        assertTrue("coin spread: $coins", coins.max() - coins.min() <= 2)
     }
 
     // --- progression ---------------------------------------------------------

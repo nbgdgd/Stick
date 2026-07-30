@@ -89,8 +89,19 @@ data class PetSnapshot(
     val isBusy: Boolean
         get() = activity == PetActivity.WORKING || activity == PetActivity.STUDYING
 
-    /** She ignores taps while asleep or on the clock. */
+    /** Feeding, sending her out, starting a game: all need her free and awake. */
     val acceptsInteraction: Boolean get() = activity == PetActivity.AWAKE
+
+    /**
+     * A pat, though, lands whenever she is awake — including on the clock.
+     *
+     * Tapping her was gated on being idle, which meant the one thing the player
+     * does most often silently did nothing for the two hours she was at the
+     * office. Cheering someone on at work is not an interruption; only sleep is
+     * off limits, because waking her is a different action with a button of its
+     * own.
+     */
+    val acceptsPat: Boolean get() = activity != PetActivity.SLEEPING
 
     val occupation: Occupation? get() = Occupations.byId(session?.occupationId)
 

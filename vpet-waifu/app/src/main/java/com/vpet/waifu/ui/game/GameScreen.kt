@@ -1,5 +1,6 @@
 package com.vpet.waifu.ui.game
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -33,6 +34,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cookie
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LocalFlorist
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.Redeem
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -45,6 +48,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -66,7 +71,7 @@ import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
-import com.vpet.waifu.domain.TapGame
+import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.ui.character.AnimatedPet
 import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.components.EffectChip
@@ -109,42 +114,49 @@ private enum class TargetKind(val tint: Color) {
 private data class Target(val id: Long, val xFraction: Float, val yFraction: Float, val kind: TargetKind)
 
 /**
- * The tap mini-game.
+ * The arcade.
  *
- * Hearts pop up for about a second each; every one caught is mood. It costs
- * energy in proportion to the score, so it lifts her spirits but cannot replace
- * food and sleep — which is the whole point of having it in the loop.
+ * Three games rather than one, chosen so that being good at one says nothing
+ * about being good at the next: catching things where they appear is aim,
+ * pressing as the rings land is timing, and repeating the order is memory. The
+ * screen is a picker plus whichever board is selected; the round machinery —
+ * clock, score, settling up — is shared, because every way out of a round has
+ * to settle it, including the tab being switched away mid-game.
  */
 @Composable
 fun GameScreen(
     snapshot: PetSnapshot,
     nowMillis: Long,
     onStart: () -> Unit,
-    onFinish: (Int) -> Unit,
+    onFinish: (Int, MiniGame) -> Unit,
     modifier: Modifier = Modifier,
     onScored: () -> Unit = {},
+    onMiss: () -> Unit = {},
 ) {
+    var game by rememberSaveable { mutableStateOf(MiniGame.CATCH) }
     var running by remember { mutableStateOf(false) }
     var score by remember { mutableIntStateOf(0) }
-    var secondsLeft by remember { mutableIntStateOf(TapGame.DURATION_SECONDS) }
+    var secondsLeft by remember { mutableIntStateOf(game.durationSeconds) }
     var lastScore by remember { mutableStateOf<Int?>(null) }
+    var lastGame by remember { mutableStateOf(game) }
+    var seed by remember { mutableLongStateOf(0L) }
     val targets: SnapshotStateList<Target> = remember { emptyList<Target>().toMutableStateList() }
 
-    // One coroutine owns the whole round: spawn, expire, count down, settle up.
-    LaunchedEffect(running) {
+    // One coroutine owns the whole round: clock, spawns, and settling up.
+    LaunchedEffect(running, game) {
         if (!running) return@LaunchedEffect
         score = 0
         targets.clear()
-        secondsLeft = TapGame.DURATION_SECONDS
+        secondsLeft = game.durationSeconds
         onStart()
 
-        val random = Random(nowMillis)
+        val random = Random(seed)
         var elapsed = 0L
         var nextSpawn = 0L
         var nextId = 0L
         try {
-            while (elapsed < TapGame.DURATION_SECONDS * 1000L) {
-                if (elapsed >= nextSpawn) {
+            while (elapsed < game.durationSeconds * 1000L) {
+                if (game == MiniGame.CATCH && elapsed >= nextSpawn) {
                     targets += Target(
                         id = nextId++,
                         xFraction = 0.08f + random.nextFloat() * 0.84f,
@@ -158,7 +170,7 @@ fun GameScreen(
                 // Targets live a fixed time; ids are monotonic so the oldest expire first.
                 val expiredBefore = nextId - (TARGET_LIFETIME_MILLIS / SPAWN_INTERVAL_MILLIS).toLong() - 1
                 targets.removeAll { it.id <= expiredBefore }
-                secondsLeft = (TapGame.DURATION_SECONDS - elapsed / 1000L).toInt().coerceAtLeast(0)
+                secondsLeft = (game.durationSeconds - elapsed / 1000L).toInt().coerceAtLeast(0)
             }
         } finally {
             // Every way out of the round settles it here — the clock running
@@ -168,7 +180,8 @@ fun GameScreen(
             // in the app is locked out behind it.
             targets.clear()
             lastScore = score
-            onFinish(score)
+            lastGame = game
+            onFinish(score, game)
             running = false
         }
     }
@@ -189,11 +202,19 @@ fun GameScreen(
 
         GameHeader(
             running = running,
+            game = game,
             score = score,
             secondsLeft = secondsLeft,
             lastScore = lastScore,
+            lastGame = lastGame,
             onStop = { running = false },
         )
+
+        // The picker disappears during a round: three tappable cards over a
+        // live game are three ways to abandon it by accident.
+        AnimatedVisibility(visible = !running, enter = fadeIn(), exit = fadeOut()) {
+            GamePicker(selected = game, onSelect = { game = it })
+        }
 
         BoxWithConstraints(
             modifier = Modifier
@@ -210,26 +231,54 @@ fun GameScreen(
             val boardWidth = maxWidth
             val boardHeight = maxHeight
 
-            AnimatedPet(
-                state = if (running) PetState.PLAYING else snapshot.state(nowMillis),
-                workProp = workPropFor(snapshot.occupation?.id),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .height(boardHeight * 0.55f)
-                    .fillMaxWidth(),
-            )
+            // She is on stage for the two games that leave room for her. The
+            // memory pads need the whole board, and cropping her to a sliver
+            // behind them looked like a rendering fault rather than a choice.
+            if (!(running && game == MiniGame.MEMORY)) {
+                AnimatedPet(
+                    state = if (running) PetState.PLAYING else snapshot.state(nowMillis),
+                    workProp = workPropFor(snapshot.occupation?.id),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .height(boardHeight * 0.55f)
+                        .fillMaxWidth(),
+                )
+            }
 
-            targets.forEach { target ->
-                key(target.id) {
-                    TargetBubble(
-                        target = target,
-                        offsetX = boardWidth * target.xFraction - (TARGET_SIZE_DP / 2).dp,
-                        offsetY = boardHeight * target.yFraction - (TARGET_SIZE_DP / 2).dp,
-                        onTap = {
-                            score++
-                            onScored()
-                            targets.remove(target)
-                        },
+            if (running) {
+                when (game) {
+                    MiniGame.CATCH -> targets.forEach { target ->
+                        key(target.id) {
+                            TargetBubble(
+                                target = target,
+                                offsetX = boardWidth * target.xFraction - (TARGET_SIZE_DP / 2).dp,
+                                offsetY = boardHeight * target.yFraction - (TARGET_SIZE_DP / 2).dp,
+                                onTap = {
+                                    score++
+                                    onScored()
+                                    targets.remove(target)
+                                },
+                            )
+                        }
+                    }
+
+                    MiniGame.RHYTHM -> RhythmBoard(
+                        running = true,
+                        seed = seed,
+                        durationSeconds = game.durationSeconds,
+                        onScore = { score += it },
+                        onHit = { if (it == Judgement.MISS) onMiss() else onScored() },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    MiniGame.MEMORY -> MemoryBoard(
+                        running = true,
+                        seed = seed,
+                        onScore = { score += it },
+                        onCorrect = onScored,
+                        onWrong = onMiss,
+                        onOutOfLives = { running = false },
+                        modifier = Modifier.align(Alignment.Center),
                     )
                 }
             }
@@ -241,11 +290,86 @@ fun GameScreen(
                 visible = !running,
                 canPlay = snapshot.acceptsInteraction,
                 played = lastScore != null,
-                onStart = { running = true },
+                onStart = {
+                    seed = nowMillis
+                    running = true
+                },
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 26.dp),
             )
         }
     }
+}
+
+/** Three cards; the selected one is lit. */
+@Composable
+private fun GamePicker(selected: MiniGame, onSelect: (MiniGame) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        MiniGame.entries.forEach { entry ->
+            val chosen = entry == selected
+            val tint = entry.tint()
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(tint.copy(alpha = if (chosen) 0.18f else 0.06f))
+                    .border(
+                        width = if (chosen) 1.5.dp else 1.dp,
+                        color = tint.copy(alpha = if (chosen) 0.7f else 0.2f),
+                        shape = RoundedCornerShape(18.dp),
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onSelect(entry) },
+                    )
+                    .padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(
+                    imageVector = entry.icon(),
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    text = stringResource(entry.titleRes()),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal,
+                    color = if (chosen) Accents.Text else Accents.TextDim,
+                )
+            }
+        }
+    }
+}
+
+private fun MiniGame.tint(): Color = when (this) {
+    MiniGame.CATCH -> Color(0xFFF477B8)
+    MiniGame.RHYTHM -> Color(0xFF7FD1E8)
+    MiniGame.MEMORY -> Color(0xFFF0C860)
+}
+
+private fun MiniGame.icon(): ImageVector = when (this) {
+    MiniGame.CATCH -> Icons.Rounded.Favorite
+    MiniGame.RHYTHM -> Icons.Rounded.MusicNote
+    MiniGame.MEMORY -> Icons.Rounded.Psychology
+}
+
+@StringRes
+private fun MiniGame.titleRes(): Int = when (this) {
+    MiniGame.CATCH -> R.string.game_catch
+    MiniGame.RHYTHM -> R.string.game_rhythm
+    MiniGame.MEMORY -> R.string.game_memory
+}
+
+@StringRes
+private fun MiniGame.hintRes(): Int = when (this) {
+    MiniGame.CATCH -> R.string.game_hint
+    MiniGame.RHYTHM -> R.string.game_rhythm_hint
+    MiniGame.MEMORY -> R.string.game_memory_hint
 }
 
 /**
@@ -259,9 +383,11 @@ fun GameScreen(
 @Composable
 private fun GameHeader(
     running: Boolean,
+    game: MiniGame,
     score: Int,
     secondsLeft: Int,
     lastScore: Int?,
+    lastGame: MiniGame,
     onStop: () -> Unit,
 ) {
     // A minimum rather than a fixed height: the idle hint runs to three lines
@@ -272,10 +398,10 @@ private fun GameHeader(
             enter = fadeIn() + scaleIn(initialScale = 0.94f),
             exit = fadeOut() + scaleOut(targetScale = 0.94f),
         ) {
-            RoundHeader(score = score, secondsLeft = secondsLeft, onStop = onStop)
+            RoundHeader(game = game, score = score, secondsLeft = secondsLeft, onStop = onStop)
         }
         AnimatedVisibility(visible = !running, enter = fadeIn(), exit = fadeOut()) {
-            IdleHeader(lastScore)
+            IdleHeader(game = game, lastScore = lastScore, lastGame = lastGame)
         }
     }
 }
@@ -318,10 +444,10 @@ private fun StartOverlay(
 
 /** The live scoreboard: countdown bar, score, and a way out of the round. */
 @Composable
-private fun RoundHeader(score: Int, secondsLeft: Int, onStop: () -> Unit) {
+private fun RoundHeader(game: MiniGame, score: Int, secondsLeft: Int, onStop: () -> Unit) {
     // Animated so the bar drains smoothly instead of stepping once a second.
     val fraction by animateFloatAsState(
-        targetValue = secondsLeft.toFloat() / TapGame.DURATION_SECONDS,
+        targetValue = secondsLeft.toFloat() / game.durationSeconds,
         animationSpec = tween(durationMillis = 1_000),
         label = "round-timer",
     )
@@ -374,7 +500,7 @@ private fun RoundHeader(score: Int, secondsLeft: Int, onStop: () -> Unit) {
 
 /** Between rounds: what the last one paid, or nothing at all before the first. */
 @Composable
-private fun IdleHeader(lastScore: Int?) {
+private fun IdleHeader(game: MiniGame, lastScore: Int?, lastGame: MiniGame) {
     PanelCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
@@ -389,7 +515,7 @@ private fun IdleHeader(lastScore: Int?) {
             Spacer(Modifier.width(12.dp))
             if (lastScore == null) {
                 Text(
-                    text = stringResource(R.string.game_hint),
+                    text = stringResource(game.hintRes()),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Accents.TextDim,
                     modifier = Modifier.weight(1f),
@@ -406,12 +532,12 @@ private fun IdleHeader(lastScore: Int?) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         EffectChip(
                             icon = Icons.Rounded.Favorite,
-                            text = "+${TapGame.moodGain(lastScore).roundToInt()}",
+                            text = "+${lastGame.moodGain(lastScore).roundToInt()}",
                             tint = StatColors.Mood,
                         )
                         EffectChip(
                             icon = Icons.Rounded.Paid,
-                            text = "+${TapGame.coins(lastScore)}",
+                            text = "+${lastGame.coins(lastScore)}",
                             tint = StatColors.Money,
                         )
                     }

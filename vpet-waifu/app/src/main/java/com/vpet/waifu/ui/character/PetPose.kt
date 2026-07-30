@@ -16,7 +16,7 @@ enum class EyeShape { OPEN, HAPPY_ARC, SLEEPING, HEART, SPARKLE, HALF_LIDDED, FO
 enum class MouthShape { SMILE, BIG_SMILE, CAT, WAVY, SMALL_O, FLAT, CHEWING }
 
 /** The object she is holding or sitting at. */
-enum class Prop { BOWL, LAPTOP, BOOK, CONTROLLER, PILLOW, TRAY, BAG, MIC, NOTEBOOK, BOOKSTACK }
+enum class Prop { BOWL, LAPTOP, BOOK, CONTROLLER, PILLOW, TRAY, BAG, MIC, NOTEBOOK, BOOKSTACK, LECTURE }
 
 /**
  * Which prop a job puts in her hands.
@@ -31,7 +31,7 @@ fun workPropFor(occupationId: String?): Prop? = when (occupationId) {
     "office" -> Prop.LAPTOP
     "idol" -> Prop.MIC
     "school" -> Prop.NOTEBOOK
-    "course" -> Prop.LAPTOP
+    "course" -> Prop.LECTURE
     "university" -> Prop.BOOKSTACK
     else -> null
 }
@@ -125,12 +125,7 @@ object PetPoseFactory {
             }
             PetState.STUDYING -> when (workProp) {
                 Prop.NOTEBOOK -> writing(base, seconds)
-                Prop.LAPTOP -> working(base, seconds).copy(
-                    // The online course: same typing, but it earns knowledge,
-                    // not coins, so the money rain stays out of it.
-                    particles = null,
-                    blushAlpha = 0.35f,
-                )
+                Prop.LECTURE -> attending(base, seconds)
                 Prop.BOOKSTACK -> studying(base, seconds).copy(prop = Prop.BOOKSTACK)
                 else -> studying(base, seconds)
             }
@@ -436,6 +431,42 @@ object PetPoseFactory {
         )
     }
 
+    /**
+     * The online course: headphones on, nodding along to a lecture.
+     *
+     * The office and the course both put her at a laptop, which made two of the
+     * seven jobs the same picture — the exact complaint the props were added to
+     * fix. Same desk, different *person*: she is listening here, not typing, so
+     * the head nods on the beat of the talk, the hands rest, and the headphones
+     * say at a glance which of the two this is.
+     */
+    private fun attending(base: PetPose, t: Float): PetPose {
+        // A nod every two seconds, a bigger one of agreement every eight, and
+        // a slow rock over the whole eight — every frequency a harmonic of the
+        // loop, so the widget's flipbook still closes.
+        val nod = sin(t * (TWO_PI / 2f))
+        val slow = sin(t * (TWO_PI / 8f))
+        val agree = spike((t % 8f) / 8f, 0.5f, 0.09f)
+        return base.copy(
+            headTiltDegrees = slow * 4f,
+            headBob = base.headBob + nod * 2.2f + agree * 4f,
+            bodyLean = slow * 1.6f,
+            hairSwayDegrees = sin(t * (TWO_PI / 8f) - 0.6f) * 6f,
+            leftArmDegrees = 34f,
+            rightArmDegrees = -40f,
+            leftElbowDegrees = 74f,
+            rightElbowDegrees = -78f,
+            eyes = EyeShape.FOCUSED,
+            mouth = MouthShape.SMILE,
+            lookY = 0.35f,
+            lookX = slow * 0.18f,
+            blushAlpha = 0.4f,
+            prop = Prop.LECTURE,
+            propProgress = (nod + 1f) / 2f,
+            particles = ParticleKind.NOTES,
+        )
+    }
+
     private fun studying(base: PetPose, t: Float): PetPose {
         // Reading: eyes track across the page, a page turns every few seconds.
         // Five sweeps per page, so the eyes land back where they started.
@@ -535,7 +566,13 @@ object PetPoseFactory {
             Prop.MIC -> TWO_PI / 1.2f
             else -> TWO_PI / 9f
         }
-        PetState.STUDYING -> if (workProp == Prop.LAPTOP) TWO_PI / 9f else 6f
+        PetState.STUDYING -> when (workProp) {
+            Prop.LAPTOP -> TWO_PI / 9f
+            // The lecture: the nod runs at 2s and the nod-of-agreement at 8,
+            // so eight seconds is the shortest window both close in.
+            Prop.LECTURE -> 8f
+            else -> 6f
+        }
         // The lean is the slowest thing she does while playing; the mash at
         // 11 and the bounce at 4.4 are both multiples of it.
         PetState.PLAYING -> TWO_PI / 2.2f

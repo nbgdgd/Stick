@@ -9,6 +9,7 @@ import com.vpet.waifu.feedback.Cue
 import com.vpet.waifu.feedback.MusicTrack
 import com.vpet.waifu.feedback.PetMusic
 import com.vpet.waifu.feedback.PetSounds
+import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
@@ -70,11 +71,11 @@ class PetViewModel @Inject constructor(
     /**
      * The clicker: tapping her directly.
      *
-     * Same game action as a pat, but with the short click instead of the
-     * jingle — rapid taps layering three copies of a 1.3-second tune is noise,
-     * not feedback.
+     * Same game action as a pat, but with her own soft boop rather than the
+     * interface click — this is the sound the player hears most in the app, so
+     * it is the one that has to stay pleasant after two hundred of them.
      */
-    fun tap() = act(Cue.TAP) { repository.pet() }
+    fun tap() = act(Cue.PET_TAP) { repository.pet() }
 
     /**
      * Tapping a category — a tab, a section header, an item's tile.
@@ -88,6 +89,9 @@ class PetViewModel @Inject constructor(
 
     /** A flying coin reaching the wallet. */
     fun coinLanded() = sounds.play(Cue.COIN)
+
+    /** A flying star reaching the level ring. Studying's own arrival sound. */
+    fun expLanded() = sounds.play(Cue.STAR)
 
     /** A dry interface click — tab switches and other chrome. */
     fun uiTap() = sounds.play(Cue.TAP)
@@ -109,11 +113,15 @@ class PetViewModel @Inject constructor(
 
     fun startPlaying() = act(Cue.TAP) { repository.startPlaying() }
 
-    fun finishPlaying(score: Int) = act(if (score > 0) Cue.HAPPY else null) {
-        repository.finishPlaying(score)
+    fun finishPlaying(score: Int, game: MiniGame) = act(if (score > 0) Cue.HAPPY else null) {
+        repository.finishPlaying(score, game)
     }
 
+    /** A point scored inside a round. */
     fun scored() = sounds.play(Cue.TAP)
+
+    /** A note fumbled or a pad hit in the wrong order. */
+    fun missed() = sounds.play(Cue.DENIED)
 
     fun acknowledgeOutcome() = act(Cue.COIN) { repository.acknowledgeOutcome() }
 

@@ -684,15 +684,24 @@ fun StatusChip(text: String, dot: Color, modifier: Modifier = Modifier) {
 
 /** The level badge: a ring that fills towards the next level. */
 @Composable
-fun LevelRing(exp: Int, modifier: Modifier = Modifier, size: Dp = 54.dp) {
+fun LevelRing(exp: Int, modifier: Modifier = Modifier, size: Dp = 54.dp, bump: Int = 0) {
     val level = Progression.levelForExp(exp)
     val (earned, needed) = Progression.levelProgress(exp)
     val fraction by animateFloatAsState(
         targetValue = if (needed <= 0) 1f else (earned.toFloat() / needed).coerceIn(0f, 1f),
         label = "level-ring",
     )
+    // The hop as a star lands on it — the wallet's trick, for the currency
+    // studying actually pays in.
+    val pop = remember { Animatable(1f) }
+    LaunchedEffect(bump) {
+        if (bump > 0) {
+            pop.snapTo(1.2f)
+            pop.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 900f))
+        }
+    }
 
-    Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.size(size).scale(pop.value), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(Modifier.size(size)) {
             val stroke = this.size.minDimension * 0.09f
             val inset = stroke / 2

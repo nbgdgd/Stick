@@ -43,8 +43,26 @@ enum class Cue(
      * here, so that `sfx_tap` is the file that actually sounds like a tap.
      */
     TAP(R.raw.sfx_tap, 0.85f, longArrayOf(0, 25), intArrayOf(0, 255)),
+    /**
+     * Tapping *her*, as opposed to tapping the interface.
+     *
+     * A soft falling boop rather than the dry interface click. This is the
+     * sound the player hears most in the whole app — it fires on every poke —
+     * so it is the one that has to stay pleasant after two hundred of them:
+     * two hundred milliseconds, a gentle attack, and a pitch that falls away
+     * instead of a transient that stabs.
+     */
+    PET_TAP(R.raw.sfx_pet, 0.9f, longArrayOf(0, 25), intArrayOf(0, 210)),
     /** A coin landing in the wallet. The bright one. */
     COIN(R.raw.sfx_coin, 1f, longArrayOf(0, 30, 50, 35), intArrayOf(0, 180, 0, 255)),
+    /**
+     * EXP landing on the level ring.
+     *
+     * A two-note rise rather than a chime that could be mistaken for money:
+     * studying and working pay in different currencies and had better sound
+     * like it, which is the whole complaint this answers.
+     */
+    STAR(R.raw.sfx_star, 0.85f, longArrayOf(0, 28), intArrayOf(0, 190)),
     EAT(R.raw.sfx_eat, 0.9f, longArrayOf(0, 35), intArrayOf(0, 200)),
     HAPPY(R.raw.sfx_happy, 1f, longArrayOf(0, 30, 60, 45), intArrayOf(0, 200, 0, 255)),
     /** Buying something permanent, or gaining a level. */

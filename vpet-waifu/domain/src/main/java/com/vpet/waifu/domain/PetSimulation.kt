@@ -58,6 +58,22 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         val ticks = elapsed / tuning.passiveTickMillis
         if (ticks <= 0L) return snapshot
 
+        // Nothing while she is out.
+        //
+        // "Why does studying pay money and not EXP?" — because the jar was
+        // ticking all through the lesson. A study session earns two EXP a
+        // minute; the jar was dropping a coin every three seconds next to it,
+        // so the thing the player watched arrive was money, and the thing the
+        // session actually paid crept up invisibly in a ring the size of a
+        // thumbnail. The clock is the clock: what a shift pays is all a shift
+        // pays. Time still passes, so nothing banks up to be collected after.
+        if (snapshot.isBusy) {
+            return snapshot.copy(
+                passiveSince = since + ticks * tuning.passiveTickMillis,
+                passiveBank = 0f,
+            )
+        }
+
         // The day's allowance. Without it, leaving the app open on a charger
         // out-earns every job in the catalogue by six to one, which is the same
         // shape of hole the cash advance used to be.
@@ -282,16 +298,30 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
      */
     fun pet(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
-        if (!current.acceptsInteraction) return current
-        val sinceInteraction = minutesBetween(current.lastInteractionAt, nowMillis)
+        if (!current.acceptsPat) return current
+        return current.copy(
+            stats = current.stats.adjusted(moodBy = patMood(current, nowMillis)),
+            lastInteractionAt = nowMillis,
+        ).withEmote(Emote.LOVED, nowMillis, tuning.lovedEmoteMillis)
+    }
+
+    /**
+     * What the next pat is worth, so the screen can say so.
+     *
+     * Full value once [PetTuning.petFullEffectMinutes] have passed since the
+     * last bit of attention, scaled down — but never to nothing — when the
+     * player mashes it. Public because a clicker whose number is invisible
+     * reads as a clicker that does nothing, which is precisely what it was
+     * accused of.
+     */
+    fun patMood(snapshot: PetSnapshot, nowMillis: Long): Float {
+        if (!snapshot.acceptsPat) return 0f
+        val sinceInteraction = minutesBetween(snapshot.lastInteractionAt, nowMillis)
         val multiplier = max(
             tuning.petMinimumMultiplier,
             min(1f, sinceInteraction / tuning.petFullEffectMinutes),
         )
-        return current.copy(
-            stats = current.stats.adjusted(moodBy = tuning.petMood * multiplier),
-            lastInteractionAt = nowMillis,
-        ).withEmote(Emote.LOVED, nowMillis, tuning.lovedEmoteMillis)
+        return tuning.petMood * multiplier
     }
 
     /** Puts her to bed. Energy then climbs on the normal tick until she wakes up. */
@@ -417,7 +447,12 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     }
 
     /** Ends the mini-game and applies its score. Playing lifts mood but costs energy. */
-    fun finishPlaying(snapshot: PetSnapshot, score: Int, nowMillis: Long): PetSnapshot {
+    fun finishPlaying(
+        snapshot: PetSnapshot,
+        score: Int,
+        nowMillis: Long,
+        game: MiniGame = MiniGame.CATCH,
+    ): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
         // Not gated on still being PLAYING: a round can outlive the screen that
         // started it, and the score should still count when it comes back.
@@ -426,10 +461,10 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         return current.copy(
             activity = PetActivity.AWAKE,
             stats = current.stats.adjusted(
-                energyBy = -TapGame.energyCost(score),
-                moodBy = TapGame.moodGain(score) * mods.play,
+                energyBy = -game.energyCost(score),
+                moodBy = game.moodGain(score) * mods.play,
             ),
-            progress = current.progress.plus(money = TapGame.coins(score)),
+            progress = current.progress.plus(money = game.coins(score)),
             lastInteractionAt = nowMillis,
         ).withEmote(Emote.CELEBRATING, nowMillis, tuning.celebrateEmoteMillis)
     }
@@ -551,16 +586,48 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
 }
 
 /**
- * Scoring for the tap mini-game. Playing is the mood lever that does not need
- * money — but it burns energy, so it cannot replace sleeping and eating.
+ * The arcade.
+ *
+ * Playing is the mood lever that does not need money — but it burns energy, so
+ * it cannot replace sleeping and eating.
+ *
+ * Three games, three different things to be good at: catching things where they
+ * appear, pressing on the beat, and remembering an order. Each reports a score
+ * in whatever units suit it — a rhythm round runs to a couple of hundred, a
+ * catch round to twenty-five — so the payout coefficients live here, per game,
+ * tuned so that *a good round is worth about the same whichever one you played*.
+ * Otherwise the arcade collapses to whichever game pays best.
  */
-object TapGame {
-    const val DURATION_SECONDS = 20
+enum class MiniGame(
+    val durationSeconds: Int,
+    private val moodPerPoint: Float,
+    private val energyPerPoint: Float,
+    private val pointsPerCoin: Int,
+) {
+    /** Tap the things that pop up. Reflex, aimed. */
+    CATCH(20, moodPerPoint = 0.9f, energyPerPoint = 0.15f, pointsPerCoin = 3),
 
-    fun moodGain(score: Int): Float = min(32f, 6f + score * 0.9f)
+    /** Tap on the beat as the rings close. Timing, no aim at all. */
+    RHYTHM(28, moodPerPoint = 0.26f, energyPerPoint = 0.045f, pointsPerCoin = 12),
 
-    fun energyCost(score: Int): Float = 8f + score * 0.15f
+    /** Watch the order, repeat the order. Recall, no reflex at all. */
+    MEMORY(30, moodPerPoint = 0.8f, energyPerPoint = 0.13f, pointsPerCoin = 3),
+    ;
+
+    fun moodGain(score: Int): Float = min(MAX_MOOD, BASE_MOOD + score * moodPerPoint)
+
+    fun energyCost(score: Int): Float = BASE_ENERGY + score * energyPerPoint
 
     /** A few coins so an empty wallet is never a dead end. */
-    fun coins(score: Int): Int = score / 3
+    fun coins(score: Int): Int = score / pointsPerCoin
+
+    companion object {
+        /** Turning up is worth something, even on a round you fluff. */
+        const val BASE_MOOD = 6f
+        /** …but no round can carry her mood on its own. */
+        const val MAX_MOOD = 32f
+        const val BASE_ENERGY = 8f
+
+        fun byName(name: String?): MiniGame = entries.firstOrNull { it.name == name } ?: CATCH
+    }
 }

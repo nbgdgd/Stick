@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.ui.theme.VPetTheme
 import org.junit.Assert.assertEquals
@@ -36,7 +37,10 @@ class GameScreenTest {
     private val idle = PetSnapshot.initial(T0)
 
     /** Mounts the screen behind a switch that can rip it out of the tree. */
-    private fun mount(onStart: () -> Unit = {}, onFinish: (Int) -> Unit = {}): () -> Unit {
+    private fun mount(
+        onStart: () -> Unit = {},
+        onFinish: (Int, MiniGame) -> Unit = { _, _ -> },
+    ): () -> Unit {
         var visible by mutableStateOf(true)
         // The character animates off `withFrameNanos` forever, so the clock has
         // to be driven by hand or `waitForIdle` would never return.
@@ -65,7 +69,7 @@ class GameScreenTest {
     @Test
     fun `leaving the tab mid-round settles it instead of abandoning it`() {
         var finished: Int? = null
-        val leave = mount(onFinish = { finished = it })
+        val leave = mount(onFinish = { score, _ -> finished = score })
 
         startRound()
         assertNull("the round should still be running", finished)
@@ -77,10 +81,46 @@ class GameScreenTest {
     }
 
     @Test
+    fun `each game in the picker can be chosen, played and settled`() {
+        // Three games sharing one round machine: the failure modes are a board
+        // that renders but never starts, and a picker that selects a game the
+        // round loop then ignores. One mount, three rounds — the harness allows
+        // exactly one setContent per test.
+        var playedGame: MiniGame? = null
+        val leave = mount(onFinish = { _, g -> playedGame = g })
+
+        MiniGame.entries.forEach { game ->
+            playedGame = null
+            compose.onNodeWithText(pickerLabel(game)).performClick()
+            compose.mainClock.advanceTimeBy(200)
+            compose.onNodeWithText(startLabel()).performClick()
+            compose.mainClock.advanceTimeBy(1_500)
+            assertNull("$game should still be running", playedGame)
+
+            compose.onNodeWithText("Stop").performClick()
+            compose.mainClock.advanceTimeBy(200)
+            assertEquals("$game must settle when it is stopped", game, playedGame)
+        }
+
+        leave()
+    }
+
+    /** The button says "Start" until a round has been played, then "Play again". */
+    private fun startLabel(): String =
+        runCatching { compose.onNodeWithText("Start").assertExists(); "Start" }
+            .getOrDefault("Play again")
+
+    private fun pickerLabel(game: MiniGame) = when (game) {
+        MiniGame.CATCH -> "Catch"
+        MiniGame.RHYTHM -> "Rhythm"
+        MiniGame.MEMORY -> "Memory"
+    }
+
+    @Test
     fun `the stop button ends the round on the spot`() {
         var started = 0
         var finished: Int? = null
-        val leave = mount(onStart = { started++ }, onFinish = { finished = it })
+        val leave = mount(onStart = { started++ }, onFinish = { score, _ -> finished = score })
 
         startRound()
         assertEquals(1, started)

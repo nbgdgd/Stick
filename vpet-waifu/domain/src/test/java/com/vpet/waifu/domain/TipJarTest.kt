@@ -182,6 +182,59 @@ class TipJarTest {
     }
 
     @Test
+    fun `studying pays EXP and nothing else`() {
+        // The complaint: "why does studying add money instead of EXP?" It was
+        // the jar, ticking all through the lesson — a coin every three seconds
+        // beside two EXP a minute, so money was the only thing you saw arrive.
+        val school = Occupations.STUDY.first()
+        val start = snapshot(money = 500)
+        var s = sim.startOccupation(start, school, T0)
+        var t = T0
+        repeat(school.durationMinutes) {
+            t += MINUTE
+            s = sim.advanceTo(s, t)
+        }
+
+        assertEquals("a lesson must not pay wages", 500, s.progress.money)
+        assertTrue("a lesson must pay EXP", s.progress.exp > 0)
+    }
+
+    @Test
+    fun `a shift pays wages and the jar stays shut`() {
+        val cafe = Occupations.WORK.first()
+        val start = snapshot(money = 0)
+        var s = sim.startOccupation(start, cafe, T0)
+        var t = T0
+        repeat(cafe.durationMinutes) {
+            t += MINUTE
+            s = sim.advanceTo(s, t)
+        }
+
+        // Everything in the wallet is the shift's own pay, to the coin — no
+        // twenty-a-minute trickle riding along on top of it. (The total can
+        // exceed the advertised payout: mood climbs during a shift now, and a
+        // shift that ends cheerful pays a bonus. That is the shift paying it.)
+        val card = s.lastOutcome
+        assertEquals("the wallet must hold exactly what the result card claims", card?.money, s.progress.money)
+    }
+
+    @Test
+    fun `time spent on the clock is not banked up for afterwards`() {
+        val cafe = Occupations.WORK.first()
+        var s = sim.startOccupation(snapshot(), cafe, T0)
+        var t = T0
+        repeat(cafe.durationMinutes + 2) {
+            t += MINUTE
+            s = sim.advanceTo(s, t)
+        }
+        val afterShift = s.progress.money
+
+        // One tick after clocking off pays exactly one tick, not half an hour's.
+        s = sim.settlePassive(s, t + tuning.passiveTickMillis)
+        assertEquals(afterShift + 1, s.progress.money)
+    }
+
+    @Test
     fun `advancing the world settles the jar too`() {
         val after = sim.advanceTo(snapshot(), T0 + 15 * tuning.passiveTickMillis)
 

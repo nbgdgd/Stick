@@ -89,7 +89,7 @@ class WidgetFrameTest {
             PetState.WORKING to Prop.LAPTOP,
             PetState.WORKING to Prop.MIC,
             PetState.STUDYING to Prop.NOTEBOOK,
-            PetState.STUDYING to Prop.LAPTOP,
+            PetState.STUDYING to Prop.LECTURE,
             PetState.STUDYING to Prop.BOOKSTACK,
         )
         scenes.forEach { (state, prop) ->
@@ -109,9 +109,21 @@ class WidgetFrameTest {
     @Test
     fun `each job draws a different picture`() {
         // The complaint that started this: every job showed the same scene.
-        val byProp = listOf(Prop.TRAY, Prop.BAG, Prop.LAPTOP, Prop.MIC).associateWith { prop ->
+        // It came back once — the office and the online course both sat her at
+        // a laptop — so every one of the seven is checked, not just the ones
+        // that happened to differ at the time.
+        val scenes = listOf(
+            PetState.WORKING to Prop.TRAY,
+            PetState.WORKING to Prop.BAG,
+            PetState.WORKING to Prop.LAPTOP,
+            PetState.WORKING to Prop.MIC,
+            PetState.STUDYING to Prop.NOTEBOOK,
+            PetState.STUDYING to Prop.LECTURE,
+            PetState.STUDYING to Prop.BOOKSTACK,
+        )
+        val byScene = scenes.associateWith { (state, prop) ->
             PetRasterizer.animationFrames(
-                state = PetState.WORKING,
+                state = state,
                 widthPx = 300,
                 heightPx = 420,
                 density = density,
@@ -121,7 +133,11 @@ class WidgetFrameTest {
             ).first().contentHashCode()
         }
 
-        assertEquals("two jobs render identically: $byProp", 4, byProp.values.distinct().size)
+        assertEquals(
+            "two occupations render identically: $byScene",
+            scenes.size,
+            byScene.values.distinct().size,
+        )
     }
 
     @Test

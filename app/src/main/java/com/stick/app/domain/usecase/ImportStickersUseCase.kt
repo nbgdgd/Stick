@@ -7,6 +7,8 @@ import com.stick.core.result.StickResult
 import com.stick.stickersource.StickerSource
 import com.stick.stickersource.StickerSourceRegistry
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
 /**
@@ -24,11 +26,41 @@ class ImportStickersUseCase @Inject constructor(
         primary(StickerSource.Capability.RESOLVE_VIDEO)?.resolveVideo(rawInput)
             ?: StickResult.Failure(com.stick.core.result.StickError.Unsupported("No source can resolve links"))
 
-    /** Stream animated stickers found in the video's comments, as they arrive. */
-    fun scanComments(video: com.stick.core.model.TikTokVideoRef): Flow<StickResult<RemoteSticker>> =
-        (primary(StickerSource.Capability.SCRAPE_COMMENTS)
-            ?: error("No comment-scraping source registered"))
-            .stickersFromComments(video)
+    /**
+     * Stream stickers found in the video's comments, as they arrive.
+     *
+     * Tries every comment-capable source in registration order and stops at the
+     * first one that actually yields something. The page scraper is registered
+     * first because it can reach comments the public API hides, but it depends on
+     * TikTok's markup — so when it comes up empty the API source still runs and
+     * the result is never worse than the API alone.
+     */
+    fun scanComments(video: com.stick.core.model.TikTokVideoRef): Flow<StickResult<RemoteSticker>> = flow {
+        val sources = registry.withCapability(StickerSource.Capability.SCRAPE_COMMENTS)
+        if (sources.isEmpty()) {
+            emit(StickResult.Failure(com.stick.core.result.StickError.Unsupported("No comment source")))
+            return@flow
+        }
+
+        var lastFailure: StickResult.Failure? = null
+        for (source in sources) {
+            var emitted = 0
+            source.stickersFromComments(video)
+                .catch { /* try the next source instead of failing the whole scan */ }
+                .collect { result ->
+                    when (result) {
+                        is StickResult.Success -> {
+                            emitted++
+                            emit(result)
+                        }
+                        is StickResult.Failure -> lastFailure = result
+                    }
+                }
+            if (emitted > 0) return@flow
+        }
+        // Nothing anywhere: surface the last real error, if there was one.
+        lastFailure?.let { emit(it) }
+    }
 
     /**
      * Download [stickers] and persist them, de-duplicating and probing accurate

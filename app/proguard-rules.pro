@@ -39,3 +39,6 @@
 -keepclasseswithmembernames class * {
     native <methods>;
 }
+
+# Keep diagnostic logging usable in release builds.
+-keep class android.util.Log { *; }

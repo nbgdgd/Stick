@@ -152,7 +152,7 @@ export function LaniakeaScene() {
           key={s.id}
           s={s}
           pos={pos}
-          showLabel={showLabels && (s.kind !== 'group' || cameraDist < 900 || s.id === 'local-group')}
+          showLabel={showLabels && (s.kind !== 'group' || cameraDist < 260 || s.id === 'local-group')}
           onPick={() => {
             setFocus(s.id)
             const facts: { label: string; value: string }[] = [
@@ -200,8 +200,8 @@ function LaniakeaBoundary({
   const center = useMemo(() => (ga ? ga.pos.clone().multiplyScalar(0.45) : new THREE.Vector3()), [ga])
   return (
     <mesh position={center} onClick={onClick}>
-      <sphereGeometry args={[LANIAKEA.diameterMly / 2, 28, 20]} />
-      <meshBasicMaterial color="#4488cc" wireframe transparent opacity={0.05} />
+      <sphereGeometry args={[LANIAKEA.diameterMly / 2, 14, 9]} />
+      <meshBasicMaterial color="#4488cc" wireframe transparent opacity={0.028} />
     </mesh>
   )
 }

@@ -20,6 +20,20 @@ import { Starfield } from '../components/Starfield'
 
 const EARTH = PLANETS.find((p) => p.id === 'earth')!
 
+/** Подпись, которая едет вместе с МКС. */
+function IssLabel({ getPos, onClick }: { getPos: () => [number, number, number]; onClick: () => void }) {
+  const ref = useRef<THREE.Group>(null)
+  useFrame(() => {
+    const p = getPos()
+    if (ref.current) ref.current.position.set(p[0], p[2], -p[1])
+  })
+  return (
+    <group ref={ref}>
+      <Label position={[0, 0.06, 0]} text="МКС" sub="420 км, 7,66 км/с" small onClick={onClick} />
+    </group>
+  )
+}
+
 export function EarthScene() {
   const [dayMap, nightMap, cloudMap] = useLoader(TextureLoader, [
     '/tex/2k_earth_daymap.jpg',
@@ -203,12 +217,9 @@ export function EarthScene() {
           <lineBasicMaterial color="#63b3ff" transparent opacity={0.35} />
         </line>
 
-        {showLabels && (
-          <>
-            <Label position={[0, 1.35, 0]} text="Северный полюс" small />
-            <Label position={[0, -1.35, 0]} text="Южный полюс" small />
-          </>
-        )}
+        {/* Подпись МКС: единственная, что здесь нужна — она объясняет,
+            что за яркая точка ползёт по дуге */}
+        {showLabels && <IssLabel getPos={() => issPosition(simTime)} onClick={selectIss} />}
       </group>
     </group>
   )

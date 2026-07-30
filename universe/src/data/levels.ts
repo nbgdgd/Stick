@@ -149,9 +149,9 @@ export const LEVELS: Level[] = [
     title: 'Наблюдаемая Вселенная',
     subtitle: 'Космическая паутина и реликтовое излучение',
     metersPerUnit: 9.4607304725808e23, // 1 единица = 100 млн световых лет
-    initialCameraDist: 900,
+    initialCameraDist: 1500,
     minDist: 30,
-    maxDist: 2200,
+    maxDist: 2600,
     characteristicSizeM: 8.8e26,
     simulation: 'Процедурная космическая паутина: узлы, филаменты, войды; оболочка реликтового излучения',
     description:

@@ -236,7 +236,7 @@ function CmbShell({ onClick }: { onClick: () => void }) {
 
             // Полупрозрачно: сквозь оболочку должна просматриваться
             // структура внутри, иначе весь уровень сводится к карте реликта
-            gl_FragColor = vec4(col, 0.30);
+            gl_FragColor = vec4(col, 0.34);
           }
         `,
       }),
@@ -260,7 +260,7 @@ function CmbShell({ onClick }: { onClick: () => void }) {
 function RedshiftShells({ showLabels }: { showLabels: boolean }) {
   const shells = useMemo(() => {
     // z -> сопутствующее расстояние через ΛCDM-интеграл
-    return [0.5, 1, 2, 6].map((z) => {
+    return [1, 2, 6].map((z) => {
       const mpc = comovingDistanceMpc(z)
       const mly = (mpc * 3.2615638) // Мпк -> млн св. лет
       const ageGyr = lookbackGyr(z)
@@ -278,7 +278,7 @@ function RedshiftShells({ showLabels }: { showLabels: boolean }) {
           </mesh>
           {showLabels && (
             <Label
-              position={[s.r * 0.71, s.r * 0.71, 0]}
+              position={[s.r * 0.62, s.r * 0.78, s.r * 0.08]}
               text={`z = ${s.z}`}
               sub={`${(s.mly / 1000).toFixed(1)} млрд св. лет · свет шёл ${s.ageGyr.toFixed(1)} млрд лет`}
               small

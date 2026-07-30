@@ -16,6 +16,7 @@ import * as THREE from 'three'
 import { LEVELS } from '../data/levels'
 import { useStore } from '../store'
 import { getFocusPosition, getFocusRadius } from '../lib/focus'
+import { sunGeometry } from '../lib/sun'
 
 /** Плавная кривая для наездов: медленный старт, медленное торможение. */
 function easeInOutCubic(t: number): number {
@@ -68,6 +69,18 @@ export function CameraRig() {
     s.vDist = 0
     s.edgePressure = 0
     s.target.set(0, 0, 0)
+
+    // На уровнях Земли ставим камеру со стороны Солнца: иначе при открытии
+    // мы смотрим в случайную точку и с равной вероятностью попадаем
+    // на полностью ночную сторону, где смотреть нечего.
+    if (level.id === 'earth' || level.id === 'earth-moon') {
+      const sun = sunGeometry(useStore.getState().simTime)
+      // направление на Солнце в координатах сцены: (x, z, -y)
+      const thetaSun = Math.atan2(-sun.direction[1], sun.direction[0])
+      // сдвиг на 0,7 рад оставляет в кадре и освещённую сторону, и терминатор
+      s.theta = thetaSun + 0.7
+      s.phi = 1.22
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [levelIndex])
 

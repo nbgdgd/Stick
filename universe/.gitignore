@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Android-проект генерируется `npx cap add android`, но коммитится, чтобы
+# сборка APK была воспроизводима. Исключаем только продукты сборки.
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/build/
+android/app/src/main/assets/public/

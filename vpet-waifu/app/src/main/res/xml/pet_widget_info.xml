@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  minWidth/minHeight are the default placement size; minResize* is how far the
+  user may shrink it and maxResize* how far it may grow. Leaving the minResize
+  pair out is what makes some launchers refuse to show resize handles at all,
+  so both pairs are declared and kept well apart.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:description="@string/widget_description"
+    android:initialLayout="@layout/widget_pet_loading"
+    android:minHeight="180dp"
+    android:minResizeHeight="110dp"
+    android:minResizeWidth="110dp"
     android:minWidth="250dp"
-    android:minHeight="110dp"
-    android:targetCellWidth="4"
-    android:targetCellHeight="2"
-    tools:ignore="UnusedAttribute"
+    android:maxResizeHeight="440dp"
+    android:maxResizeWidth="400dp"
     android:previewImage="@mipmap/ic_launcher"
     android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="3"
+    android:targetCellWidth="4"
     android:updatePeriodMillis="1800000"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    tools:ignore="UnusedAttribute" />

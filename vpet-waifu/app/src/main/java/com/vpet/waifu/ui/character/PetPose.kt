@@ -6,6 +6,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** How the eyes are drawn this frame. */
@@ -325,6 +326,62 @@ object PetPoseFactory {
     }
 
     private const val BREATH_SPEED = 1.9f
+
+    // --- widget loop ---------------------------------------------------------
+
+    /**
+     * The period of each state's own dominant motion, in seconds.
+     *
+     * A home-screen widget animates by flipping through a fixed set of
+     * pre-rendered frames, so the frames have to form a seamless loop. Sampling
+     * a state over a whole number of *its own* cycles is what makes the last
+     * frame join back onto the first.
+     */
+    private fun periodSeconds(state: PetState): Float = when (state) {
+        PetState.IDLE -> TWO_PI / BREATH_SPEED
+        PetState.HAPPY -> (PI / 3.1).toFloat()
+        PetState.HUNGRY -> 5f
+        PetState.TIRED -> TWO_PI / 0.9f
+        PetState.SLEEPING -> TWO_PI / 0.8f
+        PetState.EATING -> 1.6f
+        PetState.LOVED -> TWO_PI / 2.4f
+        PetState.WORKING -> TWO_PI / 9f
+        PetState.STUDYING -> 6f
+        PetState.PLAYING -> TWO_PI / 11f
+        PetState.CELEBRATING -> (PI / 3.6).toFloat()
+    }
+
+    /**
+     * Frame [index] of [frameCount] in a seamless loop lasting about
+     * [loopSeconds].
+     *
+     * The state is sampled over a whole number of its own cycles, chosen to sit
+     * closest to the requested loop length, so fast motions (typing, button
+     * mashing) still run at their natural speed rather than being stretched
+     * across the whole loop. Blinking is replaced by a single pulse per loop —
+     * the free-running blink would otherwise be cut in half at the seam.
+     */
+    fun widgetLoopFrame(
+        state: PetState,
+        index: Int,
+        frameCount: Int,
+        loopSeconds: Float = 2.4f,
+    ): PetPose {
+        val phase = index.toFloat() / frameCount.coerceAtLeast(1)
+        val period = periodSeconds(state)
+        val cycles = max(1f, (loopSeconds / period).roundToInt().toFloat())
+        val base = pose(state, phase * period * cycles)
+
+        val blink = when (base.eyes) {
+            EyeShape.SLEEPING -> 1f
+            EyeShape.OPEN, EyeShape.FOCUSED, EyeShape.HALF_LIDDED -> spike(phase, 0.42f, 0.05f)
+            // Sparkle and heart eyes have no lids to close.
+            else -> 0f
+        }
+        return base.copy(blink = blink)
+    }
+
+    private const val TWO_PI = (2.0 * PI).toFloat()
 }
 
 /** Shared helper for the renderer: a value that loops smoothly over [period]. */

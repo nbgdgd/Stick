@@ -66,8 +66,8 @@ in the wrong style, or not anime at all. Shipping art with an unclear licence
 into a repository is not worth it. Swapping in real art later means replacing
 `drawPet`; nothing else changes.
 
-The renderer is also the widget's: `renderPetBitmap` rasterises one frame
-through the same code, so the widget can never drift out of sync with the app.
+The renderer is also the widget's: `PetRasterizer` draws frames through the very
+same code, so the widget can never drift out of sync with the app.
 
 ### Iterating on the art
 
@@ -189,14 +189,65 @@ ways: long-press the bubble, the panel's sun button, or the app screen.
 
 ## The widget
 
-A 4×2 home-screen widget: the character, her three stats, level and wallet, plus
-two one-tap actions (feed, sleep/wake) that run without opening the app. Tapping
-the body opens the app.
+A home-screen widget where the pet **animates**, centred in her room, resizable
+from about 2x2 up to 5x4 cells.
 
-Glance cannot run a Compose canvas, so the character arrives as a bitmap from
-`renderPetBitmap`. Glance 1.1 also exposes only the single-`Color` provider —
-both the resource-id and day/night overloads are restricted to the library
-group — so the widget resolves light/dark from the configuration itself.
+Two things a widget normally cannot do:
+
+**Animation.** RemoteViews can neither run Compose nor play a frame animation —
+`AnimationDrawable` and friends do not start inside a widget. But `ViewFlipper`
+is on the short list of views a widget may contain, and with `autoStart` it
+cycles its children by itself once the launcher attaches it. So the character is
+pre-rendered into a seamless twelve-frame loop, each frame an `ImageView` child,
+embedded in the Glance tree through `AndroidRemoteViews`. No in/out animation is
+set, so the frames play as a flipbook rather than crossfading. If a launcher
+declines to auto-start the flipper, the widget shows the first frame — still a
+perfectly good picture.
+
+`PetPoseFactory.widgetLoopFrame` is what makes the loop seamless: it samples a
+state over a whole number of *its own* cycles, so fast motions (typing, button
+mashing) still run at natural speed instead of being stretched across the loop,
+and the free-running blink is replaced by one pulse per loop so it is never cut
+in half at the seam.
+
+**Payload.** Every frame travels to the launcher inside one Binder transaction
+with roughly a megabyte shared across the whole system; an oversized update is
+dropped and the user just sees a blank widget. Measured on this art:
+
+| Frames | Size | Raw `ARGB_8888` | PNG |
+|--------|------|-----------------|-----|
+| 12 | 240x336 | 3.7 MB | 234 KB |
+| 12 | 300x420 | 5.8 MB | 299 KB |
+| 12 | 400x560 | 10.3 MB | 420 KB |
+
+So the frames go over as `Icon.createWithData` PNGs rather than bitmaps — a
+bitmap is marshalled uncompressed and a dozen of them would blow the budget on
+their own. Resolution is capped, and the total is re-checked after rendering and
+the whole loop re-rendered smaller if a detail-heavy state runs over.
+
+The room is drawn **once** as a separate full-bleed layer under the flipper, and
+the frames are transparent. Measurement said the backdrop only costs about 3% —
+the point is visual: a character-sized backdrop leaves a visible panel edge
+inside the widget, while a full-bleed one makes the whole thing a single scene.
+The wall/floor junction is positioned from the character's actual foot height,
+so she stands on the floor at any widget size instead of floating up the wall.
+
+**Resizing.** `SizeMode.Exact` re-runs the widget for every size the user drags
+to, and the real size comes from the widget's options bundle (`provideGlance`
+runs before the composition, so `LocalSize` is not yet available). Both the
+layout and the bitmap resolution follow it. `minResizeWidth`/`minResizeHeight`
+are declared well apart from `minWidth`/`minHeight` — omitting them is what makes
+some launchers refuse to show resize handles at all. Three layouts:
+
+| Size | Shows |
+|------|-------|
+| under 150x130dp | the character alone |
+| 150x130dp and up | + state and the three stat bars |
+| 200x200dp and up | + level, wallet and one-tap feed / sleep |
+
+Glance 1.1 also exposes only the single-`Color` provider — both the resource-id
+and day/night overloads are restricted to the library group — so the widget
+resolves light/dark from the configuration itself.
 
 ### Permissions
 

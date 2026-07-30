@@ -97,4 +97,5 @@
     <string name="overlay_notification_text">Нажмите на неё, чтобы покормить или уложить спать.</string>
 
     <string name="widget_description">Питомец, её статы и уход в одно касание.</string>
+    <string name="widget_pet_description">Питомец</string>
 </resources>

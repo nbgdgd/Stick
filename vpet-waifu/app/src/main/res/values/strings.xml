@@ -97,4 +97,5 @@
     <string name="overlay_notification_text">Tap the bubble to feed her or put her to bed.</string>
 
     <string name="widget_description">Your pet, her stats and one-tap care.</string>
+    <string name="widget_pet_description">Your pet</string>
 </resources>

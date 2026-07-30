@@ -5,8 +5,11 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import com.stick.app.StickApplication
 import com.stick.core.model.CatalogQuery
 import com.stick.core.model.RemoteSticker
 import com.stick.core.model.StickerFormat
@@ -21,29 +24,34 @@ import com.stick.stickersource.tiktok.AssetDownloader
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.emptyFlow
 import org.json.JSONArray
 
 /**
- * Reads comment stickers by loading the video page in an off-screen WebView and
- * harvesting the rendered comment list.
+ * Reads comment stickers from the real TikTok page loaded in a WebView.
  *
  * ### Why this exists
- * TikTok's public comment API only returns a fraction of a busy video's comments
- * (measured: 86 of 206) — the rest need requests signed by TikTok's own
- * JavaScript (`X-Bogus`/`msToken`), and a logged-in session alone does not lift
- * the cap. Loading the real page lets TikTok's own scripts do that signing and
- * paginate normally; we just scroll and read what gets rendered.
+ * The public comment API only returns part of a busy video's comments (measured:
+ * 86 of 206) — the rest need requests signed by TikTok's own JavaScript, and
+ * logging in does not lift the cap. Loading the actual page lets TikTok's scripts
+ * do that signing and fetch comments normally.
  *
- * Trade-off: slower than the API and coupled to TikTok's markup, so it is
- * registered *ahead of* the API source but the API source stays as a fallback.
+ * ### How it collects
+ * Two independent channels, because a device log showed DOM-only scraping
+ * returning nothing on every pass:
+ *  1. **Network capture** — `fetch`/`XMLHttpRequest` are wrapped so every comment
+ *     API response the page itself makes is scanned for sticker URLs. This works
+ *     even when images are never painted.
+ *  2. **DOM scraping** — images actually rendered in the comment list.
+ *
+ * The WebView is attached to the current window: detached, it has no real
+ * viewport, so TikTok's lazy-loaded images never load (the earlier log was full
+ * of "tile memory limits exceeded" and zero images).
  */
 class WebViewCommentSource(
     private val context: Context,
     private val downloader: AssetDownloader,
-    /** How many scroll passes to make before giving up on new results. */
-    private val maxScrolls: Int = 40,
-    private val scrollDelayMs: Long = 900,
+    private val maxScrolls: Int = 45,
+    private val scrollDelayMs: Long = 1_000,
 ) : StickerSource {
 
     override val id: String = SOURCE_ID
@@ -57,6 +65,7 @@ class WebViewCommentSource(
     ): Flow<StickResult<RemoteSticker>> = callbackFlow {
         val main = Handler(Looper.getMainLooper())
         var webView: WebView? = null
+        var host: ViewGroup? = null
         val seen = HashSet<String>()
 
         main.post {
@@ -69,22 +78,45 @@ class WebViewCommentSource(
                 loadWithOverviewMode = true
                 useWideViewPort = true
                 userAgentString = CHROME_UA
+                blockNetworkImage = false
+                loadsImagesAutomatically = true
             }
-            // Give the page a real viewport; a zero-sized WebView renders nothing.
-            wv.layout(0, 0, 1080, 2400)
+
+            // Attach off-screen to a real window so layout and lazy image loading
+            // actually happen. Falls back to a detached view if no activity is up.
+            val activity = StickApplication.ActivityTracker.activity
+            if (activity != null) {
+                val root = activity.window.decorView as? ViewGroup
+                if (root != null) {
+                    val holder = FrameLayout(activity)
+                    holder.addView(wv, FrameLayout.LayoutParams(VIEW_W, VIEW_H))
+                    // Off to the side: laid out and drawn, but never visible.
+                    holder.translationX = -20_000f
+                    root.addView(holder, FrameLayout.LayoutParams(VIEW_W, VIEW_H))
+                    host = holder
+                    Log.i(TAG, "webview attached to window (${VIEW_W}x$VIEW_H)")
+                }
+            }
+            if (host == null) {
+                wv.layout(0, 0, VIEW_W, VIEW_H)
+                Log.i(TAG, "no activity; using detached webview (images may not load)")
+            }
 
             var pass = 0
             lateinit var pump: Runnable
             pump = Runnable {
                 if (pass++ >= maxScrolls) {
+                    Log.i(TAG, "done after $pass passes, ${seen.size} unique stickers")
                     close()
                     return@Runnable
                 }
                 wv.evaluateJavascript(HARVEST_JS) { raw ->
-                    val found = parseUrls(raw)
-                    Log.i(TAG, "pass $pass: js returned ${found.size} urls, unique so far ${seen.size}")
-                    if (found.isEmpty() && pass <= 2) Log.i(TAG, "raw js result: ${raw?.take(200)}")
-                    found.forEach { url ->
+                    val payload = parsePayload(raw)
+                    val urls = payload.first
+                    if (pass <= 3 || urls.isNotEmpty()) {
+                        Log.i(TAG, "pass $pass: ${urls.size} urls (${payload.second})")
+                    }
+                    urls.forEach { url ->
                         if (seen.add(assetKey(url))) {
                             trySend(StickResult.Success(toSticker(url, video)))
                         }
@@ -94,23 +126,23 @@ class WebViewCommentSource(
             }
 
             wv.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    Log.i(TAG, "page loaded: ${url?.take(90)}")
-                    main.postDelayed(pump, 1_500)
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                    // Install the network hook before the page's own scripts run.
+                    view?.evaluateJavascript(HOOK_JS, null)
                 }
 
-                /**
-                 * TikTok's mobile page tries to hand off to the native app via a
-                 * custom scheme (snssdk…/tiktok…). A WebView cannot open those and
-                 * reports ERR_UNKNOWN_URL_SCHEME, so swallow anything that isn't
-                 * http(s) and stay on the page.
-                 */
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    view?.evaluateJavascript(HOOK_JS, null)
+                    Log.i(TAG, "page loaded: ${url?.take(80)}")
+                    main.postDelayed(pump, 2_000)
+                }
+
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
                     request: android.webkit.WebResourceRequest?,
                 ): Boolean {
-                    val url = request?.url?.toString().orEmpty()
-                    return !url.startsWith("http://") && !url.startsWith("https://")
+                    val u = request?.url?.toString().orEmpty()
+                    return !u.startsWith("http://") && !u.startsWith("https://")
                 }
 
                 @Deprecated("Kept for API < 24 devices")
@@ -124,12 +156,8 @@ class WebViewCommentSource(
                     request: android.webkit.WebResourceRequest?,
                     error: android.webkit.WebResourceError?,
                 ) {
-                    // Sub-resource failures (ads, trackers, app-handoff links) are
-                    // normal on this page — only a failed main document is fatal.
-                    Log.i(TAG, "error on ${request?.url?.toString()?.take(70)} mainFrame=${request?.isForMainFrame} : ${error?.description}")
                     if (request?.isForMainFrame != true) return
-                    val url = request.url?.toString().orEmpty()
-                    if (!url.startsWith("http")) return
+                    Log.i(TAG, "main-frame error: ${error?.description}")
                     trySend(
                         StickResult.Failure(
                             StickError.Network(error?.description?.toString() ?: "Page failed to load"),
@@ -145,14 +173,19 @@ class WebViewCommentSource(
         awaitClose {
             main.post {
                 webView?.stopLoading()
+                host?.let { h ->
+                    (h.parent as? ViewGroup)?.removeView(h)
+                    h.removeAllViews()
+                }
                 webView?.destroy()
                 webView = null
+                host = null
             }
         }
     }
 
     private fun toSticker(url: String, video: TikTokVideoRef): RemoteSticker {
-        val animated = url.contains(".awebp") || url.contains(".webp")
+        val animated = url.contains("awebp") || url.contains(".webp")
         return RemoteSticker(
             id = assetKey(url),
             sourceId = SOURCE_ID,
@@ -164,18 +197,19 @@ class WebViewCommentSource(
         )
     }
 
-    /** `evaluateJavascript` hands back a JSON string literal; unwrap it. */
-    private fun parseUrls(raw: String?): List<String> = runCatching {
-        if (raw.isNullOrBlank() || raw == "null") return emptyList()
-        // Result arrives double-encoded: "\"[...]\"" → decode once, then parse.
+    /** Returns the URLs plus a short diagnostic string from the page. */
+    private fun parsePayload(raw: String?): Pair<List<String>, String> = runCatching {
+        if (raw.isNullOrBlank() || raw == "null") return emptyList<String>() to "null"
         val json = if (raw.startsWith("\"")) {
-            org.json.JSONTokener(raw).nextValue() as? String ?: return emptyList()
+            org.json.JSONTokener(raw).nextValue() as? String ?: return emptyList<String>() to "unwrap-failed"
         } else {
             raw
         }
-        val arr = JSONArray(json)
-        (0 until arr.length()).map { arr.getString(it) }
-    }.getOrDefault(emptyList())
+        val obj = org.json.JSONObject(json)
+        val arr: JSONArray = obj.optJSONArray("urls") ?: JSONArray()
+        val list = (0 until arr.length()).map { arr.getString(it) }
+        list to obj.optString("info")
+    }.getOrDefault(emptyList<String>() to "parse-failed")
 
     private fun assetKey(url: String): String =
         ASSET_ID_REGEX.find(url)?.groupValues?.get(1) ?: url.substringBefore('?')
@@ -185,7 +219,6 @@ class WebViewCommentSource(
         onProgress: (Float) -> Unit,
     ): StickResult<DownloadedAsset> = downloader.download(sticker, onProgress)
 
-    // --- Unsupported here; the API source keeps these capabilities ----------
     override suspend fun resolveVideo(rawInput: String): StickResult<TikTokVideoRef> =
         StickResult.Failure(StickError.Unsupported("Handled by the API source"))
 
@@ -195,44 +228,98 @@ class WebViewCommentSource(
     private companion object {
         const val TAG = "StickDiag"
         const val SOURCE_ID = "tiktok-webview"
+        const val VIEW_W = 1080
+        const val VIEW_H = 2400
         val ASSET_ID_REGEX = Regex("""/([0-9a-f]{32})""")
-        /**
-         * Desktop UA on purpose: the mobile page pushes an "open in app"
-         * interstitial and hides the comment list, while the desktop layout
-         * renders comments inline where they can be scrolled and read.
-         */
         const val CHROME_UA =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Linux; Android 14; SM-G991B) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
         /**
-         * Scrolls every scrollable container (the comment panel is a nested
-         * scroller, not the window) and returns the sticker image URLs currently
-         * in the DOM. Avatars and video covers are filtered out by URL shape.
+         * Wraps fetch/XHR so sticker URLs can be read straight out of the comment
+         * responses TikTok fetches itself — these are properly signed, and they
+         * arrive even if the images are never painted.
+         */
+        val HOOK_JS = """
+        (function(){
+          if (window.__stickHooked) return; window.__stickHooked = true;
+          window.__stickUrls = []; window.__stickHits = 0;
+          function grab(text){
+            try{
+              var re = /https:[^"\\\\ ]*?(?:awebp|\.image|\.jpeg|\.webp|\.gif)[^"\\\\ ]*/g, m;
+              while ((m = re.exec(text))) {
+                var u = m[0].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+                if (u.indexOf('-avt-') !== -1) continue;
+                if (u.indexOf('tiktokcdn') === -1) continue;
+                window.__stickUrls.push(u);
+              }
+            } catch(e) {}
+          }
+          var of = window.fetch;
+          if (of) window.fetch = function(){
+            var p = of.apply(this, arguments);
+            try {
+              var a0 = arguments[0];
+              var url = (a0 && a0.url) ? a0.url : String(a0 || '');
+              if (url.indexOf('/api/comment/') !== -1) {
+                window.__stickHits++;
+                p.then(function(r){ try { r.clone().text().then(grab); } catch(e){} });
+              }
+            } catch(e) {}
+            return p;
+          };
+          var oo = XMLHttpRequest.prototype.open, os = XMLHttpRequest.prototype.send;
+          XMLHttpRequest.prototype.open = function(m, u){ this.__su = String(u||''); return oo.apply(this, arguments); };
+          XMLHttpRequest.prototype.send = function(){
+            var s = this;
+            try {
+              s.addEventListener('load', function(){
+                try { if (s.__su && s.__su.indexOf('/api/comment/') !== -1) { window.__stickHits++; grab(s.responseText); } } catch(e){}
+              });
+            } catch(e) {}
+            return os.apply(this, arguments);
+          };
+        })();
+        """.trimIndent()
+
+        /**
+         * Scrolls every scrollable container (the comment list is a nested
+         * scroller) and returns both the captured network URLs and any sticker
+         * images currently in the DOM, plus counters for diagnosis.
          */
         val HARVEST_JS = """
         (function() {
           try {
             window.scrollTo(0, document.body.scrollHeight);
-            var nodes = document.querySelectorAll('div');
-            for (var i = 0; i < nodes.length; i++) {
-              var n = nodes[i];
-              if (n.scrollHeight > n.clientHeight + 50) { n.scrollTop = n.scrollHeight; }
+            var divs = document.querySelectorAll('div');
+            var scrollers = 0;
+            for (var i = 0; i < divs.length; i++) {
+              var n = divs[i];
+              if (n.scrollHeight > n.clientHeight + 50) { n.scrollTop = n.scrollHeight; scrollers++; }
             }
             var out = [];
-            var imgs = document.images;
+            if (window.__stickUrls && window.__stickUrls.length) {
+              out = out.concat(window.__stickUrls);
+              window.__stickUrls = [];
+            }
+            var imgs = document.images, domHits = 0;
             for (var j = 0; j < imgs.length; j++) {
               var s = imgs[j].currentSrc || imgs[j].src || '';
               if (!s || s.indexOf('tiktokcdn') === -1) continue;
-              if (s.indexOf('-avt-') !== -1) continue;          // avatars
-              if (s.indexOf('tplv-tiktokx-cropcenter') !== -1) continue; // covers
-              var isSticker = s.indexOf('awebp') !== -1 ||
-                              s.indexOf('sticker') !== -1 ||
-                              s.indexOf('comment') !== -1;
-              if (isSticker) out.push(s);
+              if (s.indexOf('-avt-') !== -1) continue;
+              if (s.indexOf('tplv-tiktokx-cropcenter') !== -1) continue;
+              if (s.indexOf('awebp') !== -1 || s.indexOf('sticker') !== -1 || s.indexOf('comment') !== -1) {
+                out.push(s); domHits++;
+              }
             }
-            return JSON.stringify(out);
-          } catch (e) { return JSON.stringify([]); }
+            return JSON.stringify({
+              urls: out,
+              info: 'imgs=' + imgs.length + ' dom=' + domHits +
+                    ' scrollers=' + scrollers + ' apiHits=' + (window.__stickHits || 0)
+            });
+          } catch (e) {
+            return JSON.stringify({ urls: [], info: 'js-error ' + e });
+          }
         })();
         """.trimIndent()
     }

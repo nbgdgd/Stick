@@ -1,6 +1,14 @@
 package com.vpet.waifu.ui.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.MusicNote
@@ -28,9 +36,7 @@ import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -39,16 +45,31 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -85,6 +106,11 @@ import com.vpet.waifu.ui.stateLabelRes
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
 import com.vpet.waifu.ui.theme.Surfaces
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Her room: the animated character, what she is up to, her stats, and the care
@@ -106,6 +132,8 @@ fun HomeScreen(
     onNameChange: (String) -> Unit,
     onFeed: () -> Unit,
     onPet: () -> Unit,
+    onTapPet: () -> Unit,
+    onCoinLanded: () -> Unit,
     onToggleSleep: () -> Unit,
     onCancelOccupation: () -> Unit,
     onDismissEvent: () -> Unit,
@@ -116,21 +144,75 @@ fun HomeScreen(
         Dialogue.lineFor(snapshot, nowMillis, tuning)
     }
 
-    Column(
+    // The clicker: tapping her dips her on her feet, sprays a burst of stars
+    // at the finger, and clicks — instantly, on the press, because a clicker
+    // that answers late is a clicker that feels broken.
+    val scope = rememberCoroutineScope()
+    val petScale = remember { Animatable(1f) }
+    val bursts = remember { mutableStateListOf<TapBurst>() }
+    var burstId by remember { mutableLongStateOf(0L) }
+
+    // Everything the coin flight needs to aim: where the stage and the wallet
+    // actually are, in one shared coordinate space.
+    var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
+    var stageBounds by remember { mutableStateOf(Rect.Zero) }
+    var pillCenter by remember { mutableStateOf(Offset.Zero) }
+    var walletBumps by remember { mutableIntStateOf(0) }
+
+    Box(
         modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { overlayOrigin = it.positionInRoot() },
+    ) {
+    Column(
+        modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Header(snapshot, settings.petName)
+        Header(
+            snapshot = snapshot,
+            petName = settings.petName,
+            walletBump = walletBumps,
+            onPillPositioned = { pillCenter = it },
+        )
 
-        Box {
+        Box(
+            modifier = Modifier.onGloballyPositioned { stageBounds = it.boundsInRoot() },
+        ) {
             PetStage(
                 state = state,
                 height = 320.dp,
                 palette = PetPalette.forOutfit(snapshot.outfit),
+                characterScale = petScale.value,
             )
+            // The tap layer sits over the room but under the chips and bubble.
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            onTapPet()
+                            bursts += TapBurst(burstId++, offset)
+                            scope.launch {
+                                petScale.snapTo(0.955f)
+                                petScale.animateTo(
+                                    1f,
+                                    spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = 700f,
+                                    ),
+                                )
+                            }
+                        }
+                    },
+            )
+            bursts.forEach { burst ->
+                key(burst.id) {
+                    SparkleBurst(burst = burst, onDone = { bursts.remove(burst) })
+                }
+            }
             // Bottom-left, over the floor: the one region of the room that
             // never has her or the furniture behind text.
             StatusChip(
@@ -186,6 +268,26 @@ fun HomeScreen(
         )
         Spacer(Modifier.height(4.dp))
     }
+
+    // Wages arrive as actual coins: they pop out of the room and arc up into
+    // the wallet, which hops as each one lands.
+    CoinFlights(
+        sessionKey = snapshot.session?.startedAt ?: 0L,
+        paidTotal = snapshot.session?.paidOut ?: 0,
+        start = {
+            Offset(
+                stageBounds.left - overlayOrigin.x + stageBounds.width * 0.5f,
+                stageBounds.top - overlayOrigin.y + stageBounds.height * 0.62f,
+            )
+        },
+        end = { pillCenter - overlayOrigin },
+        onArrive = {
+            walletBumps++
+            onCoinLanded()
+        },
+        modifier = Modifier.matchParentSize(),
+    )
+    }
 }
 
 private fun statusDot(state: PetState): Color = when (state) {
@@ -196,7 +298,12 @@ private fun statusDot(state: PetState): Color = when (state) {
 }
 
 @Composable
-private fun Header(snapshot: PetSnapshot, petName: String) {
+private fun Header(
+    snapshot: PetSnapshot,
+    petName: String,
+    walletBump: Int,
+    onPillPositioned: (Offset) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -218,7 +325,11 @@ private fun Header(snapshot: PetSnapshot, petName: String) {
                 color = Accents.TextMuted,
             )
         }
-        MoneyPill(amount = snapshot.progress.money)
+        MoneyPill(
+            amount = snapshot.progress.money,
+            bump = walletBump,
+            modifier = Modifier.onGloballyPositioned { onPillPositioned(it.boundsInRoot().center) },
+        )
     }
 }
 
@@ -327,7 +438,7 @@ private fun CareRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         ActionButton(
-            icon = Icons.Default.Restaurant,
+            icon = Icons.Rounded.Restaurant,
             label = stringResource(R.string.action_feed),
             tint = StatColors.Hunger,
             enabled = snapshot.canFeed(tuning),
@@ -335,7 +446,7 @@ private fun CareRow(
             modifier = Modifier.weight(1f),
         )
         ActionButton(
-            icon = if (snapshot.isSleeping) Icons.Default.WbSunny else Icons.Default.Bedtime,
+            icon = if (snapshot.isSleeping) Icons.Rounded.WbSunny else Icons.Rounded.Bedtime,
             label = stringResource(
                 if (snapshot.isSleeping) R.string.action_wake else R.string.action_sleep,
             ),
@@ -345,7 +456,7 @@ private fun CareRow(
             modifier = Modifier.weight(1f),
         )
         ActionButton(
-            icon = Icons.Default.Favorite,
+            icon = Icons.Rounded.Favorite,
             label = stringResource(R.string.action_pet),
             tint = StatColors.Mood,
             enabled = snapshot.acceptsInteraction,
@@ -508,5 +619,135 @@ private fun SettingRow(
                 uncheckedBorderColor = Surfaces.Divider,
             ),
         )
+    }
+}
+
+/** One tap's worth of stars, at the finger. */
+private data class TapBurst(val id: Long, val center: Offset)
+
+/**
+ * Six sparks fly out of the tap point and fade.
+ *
+ * Geometry is derived from the burst id, so every tap looks a little
+ * different without carrying a random generator through composition.
+ */
+@Composable
+private fun SparkleBurst(burst: TapBurst, onDone: () -> Unit) {
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, tween(durationMillis = 520, easing = LinearOutSlowInEasing))
+        onDone()
+    }
+
+    Canvas(Modifier.fillMaxSize()) {
+        val p = progress.value
+        if (p <= 0f || p >= 1f) return@Canvas
+        val fade = 1f - p
+        repeat(6) { i ->
+            val angle = (burst.id * 41 + i * 60 + 13).toFloat() * (PI.toFloat() / 180f)
+            val reach = 14.dp.toPx() + 52.dp.toPx() * p
+            val at = burst.center + Offset(cos(angle) * reach, sin(angle) * reach * 0.85f)
+            val r = (3.5.dp.toPx() + 2.dp.toPx() * fade) * (if (i % 2 == 0) 1f else 0.7f)
+            val tint = if (i % 3 == 0) StatColors.Mood else Accents.Bright
+            drawSpark(at, r, tint.copy(alpha = fade))
+        }
+    }
+}
+
+/** A four-point twinkle — two crossed teardrops read cleaner than a star. */
+private fun DrawScope.drawSpark(center: Offset, radius: Float, color: Color) {
+    val path = Path().apply {
+        moveTo(center.x, center.y - radius)
+        quadraticTo(center.x + radius * 0.2f, center.y - radius * 0.2f, center.x + radius, center.y)
+        quadraticTo(center.x + radius * 0.2f, center.y + radius * 0.2f, center.x, center.y + radius)
+        quadraticTo(center.x - radius * 0.2f, center.y + radius * 0.2f, center.x - radius, center.y)
+        quadraticTo(center.x - radius * 0.2f, center.y - radius * 0.2f, center.x, center.y - radius)
+        close()
+    }
+    drawPath(path, color)
+}
+
+/**
+ * The wages, visibly travelling.
+ *
+ * Watches the session's paid-out total; every coin of an increment becomes a
+ * little gold disc that arcs from the room up to the wallet, staggered so a
+ * batch reads as a stream rather than a clump. Capped per batch — a two-hour
+ * payout must not carpet-bomb the screen.
+ */
+@Composable
+private fun CoinFlights(
+    sessionKey: Long,
+    paidTotal: Int,
+    start: () -> Offset,
+    end: () -> Offset,
+    onArrive: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val previous = remember(sessionKey) { mutableIntStateOf(paidTotal) }
+    val coins = remember { mutableStateListOf<FlyingCoin>() }
+    var nextCoin by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(paidTotal, sessionKey) {
+        val delta = paidTotal - previous.intValue
+        previous.intValue = paidTotal
+        if (delta <= 0) return@LaunchedEffect
+        repeat(minOf(delta, 5)) { i -> coins += FlyingCoin(nextCoin++, i * 240L) }
+    }
+
+    Box(modifier) {
+        coins.forEach { coin ->
+            key(coin.id) {
+                CoinSprite(
+                    coin = coin,
+                    start = start,
+                    end = end,
+                    onDone = {
+                        coins.remove(coin)
+                        onArrive()
+                    },
+                )
+            }
+        }
+    }
+}
+
+private data class FlyingCoin(val id: Long, val delayMillis: Long)
+
+@Composable
+private fun CoinSprite(
+    coin: FlyingCoin,
+    start: () -> Offset,
+    end: () -> Offset,
+    onDone: () -> Unit,
+) {
+    val progress = remember { Animatable(0f) }
+    var launched by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(coin.delayMillis)
+        launched = true
+        progress.animateTo(1f, tween(durationMillis = 640, easing = FastOutSlowInEasing))
+        onDone()
+    }
+    if (!launched) return
+
+    Canvas(Modifier.fillMaxSize()) {
+        val p = progress.value
+        if (p >= 1f) return@Canvas
+        val s = start()
+        val e = end()
+        if (e == Offset.Zero) return@Canvas
+        // A quadratic arc bowed upward and sideways, like a tossed coin.
+        val lift = (coin.id % 3 - 1) * 30.dp.toPx()
+        val control = Offset((s.x + e.x) / 2f + lift, minOf(s.y, e.y) - 90.dp.toPx())
+        val inv = 1f - p
+        val pos = Offset(
+            inv * inv * s.x + 2 * inv * p * control.x + p * p * e.x,
+            inv * inv * s.y + 2 * inv * p * control.y + p * p * e.y,
+        )
+        val r = 7.dp.toPx() * (1f - p * 0.35f)
+        drawCircle(StatColors.Money, radius = r, center = pos)
+        drawCircle(Color(0xFFB8860B), radius = r, center = pos, style = Stroke(width = r * 0.22f))
+        drawCircle(Color.White.copy(alpha = 0.5f), radius = r * 0.3f, center = pos - Offset(r * 0.3f, r * 0.35f))
     }
 }

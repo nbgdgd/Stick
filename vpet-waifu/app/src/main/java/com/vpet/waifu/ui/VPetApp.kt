@@ -29,12 +29,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.WorkOutline
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Storefront
+import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -76,10 +76,10 @@ import com.vpet.waifu.ui.shop.ShopScreen
 import kotlinx.coroutines.delay
 
 private enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
-    HOME(R.string.tab_home, Icons.Default.Home),
-    ACTIVITIES(R.string.tab_activities, Icons.Default.WorkOutline),
-    SHOP(R.string.tab_shop, Icons.Default.Storefront),
-    GAME(R.string.tab_game, Icons.Default.SportsEsports),
+    HOME(R.string.tab_home, Icons.Rounded.Home),
+    ACTIVITIES(R.string.tab_activities, Icons.Rounded.Work),
+    SHOP(R.string.tab_shop, Icons.Rounded.Storefront),
+    GAME(R.string.tab_game, Icons.Rounded.SportsEsports),
 }
 
 /**
@@ -122,7 +122,12 @@ fun VPetApp(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Surfaces.Screen,
-        bottomBar = { PetNavBar(tab) { tab = it } },
+        bottomBar = {
+            PetNavBar(tab) {
+                if (it != tab) viewModel.uiTap()
+                tab = it
+            }
+        },
     ) { insets ->
         // Tabs slide in the direction they sit in the bar, so the four screens
         // feel like places rather than a single view swapping its contents.
@@ -133,11 +138,11 @@ fun VPetApp(
                 val forward = targetState.ordinal > initialState.ordinal
                 val offset = if (forward) 1 else -1
                 (
-                    slideInHorizontally(tween(260)) { width -> offset * width / 5 } +
-                        fadeIn(tween(200))
+                    slideInHorizontally(tween(180)) { width -> offset * width / 5 } +
+                        fadeIn(tween(140))
                     ) togetherWith (
-                    slideOutHorizontally(tween(260)) { width -> -offset * width / 5 } +
-                        fadeOut(tween(160))
+                    slideOutHorizontally(tween(180)) { width -> -offset * width / 5 } +
+                        fadeOut(tween(110))
                     )
             },
             label = "tab",
@@ -158,6 +163,8 @@ fun VPetApp(
                     onNameChange = viewModel::setPetName,
                     onFeed = viewModel::feed,
                     onPet = viewModel::pet,
+                    onTapPet = viewModel::tap,
+                    onCoinLanded = viewModel::coinLanded,
                     onToggleSleep = viewModel::toggleSleep,
                     onCancelOccupation = viewModel::cancelOccupation,
                     onDismissEvent = viewModel::acknowledgeEvent,
@@ -249,7 +256,7 @@ private fun NavItem(
     )
     val markerWidth by animateDpAsState(
         targetValue = if (selected) 22.dp else 0.dp,
-        animationSpec = tween(220),
+        animationSpec = tween(150),
         label = "nav-marker",
     )
 

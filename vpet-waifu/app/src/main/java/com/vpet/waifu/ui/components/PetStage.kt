@@ -13,6 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.domain.PetState
@@ -33,6 +35,8 @@ fun PetStage(
     modifier: Modifier = Modifier,
     height: Dp = 300.dp,
     palette: PetPalette = PetPalette.Default,
+    /** The tap bounce, anchored at her feet so she dips rather than shrinks. */
+    characterScale: Float = 1f,
 ) {
     val night = state == PetState.SLEEPING
     val top by animateColorAsState(
@@ -66,7 +70,12 @@ fun PetStage(
                 .fillMaxSize()
                 // The top band is reserved for the speech bubble; pushing her
                 // start line down keeps the bubble in the sky and off her face.
-                .padding(bottom = 8.dp, top = 48.dp),
+                .padding(bottom = 8.dp, top = 48.dp)
+                .graphicsLayer {
+                    scaleX = characterScale
+                    scaleY = characterScale
+                    transformOrigin = TransformOrigin(0.5f, 0.95f)
+                },
         )
     }
 }

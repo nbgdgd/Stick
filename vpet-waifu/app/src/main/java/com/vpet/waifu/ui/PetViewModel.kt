@@ -67,6 +67,21 @@ class PetViewModel @Inject constructor(
 
     fun pet() = act(Cue.HAPPY) { repository.pet() }
 
+    /**
+     * The clicker: tapping her directly.
+     *
+     * Same game action as a pat, but with the short click instead of the
+     * jingle — rapid taps layering three copies of a 1.3-second tune is noise,
+     * not feedback.
+     */
+    fun tap() = act(Cue.TAP) { repository.pet() }
+
+    /** A flying coin reaching the wallet. */
+    fun coinLanded() = sounds.play(Cue.COIN)
+
+    /** A dry interface click — tab switches and other chrome. */
+    fun uiTap() = sounds.play(Cue.TAP)
+
     fun toggleSleep() = act(Cue.TAP) { repository.toggleSleep() }
 
     fun startOccupation(occupation: Occupation) = act(Cue.TAP) {

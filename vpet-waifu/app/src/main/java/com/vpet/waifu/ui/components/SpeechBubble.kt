@@ -48,8 +48,8 @@ fun SpeechBubble(text: String, modifier: Modifier = Modifier) {
         targetState = text,
         modifier = modifier,
         transitionSpec = {
-            (fadeIn(tween(220)) + scaleIn(spring(Spring.DampingRatioMediumBouncy), initialScale = 0.88f))
-                .togetherWith(fadeOut(tween(140)) + scaleOut(targetScale = 0.94f))
+            (fadeIn(tween(160)) + scaleIn(spring(Spring.DampingRatioMediumBouncy), initialScale = 0.9f))
+                .togetherWith(fadeOut(tween(100)) + scaleOut(targetScale = 0.94f))
         },
         label = "speech",
     ) { line ->

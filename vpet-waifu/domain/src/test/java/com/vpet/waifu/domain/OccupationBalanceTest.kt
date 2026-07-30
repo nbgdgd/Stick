@@ -64,10 +64,17 @@ class OccupationBalanceTest {
     }
 
     @Test
-    fun `one job is actually good for her`() {
-        // Something has to be worth doing when she is miserable, or a bad mood
-        // is a spiral with no way out that does not cost money.
-        assertTrue("every job drains her mood", work.any { it.moodCost < 0f })
+    fun `every shift lifts her spirits, better jobs more`() {
+        // Working is the idle loop the player watches; watching her mood climb
+        // while the coins arrive is what makes it worth watching. The rate must
+        // climb with the tier or the tiers stop meaning anything.
+        work.forEach { assertTrue("${it.id} drains her mood", it.moodCost < 0f) }
+        work.zipWithNext().forEach { (older, newer) ->
+            assertTrue(
+                "${newer.id} should lift mood faster per minute than ${older.id}",
+                -newer.moodPerMinute > -older.moodPerMinute,
+            )
+        }
     }
 
     @Test

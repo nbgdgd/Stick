@@ -183,7 +183,7 @@ fun SectionHeader(icon: ImageVector, title: String, modifier: Modifier = Modifie
  * being paid while the shift is still running.
  */
 @Composable
-fun MoneyPill(amount: Int, modifier: Modifier = Modifier) {
+fun MoneyPill(amount: Int, modifier: Modifier = Modifier, bump: Int = 0) {
     val shown by animateIntAsState(
         targetValue = amount,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -194,9 +194,17 @@ fun MoneyPill(amount: Int, modifier: Modifier = Modifier) {
         targetValue = if (shown == amount) 0.10f else 0.24f,
         label = "wallet-glow",
     )
+    // The hop when a flying coin lands on it.
+    val pop = remember { Animatable(1f) }
+    LaunchedEffect(bump) {
+        if (bump > 0) {
+            pop.snapTo(1.18f)
+            pop.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 900f))
+        }
+    }
 
     Surface(
-        modifier = modifier,
+        modifier = modifier.scale(pop.value),
         color = StatColors.Money.copy(alpha = glow),
         shape = RoundedCornerShape(50),
         border = BorderStroke(1.dp, StatColors.Money.copy(alpha = 0.55f)),
@@ -351,7 +359,12 @@ fun StatRow(
     }
 }
 
-/** The bar itself: a dark track with a gradient fill and a rounded cap. */
+/**
+ * The bar itself: a dark track, a gradient fill, and a bright leading edge.
+ *
+ * The glowing cap is what makes a slowly filling bar read as *filling* rather
+ * than as a static image that happens to be different each time you look.
+ */
 @Composable
 fun StatBarTrack(
     fraction: Float,
@@ -377,6 +390,23 @@ fun StatBarTrack(
                     ),
                 ),
         )
+        if (fraction > 0.04f) {
+            Box(
+                modifier = Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(height)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(Color.White.copy(alpha = 0.85f), color.copy(alpha = 0f)),
+                            ),
+                        ),
+                )
+            }
+        }
     }
 }
 
@@ -544,7 +574,7 @@ fun GainPop(
         if (delta <= 0) return@LaunchedEffect
         gain = delta
         rise.snapTo(0f)
-        rise.animateTo(1f, animationSpec = tween(1_700, easing = LinearOutSlowInEasing))
+        rise.animateTo(1f, animationSpec = tween(1_300, easing = LinearOutSlowInEasing))
     }
 
     if (gain <= 0 || rise.value >= 1f) return

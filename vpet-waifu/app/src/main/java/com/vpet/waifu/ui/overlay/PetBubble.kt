@@ -20,12 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Restaurant
@@ -235,31 +235,31 @@ private fun PetPanel(
                     .padding(top = 2.dp),
             ) {
                 PanelAction(
-                    icon = Icons.Default.Restaurant,
+                    icon = Icons.Rounded.Restaurant,
                     labelRes = R.string.action_feed,
                     enabled = snapshot.canFeed(tuning),
                     onClick = onFeed,
                 )
                 PanelAction(
-                    icon = if (snapshot.isSleeping) Icons.Default.WbSunny else Icons.Default.Bedtime,
+                    icon = if (snapshot.isSleeping) Icons.Rounded.WbSunny else Icons.Rounded.Bedtime,
                     labelRes = if (snapshot.isSleeping) R.string.action_wake else R.string.action_sleep,
                     enabled = !snapshot.isBusy,
                     onClick = onToggleSleep,
                 )
                 PanelAction(
-                    icon = Icons.Default.Favorite,
+                    icon = Icons.Rounded.Favorite,
                     labelRes = R.string.action_pet,
                     enabled = snapshot.acceptsInteraction,
                     onClick = onPet,
                 )
                 PanelAction(
-                    icon = Icons.AutoMirrored.Filled.OpenInNew,
+                    icon = Icons.AutoMirrored.Rounded.OpenInNew,
                     labelRes = R.string.action_open_app,
                     enabled = true,
                     onClick = onOpenApp,
                 )
                 PanelAction(
-                    icon = Icons.Default.Close,
+                    icon = Icons.Rounded.Close,
                     labelRes = R.string.action_hide_bubble,
                     enabled = true,
                     onClick = onHide,

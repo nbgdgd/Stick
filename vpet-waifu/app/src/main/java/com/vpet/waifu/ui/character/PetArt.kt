@@ -625,12 +625,17 @@ private fun DrawScope.drawBowlAndBite(pose: PetPose, palette: PetPalette) {
 }
 
 /**
- * The laptop, mid-keystroke.
+ * The laptop, mid-keystroke — seen from *our* side.
+ *
+ * She faces the viewer, so the screen faces her and what we see is the back of
+ * the lid. The first version drew the screen contents toward the camera with
+ * the keyboard hanging under it, which read as a laptop flipped onto its face.
+ * Now the geometry is honest: lid back leaning slightly away from us, screen
+ * light spilling around its edges, and her forearms disappearing behind it.
  *
  * Everything here is driven by `propProgress` — the same value that swings her
- * forearms — rather than by the clock, so the keys light under the hand that is
- * actually down, and the whole thing still loops in a whole number of typing
- * cycles for the widget's flipbook.
+ * forearms — so the glow pulses on the actual keystrokes and the whole thing
+ * still loops in a whole number of typing cycles for the widget's flipbook.
  */
 private fun DrawScope.drawLaptop(pose: PetPose, palette: PetPalette) {
     val baseY = 192f
@@ -639,85 +644,57 @@ private fun DrawScope.drawLaptop(pose: PetPose, palette: PetPalette) {
     val impact = abs(stroke * 2f - 1f)
     val leftDown = stroke > 0.5f
 
-    val keyboard = Path().apply {
-        moveTo(CX - 42f, baseY)
+    // Screen light leaking around the lid — the tell that it is on, and the
+    // only place the typing can visibly pulse from this side.
+    drawRoundRectPath(
+        Rect(CX - 45f, baseY - 50f, CX + 45f, baseY + 2f),
+        radius = 8f,
+        color = palette.irisLight.copy(alpha = 0.16f + impact * 0.10f),
+    )
+
+    // The lid back: a hair narrower at the top, because it leans toward her.
+    val lid = Path().apply {
+        moveTo(CX - 38f, baseY - 46f)
+        lineTo(CX + 38f, baseY - 46f)
         lineTo(CX + 42f, baseY)
-        lineTo(CX + 50f, baseY + 8f)
-        lineTo(CX - 50f, baseY + 8f)
+        lineTo(CX - 42f, baseY)
         close()
     }
-    drawPath(keyboard, palette.prop)
-
-    // Individual keys, with the one under the descending hand lit.
-    val struckColumn = if (leftDown) 1 else 4
-    for (column in 0..5) {
-        val x = CX - 36f + column * 14.5f
-        val lit = column == struckColumn
-        drawRoundRectPath(
-            Rect(x - 5.5f, baseY + 1.2f, x + 5.5f, baseY + 5.6f),
-            radius = 1.6f,
-            color = if (lit) {
-                palette.irisLight.copy(alpha = 0.35f + impact * 0.55f)
-            } else {
-                palette.propDark.copy(alpha = 0.32f)
-            },
-        )
+    drawPath(lid, palette.prop)
+    // An inset panel gives the back some depth without pretending to be a screen.
+    val inset = Path().apply {
+        moveTo(CX - 33f, baseY - 41f)
+        lineTo(CX + 33f, baseY - 41f)
+        lineTo(CX + 36.5f, baseY - 5f)
+        lineTo(CX - 36.5f, baseY - 5f)
+        close()
     }
+    drawPath(inset, palette.propDark.copy(alpha = 0.45f))
 
-    // The clack: a short flare over the key that just landed.
+    // A little glowing heart on the lid, brightening with each keystroke.
+    drawHeart(
+        Offset(CX, baseY - 24f),
+        radius = 7f,
+        color = palette.accent.copy(alpha = 0.55f + impact * 0.45f),
+    )
+
+    // The base, edge-on: all we see of the keyboard side is its front rim.
+    drawRoundRectPath(
+        Rect(CX - 46f, baseY, CX + 46f, baseY + 6f),
+        radius = 3f,
+        color = palette.propDark,
+    )
+
+    // The clack: a spark hops off the lid's top edge on the side of whichever
+    // hand just landed, standing in for the key we cannot see.
     if (impact > 0.55f) {
         val flare = (impact - 0.55f) / 0.45f
         drawStar(
-            center = Offset(CX - 36f + struckColumn * 14.5f, baseY + 1.5f),
-            radius = 3f + flare * 4f,
-            color = palette.accent.copy(alpha = flare * 0.7f),
+            center = Offset(CX + (if (leftDown) -26f else 26f), baseY - 50f - flare * 4f),
+            radius = 2.5f + flare * 3f,
+            color = palette.accent.copy(alpha = flare * 0.8f),
         )
     }
-
-    // Screen, brightening as she types.
-    val glow = 0.6f + stroke * 0.3f
-    drawRoundRectPath(Rect(CX - 40f, baseY - 44f, CX + 40f, baseY), radius = 4f, color = palette.propDark)
-    // A soft bloom around the panel — the giveaway that it is actually on.
-    drawRoundRectPath(
-        Rect(CX - 43f, baseY - 47f, CX + 43f, baseY + 2f),
-        radius = 6f,
-        color = palette.irisLight.copy(alpha = 0.10f + impact * 0.06f),
-    )
-    drawRoundRectPath(
-        Rect(CX - 35f, baseY - 39f, CX + 35f, baseY - 5f),
-        radius = 2.5f,
-        color = palette.irisLight.copy(alpha = glow),
-    )
-
-    // Lines of text, scrolling with the typing rather than the clock so they
-    // loop with it. The last one grows as she types and carries the caret.
-    for (i in 0..2) {
-        val y = baseY - 33f + i * 8f + (stroke * 8f)
-        if (y > baseY - 9f) continue
-        val w = 18f + ((i * 11) % 30)
-        drawLine(
-            color = palette.propDark.copy(alpha = 0.4f),
-            start = Offset(CX - 30f, y),
-            end = Offset(CX - 30f + w, y),
-            strokeWidth = 2.6f,
-            cap = StrokeCap.Round,
-        )
-    }
-    // The line being written, and the caret at the end of it.
-    val caretY = baseY - 9f
-    val typed = 8f + stroke * 22f
-    drawLine(
-        color = palette.accent.copy(alpha = 0.75f),
-        start = Offset(CX - 30f, caretY),
-        end = Offset(CX - 30f + typed, caretY),
-        strokeWidth = 2.6f,
-        cap = StrokeCap.Round,
-    )
-    drawRoundRectPath(
-        Rect(CX - 28f + typed, caretY - 3.4f, CX - 25.6f + typed, caretY + 3.4f),
-        radius = 1f,
-        color = palette.propDark.copy(alpha = 0.35f + impact * 0.5f),
-    )
 }
 
 private fun DrawScope.drawBook(pose: PetPose, palette: PetPalette) {

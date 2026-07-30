@@ -17,8 +17,12 @@ data class Occupation(
     val energyCost: Float,
     /** Money for [OccupationKind.WORK], EXP for [OccupationKind.STUDY]. */
     val payout: Int,
-    /** Mood the whole session costs, on top of the usual drift. */
-    val moodCost: Float = 3f,
+    /**
+     * Mood the whole session costs — negative means the shift *lifts* her
+     * spirits, and every job now does: watching her cheer up while the coins
+     * arrive is the point of watching at all. Better jobs lift more.
+     */
+    val moodCost: Float = -5f,
 ) {
     val energyPerMinute: Float get() = energyCost / durationMinutes
 
@@ -38,13 +42,13 @@ data class Occupation(
  * everything else and the list was really a single job with a changing name.
  * Now each has something it is best at and something it is worst at:
  *
- *  - **cafe** — the best hourly rate in the game, and it barely touches her
- *    mood, but half an hour at a time caps what it can ever earn in a day.
+ *  - **cafe** — the best hourly rate in the game, but half an hour at a time
+ *    caps what it can ever earn in a day, and it only mildly cheers her up.
  *  - **shop** — a shade worse per hour, cheap on energy, unremarkable.
- *  - **office** — the worst rate and by far the worst for her mood. It exists
- *    because two hours is two hours: you set it going and stop thinking.
- *  - **idol** — pays like the cafe over three hours and pays *mood*, not costs
- *    it, but it eats almost all her energy, so it is a whole evening committed.
+ *  - **office** — the worst rate but the gentlest energy drain, and two hours
+ *    is two hours: you set it going and stop thinking.
+ *  - **idol** — the biggest total and pure euphoria, but it eats almost all
+ *    her energy, so it is a whole evening committed.
  *
  * The same idea in study: school is the efficient one, university the one that
  * gets a lot done at once while making her miserable.
@@ -52,21 +56,24 @@ data class Occupation(
 object Occupations {
 
     val WORK: List<Occupation> = listOf(
+        // Mood per minute climbs with the tier — a café shift is pleasant, the
+        // idol stage is euphoric — while the café keeps the best hourly wage
+        // and the office the gentlest energy drain, so no tier obsoletes another.
         Occupation(
             "cafe", OccupationKind.WORK, requiredLevel = 1,
-            durationMinutes = 30, energyCost = 15f, payout = 105, moodCost = 1f,
+            durationMinutes = 30, energyCost = 15f, payout = 105, moodCost = -5f,
         ),
         Occupation(
             "shop", OccupationKind.WORK, requiredLevel = 3,
-            durationMinutes = 60, energyCost = 24f, payout = 195, moodCost = 5f,
+            durationMinutes = 60, energyCost = 24f, payout = 195, moodCost = -15f,
         ),
         Occupation(
             "office", OccupationKind.WORK, requiredLevel = 6,
-            durationMinutes = 120, energyCost = 46f, payout = 360, moodCost = 16f,
+            durationMinutes = 120, energyCost = 46f, payout = 360, moodCost = -55f,
         ),
         Occupation(
             "idol", OccupationKind.WORK, requiredLevel = 10,
-            durationMinutes = 180, energyCost = 88f, payout = 620, moodCost = -12f,
+            durationMinutes = 180, energyCost = 88f, payout = 620, moodCost = -100f,
         ),
     )
 

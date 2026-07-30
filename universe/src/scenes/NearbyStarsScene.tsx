@@ -25,12 +25,17 @@ function starPos(s: Star): THREE.Vector3 {
   return new THREE.Vector3(x, z, -y)
 }
 
-/** Экранный радиус: сжатие по светимости, а не по геометрии. */
+/**
+ * Экранный радиус. Настоящие радиусы звёзд на этом масштабе неразрешимы
+ * (Солнце — 10⁻⁷ светового года), поэтому размер кодирует светимость:
+ * корень шестой степени сжимает разброс в пять порядков до множителя 10.
+ * Абсолютная величина подобрана так, чтобы ореолы соседних звёзд
+ * не сливались: типичное расстояние между звёздами здесь — 5–8 св. лет.
+ */
 function starDrawRadius(s: Star): number {
-  if (s.id === 'sun') return 0.55
+  if (s.id === 'sun') return 0.16
   const lum = s.lumSun ?? 0.002
-  // светимость меняется на 5 порядков — берём корень 6-й степени
-  return 0.3 + Math.pow(lum, 1 / 6) * 0.75
+  return 0.05 + Math.pow(lum, 1 / 6) * 0.17
 }
 
 export function NearbyStarsScene() {
@@ -40,6 +45,27 @@ export function NearbyStarsScene() {
   const setFocus = useStore((s) => s.setFocus)
 
   const all = useMemo(() => [...STARS, ...NOTABLE_FAR_STARS], [])
+
+  // Главный компонент каждой системы и её кратность. Главным считаем самый
+  // светимый известный компонент, а при отсутствии данных — первый в каталоге.
+  const systemInfo = useMemo(() => {
+    const groups = new Map<string, Star[]>()
+    for (const st of all) {
+      const g = groups.get(st.systemId)
+      if (g) g.push(st)
+      else groups.set(st.systemId, [st])
+    }
+    const primaryOf = new Map<string, string>()
+    const countOf = new Map<string, number>()
+    for (const [sysId, members] of groups) {
+      const primary = members.reduce((best, m) =>
+        (m.lumSun ?? -1) > (best.lumSun ?? -1) ? m : best,
+      )
+      primaryOf.set(sysId, primary.id)
+      countOf.set(sysId, members.length)
+    }
+    return { primaryOf, countOf }
+  }, [all])
 
   // Ближние звёзды — отдельными мешами (их десятки, это дёшево и позволяет
   // кликать по каждой). Далёкие «примечательные» — тоже, их всего четыре.
@@ -54,9 +80,6 @@ export function NearbyStarsScene() {
       })),
     [all],
   )
-
-  // Сфера-ориентир радиусом 20 св. лет: показывает границу выборки
-  const shellGeom = useMemo(() => new THREE.SphereGeometry(20, 32, 24), [])
 
   function pick(s: Star) {
     setFocus(s.id)
@@ -103,11 +126,6 @@ export function NearbyStarsScene() {
       <Starfield radius={1500} starCount={4200} starSize={0.0009} brightness={0.6} />
       <ambientLight intensity={0.6} />
 
-      {/* Опорная сфера 20 св. лет */}
-      <mesh geometry={shellGeom}>
-        <meshBasicMaterial color="#2a4a6a" wireframe transparent opacity={0.055} />
-      </mesh>
-
       {/* Плоскость галактического экватора для ориентации отсутствует
           намеренно: в экваториальных координатах она наклонена на 62°
           и только запутывала бы. Вместо неё — сетка расстояний. */}
@@ -117,7 +135,17 @@ export function NearbyStarsScene() {
         <StarBody
           key={it.star.id}
           item={it}
-          showLabel={showLabels && (it.star.distLy < 12 || cameraDist < 25 || it.star.id === 'sun')}
+          // Подписи: только главные компоненты систем, и только те,
+          // что несут содержание — иначе 70 названий в одном кадре
+          showLabel={
+            showLabels &&
+            systemInfo.primaryOf.get(it.star.systemId) === it.star.id &&
+            (it.star.id === 'sun' ||
+              it.star.distLy < 6 ||
+              (!!it.star.note && cameraDist < 60) ||
+              cameraDist < 16)
+          }
+          members={systemInfo.countOf.get(it.star.systemId) ?? 1}
           onPick={() => pick(it.star)}
         />
       ))}
@@ -128,10 +156,13 @@ export function NearbyStarsScene() {
 function StarBody({
   item,
   showLabel,
+  members,
   onPick,
 }: {
   item: { star: Star; pos: THREE.Vector3; color: THREE.Color; radius: number; far: boolean }
   showLabel: boolean
+  /** сколько компонентов в системе — показываем кратность в подписи */
+  members: number
   onPick: () => void
 }) {
   const glowRef = useRef<THREE.Mesh>(null)
@@ -165,11 +196,11 @@ function StarBody({
             // Ядро плюс широкий гало плюс четыре луча — так глаз читает
             // объект как источник света, а не как шарик
             float core = exp(-d * d * 22.0);
-            float halo = pow(max(0.0, 1.0 - d), 3.0) * 0.32;
+            float halo = pow(max(0.0, 1.0 - d), 3.0) * 0.22;
             vec2 p = (vUv - 0.5) * 2.0;
-            float spike = (exp(-abs(p.x) * 26.0) + exp(-abs(p.y) * 26.0)) * exp(-d * 2.2) * 0.22;
+            float spike = (exp(-abs(p.x) * 34.0) + exp(-abs(p.y) * 34.0)) * exp(-d * 2.8) * 0.13;
             float a = core + halo + spike;
-            gl_FragColor = vec4(uColor * (0.8 + core * 1.4), a);
+            gl_FragColor = vec4(uColor * (0.7 + core * 1.1), clamp(a, 0.0, 1.0));
           }
         `,
       }),
@@ -178,17 +209,17 @@ function StarBody({
 
   return (
     <group position={item.pos}>
-      <mesh scale={item.radius * 0.42} onClick={onPick}>
+      <mesh scale={item.radius * 0.5} onClick={onPick}>
         <sphereGeometry args={[1, 16, 12]} />
         <meshBasicMaterial color={item.color} />
       </mesh>
-      <mesh ref={glowRef} scale={item.radius * (item.far ? 4.5 : 3.2)} material={glowMat}>
+      <mesh ref={glowRef} scale={item.radius * (item.far ? 3.4 : 2.6)} material={glowMat}>
         <planeGeometry args={[2, 2]} />
       </mesh>
       {showLabel && (
         <Label
-          position={[0, item.radius * 1.6, 0]}
-          text={item.star.name}
+          position={[0, item.radius * 2.4 + 0.12, 0]}
+          text={multipleName(item.star, members)}
           sub={item.star.distLy > 0 ? `${item.star.distLy.toFixed(1)} св. лет` : 'мы здесь'}
           small={item.star.distLy > 12}
           onClick={onPick}
@@ -196,6 +227,17 @@ function StarBody({
       )}
     </group>
   )
+}
+
+/**
+ * Имя для подписи: у кратных систем убираем букву компонента и добавляем
+ * кратность, чтобы «Сириус A» и «Сириус B» не спорили за одно место.
+ */
+function multipleName(s: Star, members: number): string {
+  if (members <= 1) return s.name
+  const base = s.name.replace(/\s+[AB]$/, '')
+  const word = members === 2 ? 'двойная' : members === 3 ? 'тройная' : `${members} компонента`
+  return `${base} (${word})`
 }
 
 /** Концентрические окружности через 5 световых лет — чтобы не терять чувство расстояния. */

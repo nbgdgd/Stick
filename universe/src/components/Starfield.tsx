@@ -207,7 +207,9 @@ export function Starfield({
             // в десятки градусов, ничем не похожие на Млечный Путь
             float cl = noise(vDir * 95.0);
             float dust = smoothstep(0.40, 0.80, noise(vDir * 150.0 + 11.0));
-            band *= (0.6 + cl * 0.8) * (1.0 - dust * 0.6);
+            // Умеренный контраст: при 0,8/0,6 клочковатость превращала полосу
+            // в набор ярких клякс с чёрными дырами
+            band *= (0.75 + cl * 0.45) * (1.0 - dust * 0.35);
 
             vec3 col = mix(vec3(0.42, 0.46, 0.62), vec3(0.72, 0.66, 0.55), toCenter * 0.5 + 0.5);
             gl_FragColor = vec4(col * band * uAmp, band * uAmp);
@@ -216,7 +218,7 @@ export function Starfield({
         uniforms: {
           uGalZ: { value: new THREE.Vector3() },
           uGalX: { value: new THREE.Vector3() },
-          uAmp: { value: 0.30 * brightness },
+          uAmp: { value: 0.13 * brightness },
         },
       }),
     [brightness],

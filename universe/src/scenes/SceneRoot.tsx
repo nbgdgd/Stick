@@ -48,8 +48,10 @@ export function SceneRoot() {
           проход, поэтому разрешение half и один mip. */}
       <EffectComposer enableNormalPass={false}>
         <Bloom
-          intensity={level.index >= 3 ? 1.15 : 0.55}
-          luminanceThreshold={level.index >= 3 ? 0.12 : 0.6}
+          // На звёздных уровнях яркие точки должны «сиять», но порог 0,12
+          // подхватывал вообще всё и заливал кадр. Поднят до 0,45.
+          intensity={level.index >= 3 ? 0.7 : 0.55}
+          luminanceThreshold={level.index >= 3 ? 0.45 : 0.6}
           luminanceSmoothing={0.35}
           mipmapBlur
           radius={0.65}

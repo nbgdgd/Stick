@@ -58,7 +58,7 @@ export const LEVELS: Level[] = [
     title: 'Земля — Луна',
     subtitle: 'Приливы, фазы, приливный захват',
     metersPerUnit: 6.371e6,
-    initialCameraDist: 44,
+    initialCameraDist: 50,
     minDist: 3,
     maxDist: 400,
     characteristicSizeM: 7.7e8,
@@ -119,7 +119,7 @@ export const LEVELS: Level[] = [
     title: 'Местная группа',
     subtitle: 'Андромеда, Треугольник, карликовые спутники',
     metersPerUnit: 9.4607304725808e19, // 1 единица = 10 000 световых лет
-    initialCameraDist: 700,
+    initialCameraDist: 560,
     minDist: 15,
     maxDist: 4000,
     characteristicSizeM: 9.5e22,

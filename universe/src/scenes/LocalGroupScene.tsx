@@ -96,7 +96,7 @@ export function LocalGroupScene() {
           material={pointMat}
           showLabel={
             showLabels &&
-            (it.galaxy.diameterLy > 15000 || cameraDist < 1200 || it.galaxy.id === 'milky-way')
+            (it.galaxy.diameterLy > 15000 || cameraDist < 190 || it.galaxy.id === 'milky-way')
           }
           onPick={() => pick(it.galaxy)}
         />

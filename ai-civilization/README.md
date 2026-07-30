@@ -21,6 +21,41 @@ xvfb-run -a godot --path . --resolution 1280x720 \
 инспектор. На настольной машине дополнительно `Space` — пауза, `1..4` —
 скорость, `Tab` — тех-дерево, `[` / `]` — перемотка назад / скачок вперёд.
 
+## Сборка APK
+
+Нужны шаблоны экспорта Godot 4.3 и Android SDK (build-tools для `apksigner`,
+platform-tools для `adb`); gradle-сборка не используется, поэтому Android
+Studio не требуется.
+
+```bash
+export ANDROID_HOME=/path/to/android-sdk
+export GODOT_ANDROID_KEYSTORE_DEBUG_PATH=/path/to/debug.keystore
+export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
+export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
+
+godot --headless --path . --export-debug "Android" build/ai-civilization-debug.apk
+```
+
+Ключ передаётся переменными окружения, чтобы локальные пути не попадали в
+`export_presets.cfg`. Проверено на 4.3-stable: `org.aicivilization.island`,
+minSdk 21, targetSdk 34, `arm64-v8a` + `armeabi-v7a`, ~46 МБ. Тесты и
+инструменты в APK не попадают (`exclude_filter` в пресете).
+
+Две настройки, без которых экспорт под Android не проходит и которые легко
+потерять при правке `project.godot`:
+
+- `rendering/textures/vram_compression/import_etc2_astc=true` — **обязательна**.
+  Без неё валидация экспорта падает, причём Godot не выводит на это никакого
+  сообщения: в `has_valid_project_configuration` эта ветка сбрасывает `valid`,
+  не добавляя ничего в текст ошибки. Симптом — «configuration errors:» с пустым
+  списком.
+- `display/window/handheld/orientation=4` — это `SensorLandscape` из
+  перечисления `DisplayServer.ScreenOrientation`, а не строка. Значение `1`
+  означает **портрет**, и HUD с панелями по краям в него не помещается.
+
+В `export_presets.cfg` `min_sdk`/`target_sdk` оставлены пустыми: без
+gradle-сборки Godot отказывается их переопределять.
+
 ## Двухуровневая симуляция
 
 Тысячи ИИ не симулируются по одному — на Android это заведомо не влезает в

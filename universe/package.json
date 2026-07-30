@@ -1,5 +1,5 @@
 {
-  "name": "universe",
+  "name": "universe-explorer",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tex": "./scripts/fetch-textures.sh",
+    "shots": "node scripts/shoot.mjs",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -25,6 +28,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
+    "playwright": "^1.62.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
   }

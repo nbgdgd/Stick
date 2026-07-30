@@ -1,122 +1,78 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { Suspense, useEffect } from 'react'
+import { Canvas } from '@react-three/fiber'
+import { LEVELS } from './data/levels'
+import { useStore } from './store'
+import { SceneRoot } from './scenes/SceneRoot'
+import { Hud } from './components/Hud'
+import { FactPanel } from './components/FactPanel'
+import { SearchOverlay } from './components/SearchOverlay'
+import { TimeControls } from './components/TimeControls'
+import { LevelRail } from './components/LevelRail'
+import { LoadingVeil } from './components/LoadingVeil'
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const levelIndex = useStore((s) => s.levelIndex)
+  const paused = useStore((s) => s.paused)
+  const timeScale = useStore((s) => s.timeScale)
+  const advanceTime = useStore((s) => s.advanceTime)
+  const level = LEVELS[levelIndex]
+
+  // Ход времени симуляции. Держим его в rAF, а не внутри useFrame,
+  // чтобы время шло независимо от того, что рисует конкретная сцена.
+  useEffect(() => {
+    let raf = 0
+    let last = performance.now()
+    const tick = (now: number) => {
+      const dt = Math.min(now - last, 100) // защита от скачка после сворачивания
+      last = now
+      if (!paused) advanceTime(dt * timeScale)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [paused, timeScale, advanceTime])
+
+  // Клавиатура — удобно и при отладке, и на планшете с клавиатурой
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const s = useStore.getState()
+      if (e.key === 'ArrowRight' || e.key === ']') s.nextLevel()
+      else if (e.key === 'ArrowLeft' || e.key === '[') s.prevLevel()
+      else if (e.key === ' ') {
+        e.preventDefault()
+        s.togglePause()
+      } else if (e.key === '/') {
+        e.preventDefault()
+        s.setSearchOpen(true)
+      } else if (e.key === 'Escape') {
+        s.setSearchOpen(false)
+        s.select(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      <Canvas
+        // logarithmicDepthBuffer: внутри одной сцены диапазон расстояний
+        // доходит до шести порядков, обычный z-буфер этого не держит
+        gl={{ antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' }}
+        camera={{ fov: 55, near: 0.001, far: 1e7, position: [0, 0, level.initialCameraDist] }}
+        dpr={[1, 2]}
+      >
+        <Suspense fallback={null}>
+          <SceneRoot />
+        </Suspense>
+      </Canvas>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <LoadingVeil />
+      <Hud />
+      <LevelRail />
+      <TimeControls />
+      <FactPanel />
+      <SearchOverlay />
+    </div>
   )
 }
-
-export default App

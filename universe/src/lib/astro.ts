@@ -302,3 +302,54 @@ export function spectralTemp(spec: string): number {
   const sub = m[2] ? parseFloat(m[2]) : 5
   return hi + ((lo - hi) * sub) / 10
 }
+
+/**
+ * Галактические координаты -> декартовы экваториальные.
+ *
+ * Строим ортонормированный базис галактической системы, выраженный в
+ * экваториальных координатах J2000:
+ *   ẑ — на северный полюс Галактики,
+ *   x̂ — на центр Галактики (Sgr A*, 17ʰ45ᵐ37,2ˢ, −28°56′10″),
+ *   ŷ = ẑ × x̂.
+ * Нужно, чтобы полоса Млечного Пути на фоне неба шла там, где она есть
+ * на самом деле, а не под произвольным углом.
+ */
+const GC_RA = hms(17, 45, 37.2)
+const GC_DEC = dms(-28, 56, 10)
+
+function unit(ra: number, dec: number): [number, number, number] {
+  return raDecToXyz(ra, dec, 1)
+}
+
+const GAL_Z = unit(NGP_RA * RAD / 15, NGP_DEC * RAD)
+const GAL_X_RAW = unit(GC_RA, GC_DEC)
+// Ортогонализация: центр Галактики лежит почти в плоскости, но не идеально
+const GAL_X = (() => {
+  const d = GAL_X_RAW[0] * GAL_Z[0] + GAL_X_RAW[1] * GAL_Z[1] + GAL_X_RAW[2] * GAL_Z[2]
+  const v: [number, number, number] = [
+    GAL_X_RAW[0] - d * GAL_Z[0],
+    GAL_X_RAW[1] - d * GAL_Z[1],
+    GAL_X_RAW[2] - d * GAL_Z[2],
+  ]
+  const n = Math.hypot(v[0], v[1], v[2])
+  return [v[0] / n, v[1] / n, v[2] / n] as [number, number, number]
+})()
+const GAL_Y: [number, number, number] = [
+  GAL_Z[1] * GAL_X[2] - GAL_Z[2] * GAL_X[1],
+  GAL_Z[2] * GAL_X[0] - GAL_Z[0] * GAL_X[2],
+  GAL_Z[0] * GAL_X[1] - GAL_Z[1] * GAL_X[0],
+]
+
+export function galacticToEquatorialXyz(lDeg: number, bDeg: number, dist: number): [number, number, number] {
+  const l = lDeg * DEG
+  const b = bDeg * DEG
+  const cb = Math.cos(b)
+  const gx = cb * Math.cos(l)
+  const gy = cb * Math.sin(l)
+  const gz = Math.sin(b)
+  return [
+    dist * (gx * GAL_X[0] + gy * GAL_Y[0] + gz * GAL_Z[0]),
+    dist * (gx * GAL_X[1] + gy * GAL_Y[1] + gz * GAL_Z[1]),
+    dist * (gx * GAL_X[2] + gy * GAL_Y[2] + gz * GAL_Z[2]),
+  ]
+}

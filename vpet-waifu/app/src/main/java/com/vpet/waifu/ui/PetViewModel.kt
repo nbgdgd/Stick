@@ -9,7 +9,6 @@ import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.domain.ShopItem
-import com.vpet.waifu.widget.WidgetRefresher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,7 +35,6 @@ data class PetUiState(
 class PetViewModel @Inject constructor(
     private val repository: PetRepository,
     private val preferences: PetPreferences,
-    private val widgetRefresher: WidgetRefresher,
     val simulation: PetSimulation,
     val tuning: PetTuning,
 ) : ViewModel() {
@@ -77,12 +75,10 @@ class PetViewModel @Inject constructor(
 
     fun setBubbleEnabled(enabled: Boolean) = act { preferences.setBubbleEnabled(enabled) }
 
-    /** Every action ends by refreshing the widget, so the home screen never lies. */
+    // The widget is refreshed by WidgetSync observing the repository, so no
+    // caller has to remember to do it.
     private fun act(block: suspend () -> Unit) {
-        viewModelScope.launch {
-            block()
-            widgetRefresher.refresh()
-        }
+        viewModelScope.launch { block() }
     }
 
     private companion object {

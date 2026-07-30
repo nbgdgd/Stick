@@ -53,6 +53,7 @@
     <string name="item_ramen">Ramen</string>
     <string name="item_cake">Cake</string>
     <string name="item_bento">Bento box</string>
+    <string name="item_energy_drink">Energy drink</string>
     <string name="item_parfait">Parfait</string>
     <string name="item_flowers">Flowers</string>
     <string name="item_teddy">Teddy bear</string>
@@ -60,15 +61,13 @@
     <string name="item_ring">Ring</string>
     <string name="item_advance">Cash advance</string>
     <string name="item_exp_pill">EXP pill</string>
-
-    <string name="occupation_cost" tools:ignore="PluralsCandidate">%1$d min · −%2$d energy</string>
     <string name="unlocks_at_level" tools:ignore="PluralsCandidate">Unlocks at level %1$d</string>
     <string name="session_remaining">%1$s left</string>
     <string name="too_tired_to_work">She is too worn out to go anywhere. Let her sleep or feed her first.</string>
     <string name="not_enough_money">Too pricey</string>
     <string name="pills_warning">Pills pay out instantly and bill you later. Use them when you know what you are doing.</string>
-    <string name="effect_hunger_surge">hunger drains faster for %1$dh</string>
-    <string name="effect_exhaustion">energy drains faster for %1$dh</string>
+    <string name="effect_hunger_surge">hunger drains faster for %1$s</string>
+    <string name="effect_exhaustion">energy drains faster for %1$s</string>
 
     <string name="outcome_title">%1$s — done</string>
     <string name="outcome_title_early">%1$s — cut short</string>

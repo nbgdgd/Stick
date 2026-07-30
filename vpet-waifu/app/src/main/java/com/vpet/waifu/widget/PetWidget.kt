@@ -56,6 +56,7 @@ import com.vpet.waifu.ui.character.ART_HEIGHT
 import com.vpet.waifu.ui.character.ART_WIDTH
 import com.vpet.waifu.ui.character.PetRasterizer
 import com.vpet.waifu.ui.character.RoomColors
+import com.vpet.waifu.ui.character.RoomDetail
 import com.vpet.waifu.ui.theme.StageColors
 import com.vpet.waifu.ui.theme.StatColors
 import dagger.hilt.EntryPoint
@@ -87,10 +88,9 @@ class PetWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        // Reading through the repository ticks the world forward first, so the
-        // widget shows the pet as she is now rather than as she was when the
-        // phone last wrote to disk.
-        val snapshot = repositoryOf(context).snapshotNow()
+        // peek, not tick: the widget shows the world advanced to now, but a
+        // redraw must not itself write to the save file.
+        val snapshot = repositoryOf(context).peek()
         val state = snapshot.state(System.currentTimeMillis())
         val palette = WidgetPalette.of(context)
         val size = widgetSize(context, id)
@@ -99,8 +99,9 @@ class PetWidget : GlanceAppWidget() {
 
         val stageHeightDp = layout.stageHeight(size)
         val stageWidthDp = stageHeightDp * (ART_WIDTH / ART_HEIGHT)
-        val frames = renderFrames(state, stageWidthDp, stageHeightDp, density)
-        val flipper = buildFlipper(context, frames)
+        val tempo = FlipTempo.forState(state)
+        val frames = renderFrames(state, tempo, stageWidthDp, stageHeightDp, density)
+        val flipper = buildFlipper(context, tempo, frames)
         val room = PetRasterizer.roomPng(
             widthPx = (size.width.value * density).roundToInt().coerceAtMost(MAX_ROOM_PX),
             heightPx = (size.height.value * density).roundToInt().coerceAtMost(MAX_ROOM_PX),
@@ -110,6 +111,7 @@ class PetWidget : GlanceAppWidget() {
             // Put the wall/floor junction just behind her feet, wherever the
             // character happens to sit in this size of widget.
             floorFraction = (layout.padding + stageHeightDp * FEET_FRACTION) / size.height.value,
+            detail = if (layout == WidgetLayout.PORTRAIT_ONLY) RoomDetail.NONE else RoomDetail.WALL,
         )
 
         provideContent {
@@ -140,6 +142,7 @@ class PetWidget : GlanceAppWidget() {
      */
     private fun renderFrames(
         state: PetState,
+        tempo: FlipTempo,
         stageWidthDp: Float,
         stageHeightDp: Float,
         density: Float,
@@ -152,7 +155,7 @@ class PetWidget : GlanceAppWidget() {
             heightPx = (stageHeightDp * density * scale).roundToInt().coerceAtMost(maxFramePx(scale)),
             density = density,
             frameCount = FRAME_COUNT,
-            loopSeconds = FRAME_COUNT * FLIP_INTERVAL_MILLIS / 1000f,
+            loopSeconds = tempo.loopSeconds,
         )
 
         val full = render(1f)
@@ -169,8 +172,12 @@ class PetWidget : GlanceAppWidget() {
      * a bitmap is marshalled uncompressed, and a dozen uncompressed frames
      * would blow the transaction budget on their own.
      */
-    private fun buildFlipper(context: Context, frames: List<ByteArray>): RemoteViews {
-        val flipper = RemoteViews(context.packageName, R.layout.widget_pet_flipper)
+    private fun buildFlipper(
+        context: Context,
+        tempo: FlipTempo,
+        frames: List<ByteArray>,
+    ): RemoteViews {
+        val flipper = RemoteViews(context.packageName, tempo.layoutRes)
         frames.forEach { png ->
             val frame = RemoteViews(context.packageName, R.layout.widget_pet_frame)
             frame.setImageViewIcon(R.id.pet_frame, Icon.createWithData(png, 0, png.size))
@@ -309,12 +316,12 @@ class PetWidget : GlanceAppWidget() {
 
     companion object {
         /**
-         * Twelve frames at 200 ms is a 2.4-second loop at five frames a second:
-         * enough for breathing, a blink and swaying hair to read as alive,
-         * while staying well inside the transaction budget.
+         * Ten frames per loop. Measured against the real PNG encoder the
+         * busiest state lands near 310 KB at the capped resolution, which
+         * leaves comfortable room under the transaction limit; twelve pushed it
+         * to 373 KB and tripped the shrink path on every redraw.
          */
-        private const val FRAME_COUNT = 12
-        private const val FLIP_INTERVAL_MILLIS = 200
+        private const val FRAME_COUNT = 10
         private const val MAX_FRAME_PX = 420
         private const val MAX_ROOM_PX = 700
 
@@ -323,12 +330,37 @@ class PetWidget : GlanceAppWidget() {
         private const val CARD_CORNER_DP = 22f
 
         /** Comfortably under the transaction limit, with room for the rest of the tree. */
-        private const val PAYLOAD_BUDGET_BYTES = 360 * 1024
+        private const val PAYLOAD_BUDGET_BYTES = 400 * 1024
         private const val SHRUNK_SCALE = 0.7f
 
         /** Redraws every placed widget. Cheap, and safe to call from anywhere. */
         suspend fun refresh(context: Context) {
             PetWidget().updateAll(context)
+        }
+    }
+}
+
+/**
+ * How fast the flipbook runs.
+ *
+ * Each state's animation has its own natural speed — typing is quick, sleeping
+ * is slow — so a single interval would leave one of them wrong. The interval
+ * lives in the layout XML rather than being pushed through
+ * `RemoteViews.setInt`, so there are three layouts and each state picks one.
+ */
+private enum class FlipTempo(val layoutRes: Int, val loopSeconds: Float) {
+    FAST(R.layout.widget_pet_flipper_fast, 1.5f),
+    NORMAL(R.layout.widget_pet_flipper_normal, 2.5f),
+    SLOW(R.layout.widget_pet_flipper_slow, 5f),
+    ;
+
+    companion object {
+        fun forState(state: PetState): FlipTempo = when (state) {
+            PetState.WORKING, PetState.PLAYING, PetState.CELEBRATING,
+            PetState.HAPPY, PetState.EATING,
+            -> FAST
+            PetState.IDLE, PetState.LOVED, PetState.HUNGRY -> NORMAL
+            PetState.TIRED, PetState.SLEEPING, PetState.STUDYING -> SLOW
         }
     }
 }

@@ -69,6 +69,28 @@ into a repository is not worth it. Swapping in real art later means replacing
 The renderer is also the widget's: `PetRasterizer` draws frames through the very
 same code, so the widget can never drift out of sync with the app.
 
+## Testing
+
+There is no emulator here — the container has no KVM and the CPU exposes no
+virtualisation — so the Android-dependent half of the app is tested with
+**Robolectric**, which runs the real framework on the JVM, including Room and
+(in native graphics mode) the real Skia pipeline and PNG encoder.
+
+That matters because the widget's design rests on measured numbers, not
+estimates. The suite caught three real defects while it was being written:
+
+- twelve animation frames overflowed the transaction budget on the busiest
+  state (373 KB), so every redraw silently took the shrink path — now ten;
+- the animation loop did not join back onto itself, because each state's
+  shared idle motion ran at a frequency unrelated to its own period;
+- `PLAYING` had two internal frequencies that were not multiples of each
+  other, so it jolted once per cycle even after the first fix.
+
+```bash
+./gradlew :vpet-waifu:app:testDebugUnitTest   # Robolectric: Room, widget, frames
+./gradlew :vpet-waifu:domain:test             # pure balance tests
+```
+
 ### Iterating on the art
 
 The renderer only touches a small slice of the Compose graphics API, so it can
@@ -153,6 +175,9 @@ Buying applies the item immediately — there is no inventory to manage.
 
 - **Food** — onigiri, ramen, cake, bento, parfait: hunger, and mood in varying
   proportion. She plays the eating animation.
+- **Energy drink** — the only way to buy energy: 130 ¥ for +45, with a
+  half-hour caffeine crash (energy drains x1.6) so it does not simply replace
+  sleeping. Sleep stays the free route; the drink buys back the half hour.
 - **Gifts** — flowers, teddy, headphones, a ring: pure mood, level-gated.
 - **Pills** — risk/reward rather than pay-to-win:
   - **Cash advance**: pay 180, get 500 now, hunger drains ×2.5 for three hours.
@@ -231,6 +256,16 @@ the point is visual: a character-sized backdrop leaves a visible panel edge
 inside the widget, while a full-bleed one makes the whole thing a single scene.
 The wall/floor junction is positioned from the character's actual foot height,
 so she stands on the floor at any widget size instead of floating up the wall.
+
+**Staying in step.** The widget follows the *data*, not its callers.
+`WidgetSync` observes the repository and redraws on any change to what the
+widget actually shows — stats rounded the way they are printed, so a quiet
+minute of drift costs nothing. Asking each surface (the app, the bubble, the
+background tick, the widget's own buttons) to remember to refresh is how
+"I pressed sleep and the widget still shows her awake" happens: one path
+forgets and there is no second chance. The widget also reads through
+`PetRepository.peek`, which advances the world in memory without persisting —
+otherwise a redraw would write to the save file and schedule another redraw.
 
 **Resizing.** `SizeMode.Exact` re-runs the widget for every size the user drags
 to, and the real size comes from the widget's options bundle (`provideGlance`

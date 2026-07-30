@@ -44,6 +44,7 @@ fun shopItemNameRes(id: String): Int = when (id) {
     "cake" -> R.string.item_cake
     "bento" -> R.string.item_bento
     "parfait" -> R.string.item_parfait
+    "energy_drink" -> R.string.item_energy_drink
     "flowers" -> R.string.item_flowers
     "teddy" -> R.string.item_teddy
     "headphones" -> R.string.item_headphones
@@ -59,6 +60,7 @@ fun shopItemEmoji(id: String): String = when (id) {
     "cake" -> "🍰"
     "bento" -> "🍱"
     "parfait" -> "🍨"
+    "energy_drink" -> "🥤"
     "flowers" -> "💐"
     "teddy" -> "🧸"
     "headphones" -> "🎧"
@@ -108,9 +110,21 @@ fun qualityColor(quality: OutcomeQuality): Color = when (quality) {
 }
 
 /** "1ч 24мин" / "18мин" — compact enough for a card corner. */
-fun formatRemaining(millis: Long): String {
-    val totalMinutes = ((millis + 59_999) / 60_000).toInt()
+fun formatRemaining(millis: Long): String =
+    formatMinutes(((millis + 59_999) / 60_000).toInt())
+
+/**
+ * "2ч" / "1ч 30мин" / "45мин".
+ *
+ * Effect durations are in minutes and some are under an hour, so they cannot
+ * just be divided by 60 — that renders a half-hour crash as "0ч".
+ */
+fun formatMinutes(totalMinutes: Int): String {
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
-    return if (hours > 0) "${hours}ч ${minutes}мин" else "${minutes}мин"
+    return when {
+        hours > 0 && minutes > 0 -> "${hours}ч ${minutes}мин"
+        hours > 0 -> "${hours}ч"
+        else -> "${minutes}мин"
+    }
 }

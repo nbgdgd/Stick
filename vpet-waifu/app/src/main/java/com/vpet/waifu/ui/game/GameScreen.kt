@@ -45,7 +45,8 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.domain.TapGame
 import com.vpet.waifu.ui.character.AnimatedPet
-import com.vpet.waifu.ui.components.StatChip
+import com.vpet.waifu.ui.components.EffectChip
+import com.vpet.waifu.ui.components.ScreenTitle
 import com.vpet.waifu.ui.theme.StatColors
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -120,17 +121,8 @@ fun GameScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.tab_game),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            StatChip(emoji = "💜", text = "${snapshot.stats.mood.roundToInt()}", tint = StatColors.Mood)
+        ScreenTitle(stringResource(R.string.tab_game)) {
+            EffectChip(emoji = "💜", text = "${snapshot.stats.mood.roundToInt()}", tint = StatColors.Mood)
         }
 
         if (running) {

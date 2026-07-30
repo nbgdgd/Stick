@@ -35,7 +35,6 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.overlay.PetBubble
 import com.vpet.waifu.ui.theme.VPetTheme
-import com.vpet.waifu.widget.WidgetRefresher
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -63,7 +62,6 @@ class PetOverlayService :
     @Inject lateinit var preferences: PetPreferences
     @Inject lateinit var tuning: PetTuning
     @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
-    @Inject lateinit var widgetRefresher: WidgetRefresher
 
     override val viewModelStore: ViewModelStore = ViewModelStore()
 
@@ -143,7 +141,6 @@ class PetOverlayService :
         lifecycleScope.launch {
             while (isActive) {
                 repository.tick()
-                widgetRefresher.refresh()
                 delay(TICK_INTERVAL_MILLIS)
             }
         }
@@ -156,10 +153,7 @@ class PetOverlayService :
     }
 
     private fun act(action: suspend PetRepository.() -> PetSnapshot) {
-        lifecycleScope.launch {
-            repository.action()
-            widgetRefresher.refresh()
-        }
+        lifecycleScope.launch { repository.action() }
     }
 
     /**

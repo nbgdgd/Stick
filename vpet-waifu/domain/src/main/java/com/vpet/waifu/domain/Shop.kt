@@ -48,6 +48,14 @@ object Shop {
         ShopItem("cake", ShopCategory.FOOD, price = 90, hunger = 28f, mood = 22f),
         ShopItem("bento", ShopCategory.FOOD, price = 110, hunger = 70f, mood = 14f),
         ShopItem("parfait", ShopCategory.FOOD, price = 140, requiredLevel = 5, hunger = 35f, mood = 30f),
+        // The only way to buy energy. Sleep is still the cheap route — this one
+        // costs money and comes with a caffeine crash — but it lets her push
+        // through a shift instead of losing half an hour to a nap.
+        ShopItem(
+            "energy_drink", ShopCategory.FOOD, price = 130,
+            hunger = 5f, energy = 45f, mood = 4f,
+            effect = EffectKind.EXHAUSTION, effectMinutes = 30,
+        ),
     )
 
     val GIFTS: List<ShopItem> = listOf(

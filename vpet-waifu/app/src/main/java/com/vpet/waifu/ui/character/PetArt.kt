@@ -18,6 +18,8 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
+private const val TWO_PI_F = 6.2831855f
+
 /**
  * The character renderer.
  *
@@ -557,7 +559,9 @@ private fun DrawScope.drawMouth(pose: PetPose, palette: PetPalette, at: Offset) 
             cap = StrokeCap.Round,
         )
         MouthShape.CHEWING -> {
-            val open = (wave(pose.timeSeconds, 14f) + 1f) / 2f
+                // Four chews per mouthful: a multiple of the eating cycle, so the
+            // jaw is closed again at the seam.
+            val open = (wave(pose.timeSeconds, 15.708f) + 1f) / 2f
             drawOval(
                 palette.mouthInner,
                 Offset(at.x - 6f, at.y - 2f - open * 2.5f),
@@ -640,9 +644,10 @@ private fun DrawScope.drawLaptop(pose: PetPose, palette: PetPalette) {
         color = palette.irisLight.copy(alpha = glow),
     )
     for (i in 0..2) {
-        val y = baseY - 33f + i * 8f + (pose.timeSeconds * 5f % 8f)
+        // Scrolls with the typing rather than the clock, so it loops with it.
+        val y = baseY - 33f + i * 8f + (pose.propProgress * 8f)
         if (y > baseY - 9f) continue
-        val w = 18f + ((i * 11 + (pose.timeSeconds.toInt() % 3) * 6) % 30)
+        val w = 18f + ((i * 11) % 30)
         drawLine(
             color = palette.propDark.copy(alpha = 0.4f),
             start = Offset(CX - 30f, y),
@@ -740,23 +745,23 @@ private fun DrawScope.drawBlanket(pose: PetPose, palette: PetPalette) {
 // --- particles -------------------------------------------------------------------
 
 private fun DrawScope.drawParticles(kind: ParticleKind, pose: PetPose, palette: PetPalette) {
-    val t = pose.timeSeconds
     val count = when (kind) {
         ParticleKind.SLEEP_Z -> 3
         ParticleKind.SWEAT -> 1
         else -> 4
     }
-    val speed = when (kind) {
-        ParticleKind.SLEEP_Z -> 0.32f
-        ParticleKind.COINS -> 0.7f
-        else -> 0.5f
+    // Whole cycles per particle phase, so a looping phase gives a looping
+    // stream — a fractional rate would teleport them back once per cycle.
+    val cycles = when (kind) {
+        ParticleKind.COINS -> 2
+        else -> 1
     }
 
     repeat(count) { i ->
-        val phase = ((t * speed) + i.toFloat() / count) % 1f
+        val phase = ((pose.particlePhase * cycles) + i.toFloat() / count) % 1f
         val fade = sin(phase * Math.PI).toFloat().coerceIn(0f, 1f)
         if (fade <= 0.02f) return@repeat
-        val drift = sin(phase * 5f + i * 1.7f) * 8f
+        val drift = sin(phase * TWO_PI_F + i * 1.7f) * 8f
 
         when (kind) {
             ParticleKind.HEARTS -> drawHeart(

@@ -9,6 +9,12 @@
 
   No in/out animation is set on purpose: the default crossfade would blur one
   pose into the next instead of playing them as frames.
+
+  This is the "slow" tier. The interval lives in XML rather than being set
+  through RemoteViews.setInt, because whether ViewFlipper.setFlipInterval is
+  a remotable method is not something the SDK stubs can confirm — and an
+  unsupported reflective call fails the entire widget update, not just the
+  animation.
 -->
 <ViewFlipper xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/pet_flipper"
@@ -16,5 +22,5 @@
     android:layout_height="match_parent"
     android:animateFirstView="false"
     android:autoStart="true"
-    android:flipInterval="200"
+    android:flipInterval="500"
     android:measureAllChildren="false" />

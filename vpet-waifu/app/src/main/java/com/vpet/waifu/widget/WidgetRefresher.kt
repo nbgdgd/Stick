@@ -1,22 +1,36 @@
 package com.vpet.waifu.widget
 
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Pushes a redraw to any placed widget. An interface so tests can observe it. */
+fun interface WidgetRefresher {
+    suspend fun refresh()
+}
+
 /**
- * Pushes a redraw to any placed widget.
+ * The real one.
  *
- * Wrapped in a class so callers can depend on it through Hilt, and failures are
- * swallowed: a widget that cannot be reached must never take down the action
- * that triggered it.
+ * Failures are logged rather than swallowed: a widget that silently stops
+ * updating is exactly the bug this class exists to prevent, and a blanket
+ * `runCatching` would hide it again.
  */
 @Singleton
-class WidgetRefresher @Inject constructor(
+class GlanceWidgetRefresher @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
-    suspend fun refresh() {
-        runCatching { PetWidget.refresh(context) }
+) : WidgetRefresher {
+    override suspend fun refresh() {
+        try {
+            PetWidget.refresh(context)
+        } catch (error: Exception) {
+            Log.w(TAG, "Could not refresh the pet widget", error)
+        }
+    }
+
+    private companion object {
+        const val TAG = "PetWidget"
     }
 }

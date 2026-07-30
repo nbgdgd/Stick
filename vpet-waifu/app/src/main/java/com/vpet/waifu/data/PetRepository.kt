@@ -79,6 +79,20 @@ class PetRepository @Inject constructor(
     /** Current state, decay included, without waiting for the next tick. */
     suspend fun snapshotNow(): PetSnapshot = tick()
 
+    /**
+     * The state as it is right now, advanced in memory but **not** persisted.
+     *
+     * Read-only surfaces use this so that redrawing them is never a game
+     * action. It also breaks a feedback loop: the widget refreshes whenever the
+     * save file changes, so a widget redraw that wrote to the save file would
+     * schedule another redraw.
+     */
+    suspend fun peek(): PetSnapshot {
+        val now = clock.nowMillis()
+        val stored = dao.load()?.toSnapshot() ?: PetSnapshot.initial(now)
+        return simulation.advanceTo(stored, now)
+    }
+
     private suspend fun mutate(action: (PetSnapshot, Long) -> PetSnapshot): PetSnapshot =
         writeLock.withLock {
             val now = clock.nowMillis()

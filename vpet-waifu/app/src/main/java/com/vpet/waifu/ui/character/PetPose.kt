@@ -59,6 +59,14 @@ data class PetPose(
     /** 0..1 progress of whatever the prop is animating (fork to mouth, page turn). */
     val propProgress: Float = 0f,
     val particles: ParticleKind? = null,
+    /**
+     * Drives the floating decoration, 0..1 per cycle.
+     *
+     * Separate from [timeSeconds] so the widget's flipbook can hand it an exact
+     * fraction of the loop; particles driven straight off the clock would jump
+     * back to their start once per cycle.
+     */
+    val particlePhase: Float = 0f,
     /** Slumped posture for tired/hungry states. */
     val droop: Float = 0f,
 )
@@ -72,8 +80,17 @@ data class PetPose(
  */
 object PetPoseFactory {
 
-    fun pose(state: PetState, seconds: Float): PetPose {
-        val base = idleBase(seconds, state)
+    fun pose(state: PetState, seconds: Float): PetPose =
+        pose(state, seconds, idleBase(seconds, state))
+
+    /**
+     * The same, but on a caller-supplied base.
+     *
+     * States build on the shared idle motion — some add to it, some replace it —
+     * so the only reliable way to make a state loop is to hand it a base that
+     * already does, rather than trying to repair the result afterwards.
+     */
+    private fun pose(state: PetState, seconds: Float, base: PetPose): PetPose {
         return when (state) {
             PetState.IDLE -> base
             PetState.HAPPY -> happy(base, seconds)
@@ -105,6 +122,7 @@ object PetPoseFactory {
             rightArmDegrees = -8f - sin(t * 0.6f + 0.5f) * 3f,
             lookX = sin(t * 0.31f) * 0.35f,
             lookY = sin(t * 0.23f) * 0.15f,
+            particlePhase = t * 0.35f,
         )
     }
 
@@ -245,7 +263,10 @@ object PetPoseFactory {
         val typeL = sin(t * 9f)
         val typeR = sin(t * 9f + 1.7f)
         return base.copy(
-            headTiltDegrees = 4f + sin(t * 0.5f) * 1.5f,
+            // Rides the shared (already looping) tilt rather than adding a
+            // slow oscillator of its own, which would not be a harmonic of
+            // the typing frequency.
+            headTiltDegrees = 4f + base.headTiltDegrees * 0.6f,
             headBob = base.headBob + 4f,
             bodyLean = 4f,
             leftArmDegrees = 46f,
@@ -265,7 +286,8 @@ object PetPoseFactory {
 
     private fun studying(base: PetPose, t: Float): PetPose {
         // Reading: eyes track across the page, a page turns every few seconds.
-        val scan = ((t * 0.8f) % 1f)
+        // Five sweeps per page, so the eyes land back where they started.
+        val scan = ((t * (5f / 6f)) % 1f)
         val turn = spike((t % 6f) / 6f, 0.5f, 0.06f)
         return base.copy(
             headTiltDegrees = 8f,
@@ -293,7 +315,7 @@ object PetPoseFactory {
         return base.copy(
             headTiltDegrees = lean * 8f,
             bodyLean = lean * 4f,
-            bodyBounce = base.bodyBounce - abs(sin(t * 4f)) * 2f,
+            bodyBounce = base.bodyBounce - abs(sin(t * 4.4f)) * 2f,
             leftArmDegrees = 55f,
             rightArmDegrees = -55f,
             leftElbowDegrees = 130f + mash * 6f,
@@ -338,8 +360,9 @@ object PetPoseFactory {
      * frame join back onto the first.
      */
     private fun periodSeconds(state: PetState): Float = when (state) {
-        PetState.IDLE -> TWO_PI / BREATH_SPEED
-        PetState.HAPPY -> (PI / 3.1).toFloat()
+        // Idle is entirely the shared base, which already loops.
+        PetState.IDLE -> 2.5f
+        PetState.HAPPY -> TWO_PI / 3.1f
         PetState.HUNGRY -> 5f
         PetState.TIRED -> TWO_PI / 0.9f
         PetState.SLEEPING -> TWO_PI / 0.8f
@@ -347,8 +370,10 @@ object PetPoseFactory {
         PetState.LOVED -> TWO_PI / 2.4f
         PetState.WORKING -> TWO_PI / 9f
         PetState.STUDYING -> 6f
-        PetState.PLAYING -> TWO_PI / 11f
-        PetState.CELEBRATING -> (PI / 3.6).toFloat()
+        // The lean is the slowest thing she does while playing; the mash at
+        // 11 and the bounce at 4.4 are both multiples of it.
+        PetState.PLAYING -> TWO_PI / 2.2f
+        PetState.CELEBRATING -> TWO_PI / 3.6f
     }
 
     /**
@@ -370,15 +395,28 @@ object PetPoseFactory {
         val phase = index.toFloat() / frameCount.coerceAtLeast(1)
         val period = periodSeconds(state)
         val cycles = max(1f, (loopSeconds / period).roundToInt().toFloat())
-        val base = pose(state, phase * period * cycles)
+        val t = phase * period * cycles
+        val turns = TWO_PI * phase
 
-        val blink = when (base.eyes) {
-            EyeShape.SLEEPING -> 1f
-            EyeShape.OPEN, EyeShape.FOCUSED, EyeShape.HALF_LIDDED -> spike(phase, 0.42f, 0.05f)
-            // Sparkle and heart eyes have no lids to close.
-            else -> 0f
-        }
-        return base.copy(blink = blink)
+        // Every shared oscillator is rewritten as a harmonic of the loop, so it
+        // meets itself at the seam. The state is then applied on top and loops
+        // too, because the window is a whole number of its own cycles.
+        val base = idleBase(t, state).copy(
+            timeSeconds = t,
+            breath = sin(turns),
+            bodyBounce = sin(turns) * 1.2f,
+            headBob = sin(turns + 0.4f) * 1.6f,
+            headTiltDegrees = sin(turns) * 2.5f,
+            hairSwayDegrees = sin(turns - 0.7f) * 5f,
+            ahogeDegrees = sin(2f * turns) * 12f,
+            lookX = sin(turns) * 0.35f,
+            lookY = sin(turns + 1.1f) * 0.15f,
+            particlePhase = phase,
+            // One deliberate blink per loop; the free-running one would be cut
+            // in half at the seam.
+            blink = spike(phase, 0.42f, 0.05f),
+        )
+        return pose(state, t, base)
     }
 
     private const val TWO_PI = (2.0 * PI).toFloat()

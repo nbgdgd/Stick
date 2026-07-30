@@ -43,7 +43,7 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.accentFor
 import com.vpet.waifu.ui.character.AnimatedPet
-import com.vpet.waifu.ui.components.StatBar
+import com.vpet.waifu.ui.components.StatRow
 import com.vpet.waifu.ui.formatRemaining
 import com.vpet.waifu.ui.occupationEmoji
 import com.vpet.waifu.ui.occupationNameRes
@@ -187,19 +187,22 @@ private fun PetPanel(
                 }
             }
 
-            StatBar(
+            StatRow(
+                emoji = "🍽",
                 label = stringResource(R.string.stat_hunger),
                 value = snapshot.stats.hunger,
                 color = StatColors.Hunger,
                 compact = true,
             )
-            StatBar(
+            StatRow(
+                emoji = "⚡",
                 label = stringResource(R.string.stat_energy),
                 value = snapshot.stats.energy,
                 color = StatColors.Energy,
                 compact = true,
             )
-            StatBar(
+            StatRow(
+                emoji = "💜",
                 label = stringResource(R.string.stat_mood),
                 value = snapshot.stats.mood,
                 color = StatColors.Mood,

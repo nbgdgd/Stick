@@ -1,32 +1,31 @@
 package com.vpet.waifu.ui.activities
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.OccupationKind
@@ -34,10 +33,19 @@ import com.vpet.waifu.domain.Occupations
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
-import com.vpet.waifu.ui.components.StatChip
+import com.vpet.waifu.ui.components.EffectChip
+import com.vpet.waifu.ui.components.EmojiTile
+import com.vpet.waifu.ui.components.MoneyPill
+import com.vpet.waifu.ui.components.OutlineButton
+import com.vpet.waifu.ui.components.PanelCard
+import com.vpet.waifu.ui.components.PrimaryButton
+import com.vpet.waifu.ui.components.ScreenTitle
+import com.vpet.waifu.ui.components.SectionHeader
+import com.vpet.waifu.ui.components.StatBarTrack
 import com.vpet.waifu.ui.formatRemaining
 import com.vpet.waifu.ui.occupationEmoji
 import com.vpet.waifu.ui.occupationNameRes
+import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
 
 /**
@@ -59,21 +67,27 @@ fun ActivitiesScreen(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        item {
+            ScreenTitle(stringResource(R.string.tab_activities)) {
+                MoneyPill(amount = snapshot.progress.money)
+            }
+        }
+
         if (snapshot.isBusy) {
             item { ActiveSession(snapshot, nowMillis, onCancel) }
         } else if (snapshot.stats.energy < tuning.minimumEnergyToWork) {
             item { Notice(stringResource(R.string.too_tired_to_work)) }
         }
 
-        item { SectionTitle(stringResource(R.string.section_work), "💼") }
+        item { SectionHeader("💼", stringResource(R.string.section_work)) }
         items(Occupations.WORK, key = { it.id }) { occupation ->
             OccupationCard(occupation, snapshot, simulation, tuning, onStart)
         }
 
-        item { SectionTitle(stringResource(R.string.section_study), "📚") }
+        item { SectionHeader("📚", stringResource(R.string.section_study)) }
         items(Occupations.STUDY, key = { it.id }) { occupation ->
             OccupationCard(occupation, snapshot, simulation, tuning, onStart)
         }
@@ -81,27 +95,21 @@ fun ActivitiesScreen(
 }
 
 @Composable
-private fun SectionTitle(text: String, emoji: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-        Text(emoji, style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.width(8.dp))
-        Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
 private fun Notice(text: String) {
-    ElevatedCard(
+    PanelCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+        color = MaterialTheme.colorScheme.errorContainer,
+        border = Accents.Danger.copy(alpha = 0.4f),
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(16.dp),
-        )
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("😵", fontSize = 20.sp)
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        }
     }
 }
 
@@ -109,41 +117,48 @@ private fun Notice(text: String) {
 private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> Unit) {
     val session = snapshot.session ?: return
     val occupation = snapshot.occupation ?: return
-    ElevatedCard(
+
+    PanelCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-        ),
+        border = Accents.Primary.copy(alpha = 0.45f),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(occupationEmoji(occupation.id), style = MaterialTheme.typography.headlineMedium)
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(Accents.Primary.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(occupationEmoji(occupation.id), fontSize = 22.sp)
+                }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        stringResource(occupationNameRes(occupation.id)),
+                        text = stringResource(occupationNameRes(occupation.id)),
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Accents.Text,
                     )
                     Text(
-                        stringResource(
+                        text = stringResource(
                             R.string.session_remaining,
                             formatRemaining(session.remainingMillis(nowMillis)),
                         ),
                         style = MaterialTheme.typography.bodyMedium,
+                        color = Accents.TextMuted,
                     )
                 }
             }
-            LinearProgressIndicator(
-                progress = { session.progress(nowMillis) },
+            Spacer(Modifier.height(14.dp))
+            StatBarTrack(fraction = session.progress(nowMillis), color = Accents.Bright, height = 7.dp)
+            Spacer(Modifier.height(14.dp))
+            OutlineButton(
+                text = stringResource(R.string.action_call_home),
+                onClick = onCancel,
                 modifier = Modifier.fillMaxWidth(),
-                drawStopIndicator = {},
             )
-            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.action_call_home))
-            }
         }
     }
 }
@@ -161,52 +176,55 @@ private fun OccupationCard(
     val payout = simulation.projectedPayout(snapshot, occupation)
     val isWork = occupation.kind == OccupationKind.WORK
 
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = if (unlocked) occupationEmoji(occupation.id) else "🔒",
-                style = MaterialTheme.typography.headlineMedium,
+    PanelCard(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            EmojiTile(
+                emoji = if (unlocked) occupationEmoji(occupation.id) else "🔒",
+                tint = if (isWork) StatColors.Money else StatColors.Exp,
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(14.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(occupationNameRes(occupation.id)),
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Accents.Text,
                 )
-                Text(
-                    text = stringResource(
-                        R.string.occupation_cost,
-                        occupation.durationMinutes,
-                        occupation.energyCost.toInt(),
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.size(6.dp))
+                Spacer(Modifier.height(7.dp))
                 if (unlocked) {
-                    StatChip(
-                        emoji = if (isWork) "💰" else "⭐",
-                        text = "+$payout",
-                        tint = if (isWork) StatColors.Money else StatColors.Exp,
-                    )
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.unlocks_at_level, occupation.requiredLevel),
-                            style = MaterialTheme.typography.bodySmall,
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        EffectChip(
+                            emoji = if (isWork) "💰" else "⭐",
+                            text = "+$payout",
+                            tint = if (isWork) StatColors.Money else StatColors.Exp,
+                        )
+                        EffectChip(
+                            emoji = "⏱",
+                            text = "${occupation.durationMinutes} мин",
+                            tint = Accents.TextMuted,
+                        )
+                        EffectChip(
+                            emoji = "⚡",
+                            text = "−${occupation.energyCost.toInt()}",
+                            tint = StatColors.Energy,
                         )
                     }
+                } else {
+                    Text(
+                        text = stringResource(R.string.unlocks_at_level, occupation.requiredLevel),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Accents.Danger,
+                    )
                 }
             }
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = { onStart(occupation) }, enabled = canStart) {
-                Text(stringResource(R.string.action_send))
-            }
+
+            Spacer(Modifier.width(10.dp))
+            PrimaryButton(
+                text = stringResource(R.string.action_send),
+                onClick = { onStart(occupation) },
+                enabled = canStart,
+            )
         }
     }
 }

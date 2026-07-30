@@ -7,6 +7,9 @@ import com.vpet.waifu.data.db.PetDatabase
 import com.vpet.waifu.data.db.PetStateDao
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetTuning
+import com.vpet.waifu.widget.GlanceWidgetRefresher
+import com.vpet.waifu.widget.WidgetRefresher
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,6 +19,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
+
+/** Binds the widget refresher so tests can substitute an observable one. */
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class WidgetModule {
+    @Binds
+    abstract fun bindWidgetRefresher(impl: GlanceWidgetRefresher): WidgetRefresher
+}
 
 @Module
 @InstallIn(SingletonComponent::class)

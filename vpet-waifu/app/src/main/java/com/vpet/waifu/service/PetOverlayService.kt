@@ -10,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
@@ -34,6 +35,7 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.overlay.PetBubble
 import com.vpet.waifu.ui.theme.VPetTheme
+import com.vpet.waifu.widget.WidgetRefresher
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -61,6 +63,7 @@ class PetOverlayService :
     @Inject lateinit var preferences: PetPreferences
     @Inject lateinit var tuning: PetTuning
     @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
+    @Inject lateinit var widgetRefresher: WidgetRefresher
 
     override val viewModelStore: ViewModelStore = ViewModelStore()
 
@@ -73,6 +76,13 @@ class PetOverlayService :
     /** Compose state, fed from the repository flow. */
     private var snapshot by mutableStateOf<PetSnapshot?>(null)
     private var panelExpanded by mutableStateOf(false)
+
+    /**
+     * A half-second clock. The bubble shows a live countdown and the character
+     * FSM has time-limited reactions, so it needs "now" as state, not as a
+     * value captured once at composition.
+     */
+    private var nowMillis by mutableLongStateOf(System.currentTimeMillis())
 
     override fun onCreate() {
         // Must happen before the lifecycle reaches CREATED.
@@ -133,13 +143,23 @@ class PetOverlayService :
         lifecycleScope.launch {
             while (isActive) {
                 repository.tick()
+                widgetRefresher.refresh()
                 delay(TICK_INTERVAL_MILLIS)
+            }
+        }
+        lifecycleScope.launch {
+            while (isActive) {
+                nowMillis = System.currentTimeMillis()
+                delay(CLOCK_INTERVAL_MILLIS)
             }
         }
     }
 
     private fun act(action: suspend PetRepository.() -> PetSnapshot) {
-        lifecycleScope.launch { repository.action() }
+        lifecycleScope.launch {
+            repository.action()
+            widgetRefresher.refresh()
+        }
     }
 
     /**
@@ -166,6 +186,7 @@ class PetOverlayService :
                     PetBubble(
                         snapshot = current,
                         tuning = tuning,
+                        nowMillis = nowMillis,
                         expanded = panelExpanded,
                         onTap = {
                             // She sleeps through taps; only a long press reaches her.
@@ -252,6 +273,7 @@ class PetOverlayService :
         private const val NOTIFICATION_ID = 1
         private const val ACTION_STOP = "com.vpet.waifu.action.STOP_OVERLAY"
         private const val TICK_INTERVAL_MILLIS = 60_000L
+        private const val CLOCK_INTERVAL_MILLIS = 500L
 
         fun start(context: Context) {
             if (!OverlayPermission.isGranted(context)) return

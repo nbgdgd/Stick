@@ -2,22 +2,90 @@
 <resources>
     <string name="app_name">VPet Waifu</string>
 
+    <string name="tab_home">Дом</string>
+    <string name="tab_activities">Дела</string>
+    <string name="tab_shop">Магазин</string>
+    <string name="tab_game">Игра</string>
+
     <string name="stat_hunger">Голод</string>
     <string name="stat_energy">Энергия</string>
     <string name="stat_mood">Настроение</string>
+    <string name="level_label">Уровень %1$d</string>
 
     <string name="state_idle">Отдыхает</string>
+    <string name="state_happy">В восторге</string>
     <string name="state_hungry">Голодная</string>
+    <string name="state_tired">Вымоталась</string>
     <string name="state_sleeping">Спит</string>
+    <string name="state_eating">Кушает</string>
+    <string name="state_loved">Довольна</string>
+    <string name="state_working">На работе</string>
+    <string name="state_studying">Учится</string>
+    <string name="state_playing">Играет</string>
+    <string name="state_celebrating">Радуется</string>
 
     <string name="action_feed">Покормить</string>
     <string name="action_sleep">Спать</string>
     <string name="action_wake">Разбудить</string>
     <string name="action_pet">Погладить</string>
-    <string name="action_open_app">Открыть приложение</string>
-    <string name="action_show_bubble">Показать питомца</string>
-    <string name="action_hide_bubble">Скрыть питомца</string>
+    <string name="action_open_app">Открыть</string>
+    <string name="action_hide_bubble">Скрыть</string>
     <string name="action_grant_overlay">Открыть настройки</string>
+    <string name="action_send">Отправить</string>
+    <string name="action_call_home">Вернуть домой</string>
+    <string name="action_ok">Понятно</string>
+
+    <string name="section_work">Работа</string>
+    <string name="section_study">Учёба</string>
+    <string name="section_food">Еда</string>
+    <string name="section_gifts">Подарки</string>
+    <string name="section_pills">Таблетки</string>
+
+    <string name="job_cafe">Кафе</string>
+    <string name="job_shop">Магазин</string>
+    <string name="job_office">Офис</string>
+    <string name="job_idol">Сцена айдола</string>
+    <string name="study_school">Школа</string>
+    <string name="study_course">Онлайн-курс</string>
+    <string name="study_university">Университет</string>
+
+    <string name="item_onigiri">Онигири</string>
+    <string name="item_ramen">Рамен</string>
+    <string name="item_cake">Торт</string>
+    <string name="item_bento">Бенто</string>
+    <string name="item_parfait">Парфе</string>
+    <string name="item_flowers">Букет</string>
+    <string name="item_teddy">Плюшевый мишка</string>
+    <string name="item_headphones">Наушники</string>
+    <string name="item_ring">Колечко</string>
+    <string name="item_advance">Аванс</string>
+    <string name="item_exp_pill">EXP-таблетка</string>
+
+    <string name="occupation_cost">%1$d мин · −%2$d энергии</string>
+    <string name="unlocks_at_level">Откроется на %1$d уровне</string>
+    <string name="session_remaining">осталось %1$s</string>
+    <string name="too_tired_to_work">Она слишком вымоталась, чтобы куда-то идти. Сначала покорми или уложи спать.</string>
+    <string name="not_enough_money">Дорого</string>
+    <string name="pills_warning">Таблетки дают всё сразу, а счёт приходит потом. Бери, когда понимаешь, что делаешь.</string>
+    <string name="effect_hunger_surge">голод падает быстрее %1$dч</string>
+    <string name="effect_exhaustion">энергия падает быстрее %1$dч</string>
+
+    <string name="outcome_title">%1$s — смена закончена</string>
+    <string name="outcome_title_early">%1$s — ушла раньше</string>
+    <string name="quality_great">Отличная смена!</string>
+    <string name="quality_good">Нормально</string>
+    <string name="quality_poor">Так себе</string>
+    <string name="quality_bad">Всё пошло не так</string>
+    <string name="outcome_hint_work">В хорошем настроении она зарабатывает намного больше. Покорми и дай отдохнуть перед следующей сменой.</string>
+    <string name="outcome_hint_study">Учёба в плохом настроении почти не усваивается. Сначала подними ей настроение.</string>
+
+    <string name="game_start">Начать</string>
+    <string name="game_again">Ещё раз</string>
+    <string name="game_score">Счёт %1$d · %2$dс</string>
+    <string name="game_result">Поймано: %1$d</string>
+    <string name="game_reward">+%1$d настроения · +%2$d ¥</string>
+    <string name="game_hint">Лови всё, что выскакивает. Игра поднимает настроение, но тратит энергию.</string>
+    <string name="game_busy">Она сейчас занята.</string>
 
     <string name="bubble_title">Плавающий питомец</string>
     <string name="bubble_subtitle">Держать её на экране поверх других приложений</string>
@@ -27,4 +95,6 @@
     <string name="overlay_channel_description">Держит питомца на экране поверх других приложений.</string>
     <string name="overlay_notification_title">Питомец на экране</string>
     <string name="overlay_notification_text">Нажмите на неё, чтобы покормить или уложить спать.</string>
+
+    <string name="widget_description">Питомец, её статы и уход в одно касание.</string>
 </resources>

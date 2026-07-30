@@ -1,23 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">VPet Waifu</string>
+
+    <string name="tab_home">Home</string>
+    <string name="tab_activities">Work</string>
+    <string name="tab_shop">Shop</string>
+    <string name="tab_game">Play</string>
 
     <string name="stat_hunger">Hunger</string>
     <string name="stat_energy">Energy</string>
     <string name="stat_mood">Mood</string>
+    <string name="level_label" tools:ignore="PluralsCandidate">Level %1$d</string>
 
     <string name="state_idle">Hanging out</string>
+    <string name="state_happy">Delighted</string>
     <string name="state_hungry">Hungry</string>
+    <string name="state_tired">Worn out</string>
     <string name="state_sleeping">Sleeping</string>
+    <string name="state_eating">Eating</string>
+    <string name="state_loved">Loving it</string>
+    <string name="state_working">At work</string>
+    <string name="state_studying">Studying</string>
+    <string name="state_playing">Playing</string>
+    <string name="state_celebrating">Celebrating</string>
 
     <string name="action_feed">Feed</string>
     <string name="action_sleep">Sleep</string>
     <string name="action_wake">Wake up</string>
     <string name="action_pet">Pet</string>
     <string name="action_open_app">Open app</string>
-    <string name="action_show_bubble">Show bubble</string>
     <string name="action_hide_bubble">Hide bubble</string>
     <string name="action_grant_overlay">Open settings</string>
+    <string name="action_send">Send</string>
+    <string name="action_call_home">Call home</string>
+    <string name="action_ok">OK</string>
+
+    <string name="section_work">Work</string>
+    <string name="section_study">Study</string>
+    <string name="section_food">Food</string>
+    <string name="section_gifts">Gifts</string>
+    <string name="section_pills">Pills</string>
+
+    <string name="job_cafe">Café</string>
+    <string name="job_shop">Shop assistant</string>
+    <string name="job_office">Office</string>
+    <string name="job_idol">Idol stage</string>
+    <string name="study_school">School</string>
+    <string name="study_course">Online course</string>
+    <string name="study_university">University</string>
+
+    <string name="item_onigiri">Onigiri</string>
+    <string name="item_ramen">Ramen</string>
+    <string name="item_cake">Cake</string>
+    <string name="item_bento">Bento box</string>
+    <string name="item_parfait">Parfait</string>
+    <string name="item_flowers">Flowers</string>
+    <string name="item_teddy">Teddy bear</string>
+    <string name="item_headphones">Headphones</string>
+    <string name="item_ring">Ring</string>
+    <string name="item_advance">Cash advance</string>
+    <string name="item_exp_pill">EXP pill</string>
+
+    <string name="occupation_cost" tools:ignore="PluralsCandidate">%1$d min · −%2$d energy</string>
+    <string name="unlocks_at_level" tools:ignore="PluralsCandidate">Unlocks at level %1$d</string>
+    <string name="session_remaining">%1$s left</string>
+    <string name="too_tired_to_work">She is too worn out to go anywhere. Let her sleep or feed her first.</string>
+    <string name="not_enough_money">Too pricey</string>
+    <string name="pills_warning">Pills pay out instantly and bill you later. Use them when you know what you are doing.</string>
+    <string name="effect_hunger_surge">hunger drains faster for %1$dh</string>
+    <string name="effect_exhaustion">energy drains faster for %1$dh</string>
+
+    <string name="outcome_title">%1$s — done</string>
+    <string name="outcome_title_early">%1$s — cut short</string>
+    <string name="quality_great">Brilliant shift!</string>
+    <string name="quality_good">Went fine</string>
+    <string name="quality_poor">A bit rough</string>
+    <string name="quality_bad">A disaster</string>
+    <string name="outcome_hint_work">A happier pet earns much more. Feed her and let her rest before the next shift.</string>
+    <string name="outcome_hint_study">Studying in a bad mood barely sticks. Cheer her up first.</string>
+
+    <string name="game_start">Start</string>
+    <string name="game_again">Play again</string>
+    <string name="game_score">Score %1$d · %2$ds</string>
+    <string name="game_result">Caught %1$d</string>
+    <string name="game_reward" tools:ignore="PluralsCandidate">+%1$d mood · +%2$d ¥</string>
+    <string name="game_hint">Tap what pops up. Playing lifts her mood but costs energy.</string>
+    <string name="game_busy">She is busy right now.</string>
 
     <string name="bubble_title">Floating bubble</string>
     <string name="bubble_subtitle">Keep her on screen over other apps</string>
@@ -27,4 +95,6 @@
     <string name="overlay_channel_description">Keeps the pet on screen over other apps.</string>
     <string name="overlay_notification_title">Your pet is on screen</string>
     <string name="overlay_notification_text">Tap the bubble to feed her or put her to bed.</string>
+
+    <string name="widget_description">Your pet, her stats and one-tap care.</string>
 </resources>

@@ -7,11 +7,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,15 +19,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,20 +36,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
-import com.vpet.waifu.ui.accentColor
+import com.vpet.waifu.ui.accentFor
+import com.vpet.waifu.ui.character.AnimatedPet
 import com.vpet.waifu.ui.components.StatBar
-import com.vpet.waifu.ui.labelRes
-import com.vpet.waifu.ui.spriteRes
+import com.vpet.waifu.ui.formatRemaining
+import com.vpet.waifu.ui.occupationEmoji
+import com.vpet.waifu.ui.occupationNameRes
+import com.vpet.waifu.ui.stateLabelRes
 import com.vpet.waifu.ui.theme.StatColors
 
-private val BUBBLE_SIZE = 76.dp
-private val PANEL_WIDTH = 220.dp
+private val BUBBLE_SIZE = 84.dp
+private val PANEL_WIDTH = 232.dp
 
 /**
  * The floating pet and her mini-panel.
@@ -64,6 +64,7 @@ private val PANEL_WIDTH = 220.dp
 fun PetBubble(
     snapshot: PetSnapshot,
     tuning: PetTuning,
+    nowMillis: Long,
     expanded: Boolean,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
@@ -75,13 +76,13 @@ fun PetBubble(
     onOpenApp: () -> Unit,
     onHide: () -> Unit,
 ) {
-    val state = snapshot.state(tuning)
+    val state = snapshot.state(nowMillis, tuning)
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-            border = BorderStroke(2.dp, state.accentColor()),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+            border = BorderStroke(2.dp, accentFor(state)),
             shadowElevation = 6.dp,
             modifier = Modifier
                 .size(BUBBLE_SIZE)
@@ -89,10 +90,7 @@ fun PetBubble(
                 // which is what cancels the pending tap, so a flick to reposition
                 // her never also opens the panel.
                 .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = { onTap() },
-                        onLongPress = { onLongPress() },
-                    )
+                    detectTapGestures(onTap = { onTap() }, onLongPress = { onLongPress() })
                 }
                 .pointerInput(Unit) {
                     detectDragGestures(
@@ -104,15 +102,12 @@ fun PetBubble(
                     )
                 },
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Image(
-                    painter = painterResource(state.spriteRes()),
-                    contentDescription = stringResource(state.labelRes()),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp),
-                )
-            }
+            AnimatedPet(
+                state = state,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(3.dp),
+            )
         }
 
         AnimatedVisibility(
@@ -123,6 +118,7 @@ fun PetBubble(
             PetPanel(
                 snapshot = snapshot,
                 tuning = tuning,
+                nowMillis = nowMillis,
                 onFeed = onFeed,
                 onPet = onPet,
                 onToggleSleep = onToggleSleep,
@@ -137,6 +133,7 @@ fun PetBubble(
 private fun PetPanel(
     snapshot: PetSnapshot,
     tuning: PetTuning,
+    nowMillis: Long,
     onFeed: () -> Unit,
     onPet: () -> Unit,
     onToggleSleep: () -> Unit,
@@ -155,11 +152,40 @@ private fun PetPanel(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(
-                text = stringResource(snapshot.state(tuning).labelRes()),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.width(PANEL_WIDTH - 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(stateLabelRes(snapshot.state(nowMillis, tuning))),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "Lv ${snapshot.level} · ${snapshot.progress.money}¥",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // A shift in progress is the thing you most want to know from the
+            // bubble, so it gets the top of the panel.
+            snapshot.session?.let { session ->
+                val occupation = snapshot.occupation
+                if (occupation != null) {
+                    Text(
+                        text = "${occupationEmoji(occupation.id)} " +
+                            stringResource(occupationNameRes(occupation.id)) +
+                            " · " + formatRemaining(session.remainingMillis(nowMillis)),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    LinearProgressIndicator(
+                        progress = { session.progress(nowMillis) },
+                        modifier = Modifier.width(PANEL_WIDTH - 24.dp),
+                        drawStopIndicator = {},
+                    )
+                }
+            }
 
             StatBar(
                 label = stringResource(R.string.stat_hunger),
@@ -182,7 +208,9 @@ private fun PetPanel(
 
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.padding(top = 2.dp),
+                modifier = Modifier
+                    .width(PANEL_WIDTH - 24.dp)
+                    .padding(top = 2.dp),
             ) {
                 PanelAction(
                     icon = Icons.Default.Restaurant,
@@ -193,7 +221,7 @@ private fun PetPanel(
                 PanelAction(
                     icon = if (snapshot.isSleeping) Icons.Default.WbSunny else Icons.Default.Bedtime,
                     labelRes = if (snapshot.isSleeping) R.string.action_wake else R.string.action_sleep,
-                    enabled = true,
+                    enabled = !snapshot.isBusy,
                     onClick = onToggleSleep,
                 )
                 PanelAction(
@@ -229,8 +257,7 @@ private fun PanelAction(
     FilledTonalIconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.size(36.dp),
-        colors = IconButtonDefaults.filledTonalIconButtonColors(),
+        modifier = Modifier.size(38.dp),
     ) {
         Icon(
             imageVector = icon,

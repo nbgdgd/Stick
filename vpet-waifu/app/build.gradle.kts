@@ -83,6 +83,10 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    // Home-screen widget.
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+
     implementation(libs.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
 

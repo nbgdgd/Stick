@@ -2,12 +2,44 @@ package com.vpet.waifu.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.vpet.waifu.domain.PetProgress
 
-@Database(entities = [PetStateEntity::class], version = 1, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 2, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
     companion object {
         const val NAME = "vpet.db"
+
+        /**
+         * Phase 1 → Phase 2: money, EXP, jobs, pill effects and reactions.
+         *
+         * A real migration rather than a destructive one — anyone who already
+         * raised a pet on the Phase 1 build keeps her stats and her clock.
+         */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val columns = listOf(
+                    "money INTEGER NOT NULL DEFAULT ${PetProgress.START_MONEY}",
+                    "exp INTEGER NOT NULL DEFAULT 0",
+                    "sessionOccupationId TEXT",
+                    "sessionStartedAt INTEGER NOT NULL DEFAULT 0",
+                    "sessionEndsAt INTEGER NOT NULL DEFAULT 0",
+                    "effects TEXT NOT NULL DEFAULT ''",
+                    "outcomeOccupationId TEXT",
+                    "outcomeKind TEXT",
+                    "outcomeMoney INTEGER NOT NULL DEFAULT 0",
+                    "outcomeExp INTEGER NOT NULL DEFAULT 0",
+                    "outcomeQuality TEXT",
+                    "outcomeCancelled INTEGER NOT NULL DEFAULT 0",
+                    "outcomeAt INTEGER NOT NULL DEFAULT 0",
+                    "emote TEXT",
+                    "emoteUntil INTEGER NOT NULL DEFAULT 0",
+                )
+                columns.forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+            }
+        }
     }
 }

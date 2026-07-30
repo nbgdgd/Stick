@@ -8,6 +8,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vpet.waifu.data.PetRepository
+import com.vpet.waifu.widget.WidgetRefresher
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -25,10 +26,14 @@ class PetTickWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val repository: PetRepository,
+    private val widgetRefresher: WidgetRefresher,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         repository.tick()
+        // The widget is the only surface that can go stale with the app closed,
+        // so the background tick is also its refresh.
+        widgetRefresher.refresh()
         return Result.success()
     }
 

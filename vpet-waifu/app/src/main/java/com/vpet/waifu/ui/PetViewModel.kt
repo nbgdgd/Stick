@@ -1,11 +1,15 @@
-package com.vpet.waifu.ui.home
+package com.vpet.waifu.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.data.PetRepository
+import com.vpet.waifu.domain.Occupation
+import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
+import com.vpet.waifu.domain.ShopItem
+import com.vpet.waifu.widget.WidgetRefresher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,25 +20,34 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class HomeUiState(
+data class PetUiState(
     val snapshot: PetSnapshot? = null,
     val bubbleEnabled: Boolean = false,
 )
 
+/**
+ * One view model behind every tab.
+ *
+ * The tabs are views onto a single pet, so sharing the model keeps the stat
+ * bars, the countdown and the wallet identical everywhere without any
+ * cross-screen plumbing.
+ */
 @HiltViewModel
-class HomeViewModel @Inject constructor(
+class PetViewModel @Inject constructor(
     private val repository: PetRepository,
     private val preferences: PetPreferences,
+    private val widgetRefresher: WidgetRefresher,
+    val simulation: PetSimulation,
     val tuning: PetTuning,
 ) : ViewModel() {
 
-    val uiState: StateFlow<HomeUiState> =
+    val uiState: StateFlow<PetUiState> =
         combine(repository.snapshot, preferences.bubbleEnabled) { snapshot, bubbleEnabled ->
-            HomeUiState(snapshot, bubbleEnabled)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+            PetUiState(snapshot, bubbleEnabled)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PetUiState())
 
     init {
-        // Reopening the app is itself a tick: pay off everything owed since the
+        // Opening the app is itself a tick: pay off everything owed since the
         // last time anything ran, then keep the screen honest once a minute.
         viewModelScope.launch {
             while (isActive) {
@@ -48,15 +61,28 @@ class HomeViewModel @Inject constructor(
 
     fun pet() = act { repository.pet() }
 
-    fun toggleSleep() = act {
-        val current = repository.snapshotNow()
-        if (current.isSleeping) repository.wake() else repository.startSleep()
-    }
+    fun toggleSleep() = act { repository.toggleSleep() }
+
+    fun startOccupation(occupation: Occupation) = act { repository.startOccupation(occupation) }
+
+    fun cancelOccupation() = act { repository.cancelOccupation() }
+
+    fun buy(item: ShopItem) = act { repository.buy(item) }
+
+    fun startPlaying() = act { repository.startPlaying() }
+
+    fun finishPlaying(score: Int) = act { repository.finishPlaying(score) }
+
+    fun acknowledgeOutcome() = act { repository.acknowledgeOutcome() }
 
     fun setBubbleEnabled(enabled: Boolean) = act { preferences.setBubbleEnabled(enabled) }
 
+    /** Every action ends by refreshing the widget, so the home screen never lies. */
     private fun act(block: suspend () -> Unit) {
-        viewModelScope.launch { block() }
+        viewModelScope.launch {
+            block()
+            widgetRefresher.refresh()
+        }
     }
 
     private companion object {

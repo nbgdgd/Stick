@@ -13,6 +13,18 @@ object StatColors {
     val Hunger = Color(0xFFF2994A)
     val Energy = Color(0xFF4FC3F7)
     val Mood = Color(0xFFBA68C8)
+    val Money = Color(0xFFFFB74D)
+    val Exp = Color(0xFF66BB6A)
+}
+
+/** Room backdrops behind the character, light and dark. */
+object StageColors {
+    val DayTop = Color(0xFFF6EEFF)
+    val DayBottom = Color(0xFFE3D6F7)
+    val NightTop = Color(0xFF2B2447)
+    val NightBottom = Color(0xFF1A1530)
+    val FloorLight = Color(0xFFD9C9F0)
+    val FloorDark = Color(0xFF272042)
 }
 
 private val Violet = Color(0xFF7B5EA7)

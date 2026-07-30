@@ -48,6 +48,19 @@
                 android:value="floating_pet_overlay" />
         </service>
 
+        <!-- Home-screen widget. updatePeriodMillis is the system's own refresh;
+             the app also pushes an update whenever her state changes. -->
+        <receiver
+            android:name=".widget.PetWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pet_widget_info" />
+        </receiver>
+
         <receiver
             android:name=".boot.BootReceiver"
             android:enabled="true"

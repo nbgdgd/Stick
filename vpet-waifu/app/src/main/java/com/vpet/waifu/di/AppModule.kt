@@ -24,7 +24,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PetDatabase =
-        Room.databaseBuilder(context, PetDatabase::class.java, PetDatabase.NAME).build()
+        Room.databaseBuilder(context, PetDatabase::class.java, PetDatabase.NAME)
+            .addMigrations(PetDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun providePetStateDao(database: PetDatabase): PetStateDao = database.petStateDao()

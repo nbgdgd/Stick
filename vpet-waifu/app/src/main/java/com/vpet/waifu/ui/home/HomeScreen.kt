@@ -1,13 +1,13 @@
 package com.vpet.waifu.ui.home
 
-import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,9 +20,11 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -31,69 +33,143 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
+import com.vpet.waifu.ui.components.LevelRing
+import com.vpet.waifu.ui.components.PetStage
 import com.vpet.waifu.ui.components.StatBar
-import com.vpet.waifu.ui.labelRes
-import com.vpet.waifu.ui.spriteRes
+import com.vpet.waifu.ui.components.StatChip
+import com.vpet.waifu.ui.formatRemaining
+import com.vpet.waifu.ui.occupationEmoji
+import com.vpet.waifu.ui.occupationNameRes
+import com.vpet.waifu.ui.stateLabelRes
 import com.vpet.waifu.ui.theme.StatColors
 
 /**
- * The "home" of the pet: the same three stats and the same actions the bubble
- * offers, plus the permission plumbing the bubble cannot ask for itself.
+ * Her room: the animated character, what she is up to, her stats, and the care
+ * actions that do not cost money.
  */
 @Composable
 fun HomeScreen(
-    state: HomeUiState,
+    snapshot: PetSnapshot,
     tuning: PetTuning,
+    nowMillis: Long,
+    bubbleEnabled: Boolean,
     overlayPermissionGranted: Boolean,
     onGrantOverlayPermission: () -> Unit,
+    onBubbleEnabledChange: (Boolean) -> Unit,
     onFeed: () -> Unit,
     onPet: () -> Unit,
     onToggleSleep: () -> Unit,
-    onBubbleEnabledChange: (Boolean) -> Unit,
+    onCancelOccupation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val snapshot = state.snapshot ?: return
+    val state = snapshot.state(nowMillis, tuning)
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        PetPortrait(snapshot, tuning)
+        HeaderRow(snapshot)
+
+        Box {
+            PetStage(state = state)
+            Text(
+                text = stringResource(stateLabelRes(state)),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(14.dp),
+            )
+        }
+
+        AnimatedVisibility(visible = snapshot.isBusy) {
+            SessionCard(snapshot, nowMillis, onCancelOccupation)
+        }
+
         StatsCard(snapshot)
-        ActionRow(snapshot, tuning, onFeed, onPet, onToggleSleep)
+        CareRow(snapshot, tuning, onFeed, onPet, onToggleSleep)
         BubbleCard(
-            bubbleEnabled = state.bubbleEnabled,
+            bubbleEnabled = bubbleEnabled,
             overlayPermissionGranted = overlayPermissionGranted,
             onGrantOverlayPermission = onGrantOverlayPermission,
             onBubbleEnabledChange = onBubbleEnabledChange,
         )
+        Spacer(Modifier.size(4.dp))
     }
 }
 
 @Composable
-private fun PetPortrait(snapshot: PetSnapshot, tuning: PetTuning) {
-    val petState = snapshot.state(tuning)
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(
-            painter = painterResource(petState.spriteRes()),
-            contentDescription = stringResource(petState.labelRes()),
-            modifier = Modifier.size(200.dp),
-        )
-        Text(
-            text = stringResource(petState.labelRes()),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+private fun HeaderRow(snapshot: PetSnapshot) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        LevelRing(exp = snapshot.progress.exp)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.level_label, snapshot.level),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        StatChip(emoji = "💰", text = "${snapshot.progress.money}", tint = StatColors.Money)
+    }
+}
+
+@Composable
+private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> Unit) {
+    val session = snapshot.session ?: return
+    val occupation = snapshot.occupation ?: return
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(occupationEmoji(occupation.id), style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(occupationNameRes(occupation.id)),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.session_remaining,
+                            formatRemaining(session.remainingMillis(nowMillis)),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                OutlinedButton(onClick = onCancel) {
+                    Text(stringResource(R.string.action_call_home))
+                }
+            }
+            LinearProgressIndicator(
+                progress = { session.progress(nowMillis) },
+                modifier = Modifier.fillMaxWidth(),
+                drawStopIndicator = {},
+            )
+        }
     }
 }
 
@@ -124,7 +200,7 @@ private fun StatsCard(snapshot: PetSnapshot) {
 }
 
 @Composable
-private fun ActionRow(
+private fun CareRow(
     snapshot: PetSnapshot,
     tuning: PetTuning,
     onFeed: () -> Unit,
@@ -135,23 +211,23 @@ private fun ActionRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ActionButton(
+        CareButton(
             icon = Icons.Default.Restaurant,
             label = stringResource(R.string.action_feed),
             enabled = snapshot.canFeed(tuning),
             onClick = onFeed,
             modifier = Modifier.weight(1f),
         )
-        ActionButton(
+        CareButton(
             icon = if (snapshot.isSleeping) Icons.Default.WbSunny else Icons.Default.Bedtime,
             label = stringResource(
                 if (snapshot.isSleeping) R.string.action_wake else R.string.action_sleep,
             ),
-            enabled = true,
+            enabled = !snapshot.isBusy,
             onClick = onToggleSleep,
             modifier = Modifier.weight(1f),
         )
-        ActionButton(
+        CareButton(
             icon = Icons.Default.Favorite,
             label = stringResource(R.string.action_pet),
             enabled = snapshot.acceptsInteraction,
@@ -162,17 +238,27 @@ private fun ActionRow(
 }
 
 @Composable
-private fun ActionButton(
+private fun CareButton(
     icon: ImageVector,
     label: String,
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    FilledTonalButton(onClick = onClick, enabled = enabled, modifier = modifier) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge)
+    FilledTonalButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            horizontal = 8.dp,
+            vertical = 12.dp,
+        ),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.size(4.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium)
+        }
     }
 }
 
@@ -191,7 +277,6 @@ private fun BubbleCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -219,18 +304,6 @@ private fun BubbleCard(
                 )
                 Button(onClick = onGrantOverlayPermission) {
                     Text(stringResource(R.string.action_grant_overlay))
-                }
-            } else {
-                OutlinedButton(
-                    onClick = { onBubbleEnabledChange(!bubbleEnabled) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        stringResource(
-                            if (bubbleEnabled) R.string.action_hide_bubble
-                            else R.string.action_show_bubble,
-                        ),
-                    )
                 }
             }
         }

@@ -3,8 +3,10 @@ package com.vpet.waifu.data
 import com.vpet.waifu.data.db.PetStateDao
 import com.vpet.waifu.data.db.toEntity
 import com.vpet.waifu.data.db.toSnapshot
+import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
+import com.vpet.waifu.domain.ShopItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -15,11 +17,11 @@ import javax.inject.Singleton
 /**
  * The one place the pet's state is read and written.
  *
- * Three different callers mutate the same save file — the UI, the overlay
- * service's 60-second ticker and the WorkManager job — potentially at the same
- * instant, so every mutation is a read-modify-write serialised by a [Mutex].
- * Without it, a tick landing between a feed's read and its write would silently
- * eat the food.
+ * Four different callers mutate the same save file — the UI, the overlay
+ * service's ticker, the WorkManager job and the widget — potentially at the
+ * same instant, so every mutation is a read-modify-write serialised by a
+ * [Mutex]. Without it, a tick landing between a feed's read and its write would
+ * silently eat the food.
  */
 @Singleton
 class PetRepository @Inject constructor(
@@ -31,8 +33,8 @@ class PetRepository @Inject constructor(
 
     /**
      * The stored state, as written. It is *not* advanced to "now" — observers
-     * get a fresh value because something is always ticking; see
-     * [snapshotNow] when an exact up-to-date value is needed on the spot.
+     * get a fresh value because something is always ticking; use [snapshotNow]
+     * when an exact up-to-date value is needed on the spot.
      */
     val snapshot: Flow<PetSnapshot> = dao.observe().map { stored ->
         stored?.toSnapshot() ?: PetSnapshot.initial(clock.nowMillis())
@@ -48,6 +50,31 @@ class PetRepository @Inject constructor(
     suspend fun startSleep(): PetSnapshot = mutate(simulation::startSleep)
 
     suspend fun wake(): PetSnapshot = mutate(simulation::wake)
+
+    suspend fun toggleSleep(): PetSnapshot = mutate { current, now ->
+        if (current.isSleeping) simulation.wake(current, now) else simulation.startSleep(current, now)
+    }
+
+    suspend fun startOccupation(occupation: Occupation): PetSnapshot = mutate { current, now ->
+        simulation.startOccupation(current, occupation, now)
+    }
+
+    suspend fun cancelOccupation(): PetSnapshot = mutate(simulation::cancelOccupation)
+
+    suspend fun buy(item: ShopItem): PetSnapshot = mutate { current, now ->
+        simulation.buy(current, item, now)
+    }
+
+    suspend fun startPlaying(): PetSnapshot = mutate(simulation::startPlaying)
+
+    suspend fun finishPlaying(score: Int): PetSnapshot = mutate { current, now ->
+        simulation.finishPlaying(current, score, now)
+    }
+
+    /** Clears the "she finished her shift" card once the player has seen it. */
+    suspend fun acknowledgeOutcome(): PetSnapshot = mutate { current, _ ->
+        simulation.acknowledgeOutcome(current)
+    }
 
     /** Current state, decay included, without waiting for the next tick. */
     suspend fun snapshotNow(): PetSnapshot = tick()

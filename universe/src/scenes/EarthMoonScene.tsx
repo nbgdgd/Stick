@@ -279,12 +279,13 @@ export function EarthMoonScene() {
             position={[0, moonScale * 1.9, 0]}
             text={MOON.name}
             sub={phaseName}
+            priority={120}
             onClick={selectMoon}
           />
         )}
       </group>
 
-      {showLabels && <Label position={[0, 1.7, 0]} text={EARTH.name} onClick={selectEarth} />}
+      {showLabels && <Label position={[0, 1.7, 0]} text={EARTH.name} priority={125} onClick={selectEarth} />}
 
       {/* Линия Земля — Луна: наглядно, что приливные горбы вытянуты по ней */}
       {showOrbits && (

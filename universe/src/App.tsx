@@ -10,6 +10,7 @@ import { TimeControls } from './components/TimeControls'
 import { LevelRail } from './components/LevelRail'
 import { LoadingVeil } from './components/LoadingVeil'
 import { Sandbox } from './components/Sandbox'
+import { ZoomPad } from './components/ZoomPad'
 
 export default function App() {
   const levelIndex = useStore((s) => s.levelIndex)
@@ -64,7 +65,10 @@ export default function App() {
         // доходит до шести порядков, обычный z-буфер этого не держит
         gl={{ antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' }}
         camera={{ fov: 55, near: 0.001, far: 1e7, position: [0, 0, level.initialCameraDist] }}
-        dpr={[1, 2]}
+        // Верхняя граница 1,75, а не 2: на телефоне с плотностью 3x
+        // разница незаметна, а пикселей вдвое меньше. Дальше значение
+        // подстраивает AdaptiveQuality по фактической частоте кадров.
+        dpr={[1, 1.75]}
       >
         <Suspense fallback={null}>
           <SceneRoot />
@@ -74,6 +78,7 @@ export default function App() {
       <LoadingVeil />
       <Hud />
       <LevelRail />
+      <ZoomPad />
       <TimeControls />
       <FactPanel />
       <SearchOverlay />

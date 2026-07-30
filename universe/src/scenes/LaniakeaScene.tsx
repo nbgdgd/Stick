@@ -253,6 +253,12 @@ function StructureNode({
           text={s.name}
           sub={s.distMly > 0 ? `${s.distMly} млн св. лет` : 'мы здесь'}
           small={s.kind === 'group'}
+          priority={
+            s.id === 'local-group' ? 130
+            : s.kind === 'attractor' || s.kind === 'supercluster' ? 100
+            : s.kind === 'cluster' ? 80
+            : 45
+          }
           onClick={onPick}
         />
       )}

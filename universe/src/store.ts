@@ -54,6 +54,14 @@ interface UniverseState {
   /** N-body песочница активна */
   sandboxOpen: boolean
 
+  /**
+   * Уровень качества отрисовки. Меняется автоматически по частоте кадров
+   * (см. AdaptiveQuality), пользователь может зафиксировать вручную.
+   */
+  quality: 'high' | 'medium' | 'low'
+  /** true — пользователь выбрал качество сам, автоподбор отключён */
+  qualityLocked: boolean
+
   setLevel: (i: number, dir?: number) => void
   nextLevel: () => void
   prevLevel: () => void
@@ -75,6 +83,8 @@ interface UniverseState {
   setFocus: (id: string | null) => void
   setCameraDist: (d: number) => void
   setSandboxOpen: (v: boolean) => void
+  setQuality: (q: 'high' | 'medium' | 'low') => void
+  lockQuality: (q: 'high' | 'medium' | 'low') => void
 }
 
 export const useStore = create<UniverseState>((set, get) => ({
@@ -96,6 +106,8 @@ export const useStore = create<UniverseState>((set, get) => ({
   focusId: null,
   cameraDist: 0,
   sandboxOpen: false,
+  quality: 'high',
+  qualityLocked: false,
 
   setLevel: (i, dir) => {
     const clamped = Math.max(0, Math.min(LEVELS.length - 1, i))
@@ -130,6 +142,8 @@ export const useStore = create<UniverseState>((set, get) => ({
   setFocus: (id) => set({ focusId: id }),
   setCameraDist: (d) => set({ cameraDist: d }),
   setSandboxOpen: (v) => set({ sandboxOpen: v }),
+  setQuality: (q) => set((s) => (s.qualityLocked ? s : { quality: q })),
+  lockQuality: (q) => set({ quality: q, qualityLocked: true }),
 }))
 
 /** Пресеты скорости времени: подписи и значения (секунд симуляции на секунду). */

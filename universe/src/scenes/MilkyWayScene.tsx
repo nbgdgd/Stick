@@ -186,7 +186,7 @@ export function MilkyWayScene() {
           <sphereGeometry args={[1, 12, 10]} />
           <meshBasicMaterial color="#fff3c4" />
         </mesh>
-        {showLabels && <Label position={[0, 3.5, 0]} text="Солнце" sub="26 670 св. лет от центра" />}
+        {showLabels && <Label position={[0, 3.5, 0]} text="Солнце" sub="26 670 св. лет от центра" priority={125} />}
       </group>
 
       {/* Подписи рукавов */}
@@ -238,7 +238,15 @@ function GalacticMarker({
         <sphereGeometry args={[1, 10, 8]} />
         <meshBasicMaterial color={color} />
       </mesh>
-      {showLabel && <Label position={[0, size * 0.85, 0]} text={name} small onClick={onPick} />}
+      {showLabel && (
+        <Label
+          position={[0, size * 0.85, 0]}
+          text={name}
+          small
+          priority={kind === 'center' ? 120 : 60}
+          onClick={onPick}
+        />
+      )}
     </group>
   )
 }
@@ -262,7 +270,7 @@ function ArmLabels() {
   return (
     <>
       {labels.map((l) => (
-        <Label key={l.id} position={l.pos} text={l.name} small />
+        <Label key={l.id} position={l.pos} text={l.name} small priority={40} />
       ))}
     </>
   )

@@ -1,11 +1,14 @@
 /**
- * Верхняя панель: где мы находимся, какой сейчас масштаб, и переключатели.
+ * Верхняя панель: где мы находимся и какой сейчас масштаб.
  *
- * Индикатор масштаба — главный элемент против потери ориентации при зуме:
- * показывает и ширину видимой области в физических единицах, и порядок
- * величины (10ⁿ м), и расстояние от Земли до текущего центра внимания.
+ * Плотность специально низкая. В первой версии здесь одновременно жили
+ * название уровня, индикатор масштаба, переключатель масштаба расстояний и
+ * два чипа-тумблера — на телефоне это занимало четверть экрана и мешало
+ * смотреть на сцену. Сейчас постоянно видны только название уровня и
+ * индикатор масштаба; остальное — за кнопкой настроек.
  */
 
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { LEVELS, formatDistance, powerOfTen } from '../data/levels'
 
@@ -19,17 +22,30 @@ export function Hud() {
   const showLabels = useStore((s) => s.showLabels)
   const toggleLabels = useStore((s) => s.toggleLabels)
   const setSearchOpen = useStore((s) => s.setSearchOpen)
-  const selected = useStore((s) => s.selected)
   const setSandboxOpen = useStore((s) => s.setSandboxOpen)
+
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const settingsRef = useRef<HTMLDivElement>(null)
+
+  // Закрытие по тапу мимо
+  useEffect(() => {
+    if (!settingsOpen) return
+    const onDown = (e: PointerEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [settingsOpen])
 
   const level = LEVELS[levelIndex]
 
-  // Ширина видимой области: при вертикальном FOV 55° и расстоянии d
-  // видимая высота равна 2·d·tan(27,5°)
+  // При вертикальном поле зрения 55° и расстоянии d видимая высота равна 2·d·tg(27,5°)
   const viewSpanUnits = 2 * cameraDist * Math.tan((55 / 2) * (Math.PI / 180))
   const viewSpanM = viewSpanUnits * level.metersPerUnit
 
-  // Уровни, на которых сжатие масштаба вообще имеет смысл
+  // Сжатие расстояний осмысленно только там, где есть что сжимать
   const scaleToggleAvailable = level.id === 'solar-system' || level.id === 'earth-moon'
 
   return (
@@ -42,98 +58,98 @@ export function Hud() {
           </div>
           <div className="hud__level-text">
             <div className="hud__title">{level.title}</div>
-            <div className="hud__subtitle">{level.subtitle}</div>
+            <div className="hud__scale">
+              <span className="hud__scale-value">{formatDistance(viewSpanM)}</span>
+              <span className="hud__scale-power">{powerOfTen(viewSpanM)}</span>
+            </div>
           </div>
         </div>
 
         <div className="hud__actions">
-          <button
-            className="icon-btn"
-            onClick={() => setSandboxOpen(true)}
-            aria-label="Гравитационная песочница"
-            title="Гравитационная песочница (G)"
-          >
-            {/* Две массы и виток орбиты между ними */}
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
-              <ellipse cx="12" cy="12" rx="9" ry="5" />
-              <circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" />
-              <circle cx="21" cy="12" r="1.6" fill="currentColor" stroke="none" />
-            </svg>
-          </button>
           <button className="icon-btn" onClick={() => setSearchOpen(true)} aria-label="Поиск объекта" title="Поиск (/)">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-4.5-4.5" />
             </svg>
           </button>
+          <div className="hud__settings-wrap" ref={settingsRef}>
+            <button
+              className={`icon-btn${settingsOpen ? ' icon-btn--on' : ''}`}
+              onClick={() => setSettingsOpen((o) => !o)}
+              aria-label="Настройки отображения"
+            >
+              <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+                <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+                <circle cx="16" cy="7" r="2.2" />
+                <circle cx="10" cy="17" r="2.2" />
+              </svg>
+            </button>
+
+            {settingsOpen && (
+              <div className="hud__settings">
+                {scaleToggleAvailable && (
+                  <>
+                    <div className="hud__settings-title">Масштаб расстояний</div>
+                    <div className="seg">
+                      <button
+                        className={`seg__btn${!realScale ? ' seg__btn--on' : ''}`}
+                        onClick={() => setRealScale(false)}
+                      >
+                        Читаемый
+                      </button>
+                      <button
+                        className={`seg__btn${realScale ? ' seg__btn--on' : ''}`}
+                        onClick={() => setRealScale(true)}
+                      >
+                        Реальный
+                      </button>
+                    </div>
+                    <p className="hud__settings-hint">
+                      В реальном масштабе система выглядит пустой. Так и есть на самом деле.
+                    </p>
+                  </>
+                )}
+
+                <div className="hud__settings-title">Показывать</div>
+                <label className="hud__check">
+                  <input type="checkbox" checked={showOrbits} onChange={toggleOrbits} />
+                  Орбиты и опорные линии
+                </label>
+                <label className="hud__check">
+                  <input type="checkbox" checked={showLabels} onChange={toggleLabels} />
+                  Подписи объектов
+                </label>
+
+                <button
+                  className="hud__settings-action"
+                  onClick={() => {
+                    setSettingsOpen(false)
+                    setSandboxOpen(true)
+                  }}
+                >
+                  Гравитационная песочница
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Индикатор масштаба */}
-      <div className="scale-bar">
-        <div className="scale-bar__main">
-          <span className="scale-bar__label">В кадре</span>
-          <span className="scale-bar__value">{formatDistance(viewSpanM)}</span>
-          <span className="scale-bar__power">{powerOfTen(viewSpanM)}</span>
-        </div>
-        <div className="scale-bar__track">
-          {/* Логарифмическая линейка от 1 м (10⁰) до 10²⁷ м */}
+      {/* Логарифмическая линейка «Powers of Ten»: от 1 м до 10²⁷ м */}
+      <div className="scale-track">
+        <div
+          className="scale-track__fill"
+          style={{ width: `${Math.max(0, Math.min(100, (Math.log10(Math.max(viewSpanM, 1)) / 27) * 100))}%` }}
+        />
+        {LEVELS.map((l) => (
           <div
-            className="scale-bar__fill"
-            style={{ width: `${Math.max(0, Math.min(100, (Math.log10(Math.max(viewSpanM, 1)) / 27) * 100))}%` }}
+            key={l.id}
+            className={`scale-track__tick${l.index === levelIndex ? ' scale-track__tick--active' : ''}`}
+            style={{ left: `${(Math.log10(l.characteristicSizeM) / 27) * 100}%` }}
+            title={l.title}
           />
-          {LEVELS.map((l) => (
-            <div
-              key={l.id}
-              className={`scale-bar__tick${l.index === levelIndex ? ' scale-bar__tick--active' : ''}`}
-              style={{ left: `${(Math.log10(l.characteristicSizeM) / 27) * 100}%` }}
-              title={l.title}
-            />
-          ))}
-        </div>
-        {selected?.distanceM !== undefined && selected.distanceM > 0 && (
-          <div className="scale-bar__from-earth">
-            До «{selected.name}» от Земли: <strong>{formatDistance(selected.distanceM)}</strong>
-          </div>
-        )}
+        ))}
       </div>
-
-      <div className="toggles">
-        {scaleToggleAvailable ? (
-          <div className="seg">
-            <button
-              className={`seg__btn${!realScale ? ' seg__btn--on' : ''}`}
-              onClick={() => setRealScale(false)}
-              title="Расстояния сжаты, чтобы всё влезло в кадр"
-            >
-              Читаемый масштаб
-            </button>
-            <button
-              className={`seg__btn${realScale ? ' seg__btn--on' : ''}`}
-              onClick={() => setRealScale(true)}
-              title="Настоящие пропорции расстояний"
-            >
-              Реальный масштаб
-            </button>
-          </div>
-        ) : (
-          <div className="seg seg--note">Масштаб этого уровня — реальный</div>
-        )}
-
-        <button className={`chip${showOrbits ? ' chip--on' : ''}`} onClick={toggleOrbits}>
-          Орбиты
-        </button>
-        <button className={`chip${showLabels ? ' chip--on' : ''}`} onClick={toggleLabels}>
-          Подписи
-        </button>
-      </div>
-
-      {realScale && scaleToggleAvailable && (
-        <div className="hud__warning">
-          Реальный масштаб: планеты меньше пикселя, а между орбитами пустота. Так и есть на самом деле —
-          Солнечная система почти целиком состоит из ничего.
-        </div>
-      )}
     </div>
   )
 }

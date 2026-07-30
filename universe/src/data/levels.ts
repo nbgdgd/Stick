@@ -26,6 +26,12 @@ export interface Level {
   metersPerUnit: number
   /** начальное расстояние камеры от центра, в единицах сцены */
   initialCameraDist: number
+  /**
+   * Начальный угол камеры от вертикали, радианы. Меньше — вид сверху.
+   * Для Солнечной системы нужен почти плановый вид: при пологом взгляде
+   * орбиты проецируются в узкую полосу и планеты наползают друг на друга.
+   */
+  initialPhi?: number
   /** пределы зума камеры */
   minDist: number
   maxDist: number
@@ -59,6 +65,7 @@ export const LEVELS: Level[] = [
     subtitle: 'Приливы, фазы, приливный захват',
     metersPerUnit: 6.371e6,
     initialCameraDist: 50,
+    initialPhi: 0.75,
     minDist: 3,
     maxDist: 400,
     characteristicSizeM: 7.7e8,
@@ -74,6 +81,7 @@ export const LEVELS: Level[] = [
     subtitle: '8 планет, спутники, пояса астероидов и Койпера',
     metersPerUnit: 1.495978707e11, // 1 единица = 1 а.е.
     initialCameraDist: 30,
+    initialPhi: 0.62,
     minDist: 0.02,
     maxDist: 3000,
     characteristicSizeM: 1.5e13,
@@ -90,6 +98,7 @@ export const LEVELS: Level[] = [
     subtitle: '≈ 20 световых лет вокруг Солнца',
     metersPerUnit: 9.4607304725808e15, // 1 единица = 1 световой год
     initialCameraDist: 48,
+    initialPhi: 1.1,
     minDist: 0.5,
     maxDist: 300,
     characteristicSizeM: 3.8e17,
@@ -105,6 +114,7 @@ export const LEVELS: Level[] = [
     subtitle: 'Спиральные рукава, Sgr A*, шаровые скопления',
     metersPerUnit: 9.4607304725808e18, // 1 единица = 1000 световых лет
     initialCameraDist: 160,
+    initialPhi: 0.95,
     minDist: 3,
     maxDist: 900,
     characteristicSizeM: 9.5e20,

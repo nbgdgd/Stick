@@ -1,9 +1,14 @@
 /**
- * Вспышка на стыке уровней и заголовок нового масштаба.
+ * Вспышка на стыке уровней и короткий заголовок нового масштаба.
  *
  * Функциональная задача — прикрыть кадр, в котором старая сцена уже
- * размонтирована, а новая ещё грузит текстуры. Эстетическая — дать
- * ощущение непрерывного пролёта, а не переключения экрана.
+ * размонтирована, а новая ещё грузит текстуры.
+ *
+ * Раньше здесь же показывались описание уровня и блок «Симуляция». На
+ * телефоне это была стена текста поверх звёзд, которая налезала на подписи
+ * объектов. Описание переехало в панель фактов уровня (кнопка в шапке),
+ * а здесь осталось только название — его достаточно, чтобы понять,
+ * куда переместились.
  */
 
 import { useEffect, useState } from 'react'
@@ -19,7 +24,7 @@ export function LoadingVeil() {
 
   useEffect(() => {
     setShowTitle(true)
-    const t = setTimeout(() => setShowTitle(false), 2600)
+    const t = setTimeout(() => setShowTitle(false), 1700)
     return () => clearTimeout(t)
   }, [levelIndex])
 
@@ -27,14 +32,9 @@ export function LoadingVeil() {
     <>
       <div className={`veil${transitioning ? ' veil--on' : ''}`} />
       <div className={`level-title${showTitle ? ' level-title--on' : ''}`}>
-        <div className="level-title__index">Масштаб {level.index + 1}</div>
+        <div className="level-title__index">Масштаб {level.index + 1} из {LEVELS.length}</div>
         <div className="level-title__name">{level.title}</div>
         <div className="level-title__sub">{level.subtitle}</div>
-        <div className="level-title__desc">{level.description}</div>
-        <div className="level-title__sim">
-          <span className="level-title__sim-label">Симуляция</span>
-          {level.simulation}
-        </div>
       </div>
     </>
   )

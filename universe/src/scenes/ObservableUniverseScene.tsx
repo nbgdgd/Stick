@@ -177,7 +177,7 @@ export function ObservableUniverseScene() {
 
       {/* Мы — в центре наблюдаемой Вселенной, потому что это наш горизонт,
           а не потому, что Вселенная вокруг нас устроена особым образом */}
-      {showLabels && <Label position={[0, 12, 0]} text="Млечный Путь" sub="центр нашего горизонта" small />}
+      {showLabels && <Label position={[0, 12, 0]} text="Млечный Путь" sub="центр нашего горизонта" small priority={120} />}
     </group>
   )
 }
@@ -282,6 +282,7 @@ function RedshiftShells({ showLabels }: { showLabels: boolean }) {
               text={`z = ${s.z}`}
               sub={`${(s.mly / 1000).toFixed(1)} млрд св. лет · свет шёл ${s.ageGyr.toFixed(1)} млрд лет`}
               small
+              priority={30}
             />
           )}
         </group>
@@ -346,7 +347,7 @@ function FarStructure({
           onClick={onPick as never}
         />
       )}
-      {showLabel && <Label position={[0, drawSize * 0.6, 0]} text={name} small onClick={onPick} />}
+      {showLabel && <Label position={[0, drawSize * 0.6, 0]} text={name} small priority={75} onClick={onPick} />}
     </group>
   )
 }

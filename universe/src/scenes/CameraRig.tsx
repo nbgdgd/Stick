@@ -17,6 +17,7 @@ import { LEVELS } from '../data/levels'
 import { useStore } from '../store'
 import { getFocusPosition, getFocusRadius } from '../lib/focus'
 import { sunGeometry } from '../lib/sun'
+import { cameraBus } from '../lib/cameraBus'
 
 /** Плавная кривая для наездов: медленный старт, медленное торможение. */
 function easeInOutCubic(t: number): number {
@@ -56,6 +57,9 @@ export function CameraRig() {
     pinchDist: 0,
     // объект, на который надо навестись, как только сцена сообщит его радиус
     pendingFocus: null as string | null,
+    // для распознавания двойного касания
+    lastTapAt: 0,
+    movedPx: 0,
   })
 
   // Смена уровня: наезд от «продолжения» предыдущего масштаба к штатному виду.
@@ -72,6 +76,9 @@ export function CameraRig() {
     s.edgePressure = 0
     s.pendingFocus = null
     s.target.set(0, 0, 0)
+
+    // Наклон камеры по уровню, если задан
+    if (level.initialPhi !== undefined) s.phi = level.initialPhi
 
     // На уровнях Земли ставим камеру со стороны Солнца: иначе при открытии
     // мы смотрим в случайную точку и с равной вероятностью попадаем
@@ -104,9 +111,13 @@ export function CameraRig() {
       el.setPointerCapture(e.pointerId)
       s.lastPointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
       s.dragging = true
+      s.movedPx = 0
       if (s.lastPointers.size === 2) {
         const [a, b] = [...s.lastPointers.values()]
         s.pinchDist = Math.hypot(a.x - b.x, a.y - b.y)
+        // Начался пинч — гасим инерцию вращения, иначе камера уезжает
+        s.vTheta = 0
+        s.vPhi = 0
       }
     }
 
@@ -116,37 +127,61 @@ export function CameraRig() {
       const dx = e.clientX - prev.x
       const dy = e.clientY - prev.y
       s.lastPointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      s.movedPx += Math.abs(dx) + Math.abs(dy)
 
       if (s.lastPointers.size >= 2) {
-        // Пинч — зум
         const [a, b] = [...s.lastPointers.values()]
         const d = Math.hypot(a.x - b.x, a.y - b.y)
-        if (s.pinchDist > 0) {
+        if (s.pinchDist > 0 && d > 0) {
+          // Показатель 1,7 делает жест «сильнее», чем один к одному:
+          // на телефоне пальцы разводятся максимум вдвое, и при
+          // передаточном отношении 1:1 зум ощущается вязким.
           const ratio = s.pinchDist / d
-          s.dist *= Math.pow(ratio, 1.1)
+          s.dist *= Math.pow(ratio, 1.7)
           s.animating = false
+          cameraBus.zooming = true
         }
         s.pinchDist = d
       } else {
-        // Одним пальцем — орбита. Чувствительность в радианах на пиксель.
+        // Одним пальцем — орбита
         const rect = el.getBoundingClientRect()
-        s.vTheta -= (dx / rect.width) * 3.2
-        s.vPhi -= (dy / rect.height) * 2.4
+        s.vTheta -= (dx / rect.width) * 4.2
+        s.vPhi -= (dy / rect.height) * 3.2
         s.animating = false
       }
     }
 
     const onPointerUp = (e: PointerEvent) => {
+      const wasSingle = s.lastPointers.size === 1
       s.lastPointers.delete(e.pointerId)
-      if (s.lastPointers.size < 2) s.pinchDist = 0
-      if (s.lastPointers.size === 0) s.dragging = false
+      if (s.lastPointers.size < 2) {
+        s.pinchDist = 0
+        cameraBus.zooming = false
+      }
+      if (s.lastPointers.size === 0) {
+        s.dragging = false
+        // Двойное касание — приблизиться. Порог смещения нужен, чтобы
+        // короткий свайп не считался тапом.
+        if (wasSingle && s.movedPx < 12) {
+          const now = performance.now()
+          if (now - s.lastTapAt < 320) {
+            s.animFrom = s.dist
+            s.animTo = Math.max(LEVELS[useStore.getState().levelIndex].minDist, s.dist * 0.45)
+            s.animStart = now
+            s.animating = true
+            s.lastTapAt = 0
+          } else {
+            s.lastTapAt = now
+          }
+        }
+      }
     }
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      // Логарифмический зум: на любом масштабе один щелчок колеса
-      // меняет расстояние на одинаковую долю
-      s.vDist += Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY) / 100, 3) * 0.09
+      // Логарифмический зум: один щелчок колеса меняет расстояние
+      // на одинаковую долю на любом масштабе
+      s.vDist += Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY) / 100, 3) * 0.14
       s.animating = false
     }
 
@@ -184,12 +219,23 @@ export function CameraRig() {
         s.animating = false
         if (store.transitioning) store.finishTransition()
       }
+      // Кнопки зума работают и во время наезда: пользователь имеет
+      // право перебить анимацию
+      if (cameraBus.zoomFactor !== 1) {
+        s.dist *= cameraBus.zoomFactor
+        cameraBus.zoomFactor = 1
+        s.animating = false
+      }
     } else {
+      if (cameraBus.zoomFactor !== 1) {
+        s.dist *= cameraBus.zoomFactor
+        cameraBus.zoomFactor = 1
+      }
       // Инерция орбиты
       s.theta += s.vTheta * dt * 60 * 0.016
       s.phi += s.vPhi * dt * 60 * 0.016
-      s.vTheta *= 0.9
-      s.vPhi *= 0.9
+      s.vTheta *= 0.93
+      s.vPhi *= 0.93
       // Зум с инерцией, множителем — иначе на больших расстояниях он вязкий
       s.dist *= Math.exp(s.vDist)
       s.vDist *= 0.82
@@ -203,23 +249,31 @@ export function CameraRig() {
     // Считаем «давление» на предел: случайный перескок за границу не должен
     // мгновенно менять уровень, нужно осознанное продолжение жеста.
     if (!s.animating && !store.transitioning) {
+      // Порог 0,55 с вместо 0,28: при коротком пороге уровень
+      // переключался посреди обычного пинча и это читалось как сбой.
+      // Прогресс отдаём в интерфейс, чтобы переход не был неожиданным.
+      const HOLD = 0.55
       if (s.dist > lvl.maxDist) {
         s.dist = lvl.maxDist
         s.edgePressure += dt
-        if (s.edgePressure > 0.28 && store.levelIndex < LEVELS.length - 1) {
+        cameraBus.edgeDir = store.levelIndex < LEVELS.length - 1 ? 1 : 0
+        if (s.edgePressure > HOLD && store.levelIndex < LEVELS.length - 1) {
           store.nextLevel()
           s.edgePressure = 0
         }
       } else if (s.dist < lvl.minDist) {
         s.dist = lvl.minDist
         s.edgePressure += dt
-        if (s.edgePressure > 0.28 && store.levelIndex > 0) {
+        cameraBus.edgeDir = store.levelIndex > 0 ? -1 : 0
+        if (s.edgePressure > HOLD && store.levelIndex > 0) {
           store.prevLevel()
           s.edgePressure = 0
         }
       } else {
         s.edgePressure = Math.max(0, s.edgePressure - dt * 2)
+        if (s.edgePressure === 0) cameraBus.edgeDir = 0
       }
+      cameraBus.edgePressure = Math.min(1, s.edgePressure / HOLD)
     }
 
     // Наезд на объект: ждём, пока сцена зарегистрирует его радиус

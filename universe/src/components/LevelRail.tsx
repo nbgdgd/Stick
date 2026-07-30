@@ -1,7 +1,10 @@
 /**
- * Вертикальная линейка уровней масштаба справа — навигация и одновременно
- * карта «где я в порядках величины». Подписи расстояний берутся из
- * характерного размера уровня.
+ * Вертикальная линейка уровней справа: и навигация, и карта «где я
+ * в порядках величины».
+ *
+ * Кнопки «+» и «−» отсюда убраны: рядом с 3D-сценой они читаются как зум,
+ * а не как смена масштабного уровня. Зум и переход между уровнями теперь
+ * разведены по разным элементам (см. `ZoomPad`).
  */
 
 import { useStore } from '../store'
@@ -21,35 +24,11 @@ export function LevelRail() {
           onClick={() => setLevel(l.index)}
           disabled={transitioning}
           title={`${l.title} — ${formatDistance(l.characteristicSizeM)}`}
+          aria-label={l.title}
         >
           <span className="rail__dot" />
-          <span className="rail__text">
-            <span className="rail__title">{l.title}</span>
-            <span className="rail__size">{formatDistance(l.characteristicSizeM)}</span>
-          </span>
         </button>
       ))}
-
-      <div className="rail__nav">
-        <button
-          className="rail__arrow"
-          onClick={() => setLevel(levelIndex - 1)}
-          disabled={levelIndex === 0 || transitioning}
-          aria-label="Уровень внутрь"
-          title="Внутрь (←)"
-        >
-          −
-        </button>
-        <button
-          className="rail__arrow"
-          onClick={() => setLevel(levelIndex + 1)}
-          disabled={levelIndex === LEVELS.length - 1 || transitioning}
-          aria-label="Уровень наружу"
-          title="Наружу (→)"
-        >
-          +
-        </button>
-      </div>
     </div>
   )
 }

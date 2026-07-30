@@ -222,6 +222,13 @@ function StarBody({
           text={multipleName(item.star, members)}
           sub={item.star.distLy > 0 ? `${item.star.distLy.toFixed(1)} св. лет` : 'мы здесь'}
           small={item.star.distLy > 12}
+          // Солнце — точка отсчёта, звёзды с содержательной заметкой важнее
+          // безымянных карликов, дальние уступают ближним
+          priority={
+            item.star.id === 'sun' ? 130
+            : item.star.note ? 70 - item.star.distLy
+            : 35 - item.star.distLy
+          }
           onClick={onPick}
         />
       )}
@@ -262,7 +269,7 @@ function DistanceRings() {
         </line>
       ))}
       {geoms.map(({ r }) => (
-        <Label key={`l${r}`} position={[r, 0, 0]} text={`${r} св. лет`} small />
+        <Label key={`l${r}`} position={[r, 0, 0]} text={`${r} св. лет`} small priority={18} />
       ))}
     </group>
   )

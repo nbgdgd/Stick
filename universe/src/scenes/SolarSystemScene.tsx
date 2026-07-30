@@ -238,7 +238,7 @@ function SunBody({ texture, real, simTime }: { texture: THREE.Texture; real: boo
       <mesh ref={coronaRef} material={coronaMat} scale={r * 2.4}>
         <planeGeometry args={[2, 2]} />
       </mesh>
-      {showLabels && <Label position={[0, r * 2.4, 0]} text="Солнце" onClick={onSelect} />}
+      {showLabels && <Label position={[0, r * 2.4, 0]} text="Солнце" priority={130} onClick={onSelect} />}
     </group>
   )
 }
@@ -406,6 +406,9 @@ function PlanetBody({ planet, simTime, real, showOrbit, showLabel, cameraDist, f
             position={[0, r * 2.2 + (real ? 0.004 : 0.05), 0]}
             text={planet.name}
             small={planet.kind === 'dwarf'}
+            // Планеты вытесняют спутники и карликовые планеты, если
+            // подписи не помещаются рядом
+            priority={planet.kind === 'dwarf' ? 55 : 100}
             onClick={handleSelect}
           />
         )}
@@ -536,7 +539,7 @@ function MoonBody({
           <meshStandardMaterial color={moon.color} roughness={0.95} />
         )}
       </mesh>
-      {showLabel && <Label position={[0, rMoon * 3, 0]} text={moon.name} small />}
+      {showLabel && <Label position={[0, rMoon * 3, 0]} text={moon.name} small priority={45} />}
     </group>
   )
 }

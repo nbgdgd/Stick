@@ -10,6 +10,8 @@ import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import { useStore } from '../store'
 import { LEVELS } from '../data/levels'
 import { CameraRig } from './CameraRig'
+import { LabelDeclutter } from './LabelDeclutter'
+import { AdaptiveQuality } from './AdaptiveQuality'
 import { clearFocusRegistry } from '../lib/focus'
 import { EarthScene } from './EarthScene'
 import { EarthMoonScene } from './EarthMoonScene'
@@ -22,6 +24,7 @@ import { ObservableUniverseScene } from './ObservableUniverseScene'
 
 export function SceneRoot() {
   const levelIndex = useStore((s) => s.levelIndex)
+  const quality = useStore((s) => s.quality)
   const level = LEVELS[levelIndex]
 
   // Координаты объектов прошлой сцены больше не действительны
@@ -32,6 +35,8 @@ export function SceneRoot() {
   return (
     <>
       <CameraRig />
+      <LabelDeclutter />
+      <AdaptiveQuality />
       <Suspense fallback={null}>
         {level.id === 'earth' && <EarthScene />}
         {level.id === 'earth-moon' && <EarthMoonScene />}
@@ -43,10 +48,14 @@ export function SceneRoot() {
         {level.id === 'observable-universe' && <ObservableUniverseScene />}
       </Suspense>
 
-      {/* Bloom ставим сдержанно: на ярких точках он нужен, чтобы звёзды
-          выглядели как источники света, но на телефоне это самый дорогой
-          проход, поэтому разрешение half и один mip. */}
+      {/* Bloom — самый дорогой проход в кадре. На слабом устройстве он
+          снимается первым: без него сцена читается почти так же, а частота
+          кадров вырастает заметно. Виньетка стоит копейки и остаётся. */}
       <EffectComposer enableNormalPass={false}>
+        {quality === 'low' ? (
+          <Vignette eskil={false} offset={0.22} darkness={0.72} />
+        ) : (
+          <>
         <Bloom
           // На звёздных уровнях яркие точки должны «сиять», но порог 0,12
           // подхватывал вообще всё и заливал кадр. Поднят до 0,45.
@@ -57,6 +66,8 @@ export function SceneRoot() {
           radius={0.65}
         />
         <Vignette eskil={false} offset={0.22} darkness={0.72} />
+          </>
+        )}
       </EffectComposer>
     </>
   )

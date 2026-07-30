@@ -29,7 +29,7 @@ function IssLabel({ getPos, onClick }: { getPos: () => [number, number, number];
   })
   return (
     <group ref={ref}>
-      <Label position={[0, 0.06, 0]} text="МКС" sub="420 км, 7,66 км/с" small onClick={onClick} />
+      <Label position={[0, 0.06, 0]} text="МКС" sub="420 км, 7,66 км/с" small priority={60} onClick={onClick} />
     </group>
   )
 }

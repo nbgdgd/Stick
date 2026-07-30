@@ -128,6 +128,7 @@ function MwToM31Line({ items }: { items: { galaxy: Galaxy; pos: THREE.Vector3 }[
         text="2,54 млн св. лет"
         sub="сближаемся на 110 км/с"
         small
+        priority={70}
       />
     </group>
   )
@@ -179,6 +180,9 @@ function GalaxyBody({
           text={galaxy.name}
           sub={galaxy.distLy > 0 ? formatLy(galaxy.distLy) : 'мы здесь'}
           small={isDwarf}
+          // Крупные галактики группы вытесняют карликовые спутники:
+          // тех четырнадцать штук в одном градусе неба
+          priority={galaxy.id === 'milky-way' ? 130 : isDwarf ? 35 : 90}
           onClick={onPick}
         />
       )}

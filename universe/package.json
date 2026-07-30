@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "tex": "./scripts/fetch-textures.sh",
     "shots": "node scripts/shoot.mjs",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "test:ui": "node scripts/ui-test.mjs",
+    "shots:phone": "node scripts/phone-shot.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",

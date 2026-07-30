@@ -202,10 +202,14 @@ object PetPoseFactory {
             breath = slow,
             blink = 1f,
             droop = 1f,
-            headTiltDegrees = 15f,
-            headBob = 8f + slow * 1.5f,
-            bodyBounce = slow * 1.5f,
-            hairSwayDegrees = slow * 2f,
+            // Enough amplitude to actually read as breathing. At a point and a
+            // half of rise the only thing moving on the whole screen was the
+            // stream of Zs, which made her look like a still image with a
+            // sticker floating over it.
+            headTiltDegrees = 15f + slow * 2f,
+            headBob = 8f + slow * 3f,
+            bodyBounce = slow * 3.5f,
+            hairSwayDegrees = slow * 4f,
             ahogeDegrees = slow * 5f,
             leftArmDegrees = 0f,
             rightArmDegrees = 0f,

@@ -24,8 +24,10 @@ object TikTokSourceFactory {
     fun create(
         downloadDir: File,
         enableLogging: Boolean = false,
+        /** Supplies session cookies once the user signs in; anonymous by default. */
+        cookieProvider: TikTokCookieProvider = TikTokCookieProvider { null },
     ): TikTokStickerSource {
-        val client = buildHttpClient(enableLogging)
+        val client = buildHttpClient(enableLogging, cookieProvider)
         val retrofit = Retrofit.Builder()
             .baseUrl(TikTokApi.BASE_URL)
             .client(client)
@@ -40,12 +42,17 @@ object TikTokSourceFactory {
         )
     }
 
-    private fun buildHttpClient(enableLogging: Boolean): OkHttpClient {
+    private fun buildHttpClient(
+        enableLogging: Boolean,
+        cookieProvider: TikTokCookieProvider,
+    ): OkHttpClient {
         val builder = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(40, TimeUnit.SECONDS)
             .followRedirects(true)
             .addInterceptor(defaultHeaders())
+            // Adds the signed-in session to tiktok.com calls (and only those).
+            .addInterceptor(SessionInterceptor(cookieProvider))
             // Gentle spacing for the comment API only (CDN downloads stay full speed).
             .addInterceptor(RateLimitInterceptor(minIntervalMs = 300, hostMatch = "www.tiktok.com"))
 

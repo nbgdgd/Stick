@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -30,8 +32,12 @@ import com.stick.app.ui.theme.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onOpenLogin: () -> Unit = {},
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val signedIn by viewModel.signedIn.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.nav_settings)) }) },
@@ -43,6 +49,30 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
+            // TikTok account --------------------------------------------------
+            Section("TikTok account") {
+                Text(
+                    if (signedIn) {
+                        "Signed in. Stick can read the full comment list, so it finds " +
+                            "every sticker a video has."
+                    } else {
+                        "Not signed in. TikTok only returns part of the comments to " +
+                            "anonymous apps, so some stickers stay out of reach."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (signedIn) {
+                    OutlinedButton(onClick = { viewModel.signOut() }) {
+                        Text("Sign out")
+                    }
+                } else {
+                    Button(onClick = onOpenLogin) {
+                        Text("Sign in to TikTok")
+                    }
+                }
+            }
+
             // Theme -----------------------------------------------------------
             Section(stringResource(R.string.settings_theme)) {
                 Row(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -14,6 +14,7 @@ object Routes {
     const val CATALOG = "catalog"
     const val SETTINGS = "settings"
 
+    const val LOGIN = "login"
     const val VIEWER = "viewer/{stickerId}"
     const val EDITOR = "editor/{stickerId}"
     const val EXPORT = "export/{stickerId}"

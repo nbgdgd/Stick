@@ -63,7 +63,82 @@ static func _generate(key: String) -> Texture2D:
 		"scrap_node": return _scrap()
 		"settlement": return _settlement()
 		"spark": return _dot(Color(1.0, 0.9, 0.6))
+		"prop_rock": return _rock()
+		"prop_scrap": return _scrap_pile()
+		"prop_wreck": return _wreck()
+		"prop_debris": return _debris()
 	return _dot(Color(1, 0, 1))
+
+
+## Валун: тёплый серый, светлая грань сверху-слева — совпадает с направлением
+## света в шейдере террейна, иначе пропы «висят» отдельно от рельефа.
+static func _rock() -> Texture2D:
+	var img := Image.create(7, 6, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var dark := Color(0.28, 0.26, 0.24)
+	var body := Color(0.42, 0.40, 0.37)
+	var lit := Color(0.56, 0.54, 0.50)
+	for p in [Vector2i(2, 1), Vector2i(3, 1), Vector2i(4, 1),
+			Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2), Vector2i(5, 2),
+			Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3), Vector2i(4, 3), Vector2i(5, 3),
+			Vector2i(2, 4), Vector2i(3, 4), Vector2i(4, 4)]:
+		img.set_pixel(p.x, p.y, body)
+	img.set_pixel(2, 1, lit)
+	img.set_pixel(3, 1, lit)
+	img.set_pixel(1, 2, lit)
+	for p in [Vector2i(2, 4), Vector2i(3, 4), Vector2i(4, 4), Vector2i(5, 3)]:
+		img.set_pixel(p.x, p.y, dark)
+	return _texture_from(img)
+
+
+## Куча лома: ржавые обломки с блёстками металла.
+static func _scrap_pile() -> Texture2D:
+	var img := Image.create(9, 7, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var rust := Color(0.44, 0.28, 0.16)
+	var rust_d := Color(0.30, 0.19, 0.11)
+	var metal := Color(0.62, 0.62, 0.64)
+	for x in range(1, 8):
+		img.set_pixel(x, 5, rust_d)
+	for p in [Vector2i(2, 4), Vector2i(3, 4), Vector2i(4, 4), Vector2i(5, 4), Vector2i(6, 4),
+			Vector2i(3, 3), Vector2i(4, 3), Vector2i(5, 3), Vector2i(4, 2)]:
+		img.set_pixel(p.x, p.y, rust)
+	img.set_pixel(4, 2, metal)
+	img.set_pixel(6, 4, metal)
+	img.set_pixel(2, 4, rust_d)
+	img.set_pixel(1, 4, rust)
+	img.set_pixel(7, 4, rust)
+	return _texture_from(img)
+
+
+## Остов сброшенного контейнера на берегу — след того, как остров стал свалкой.
+static func _wreck() -> Texture2D:
+	var img := Image.create(12, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var hull := Color(0.38, 0.36, 0.34)
+	var hull_d := Color(0.24, 0.23, 0.22)
+	var rust := Color(0.46, 0.28, 0.15)
+	for y in range(2, 6):
+		for x in range(1, 11):
+			img.set_pixel(x, y, hull if (x + y) % 3 != 0 else rust)
+	for x in range(1, 11):
+		img.set_pixel(x, 6, hull_d)
+		img.set_pixel(x, 1, hull_d if x % 2 == 0 else hull)
+	img.set_pixel(1, 2, hull_d)
+	img.set_pixel(10, 5, rust)
+	return _texture_from(img)
+
+
+## Мелкий мусор: пара точек, чтобы грунт не был идеально чистым.
+static func _debris() -> Texture2D:
+	var img := Image.create(5, 4, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c := Color(0.36, 0.31, 0.25)
+	img.set_pixel(1, 2, c)
+	img.set_pixel(2, 2, c)
+	img.set_pixel(3, 1, Color(0.44, 0.40, 0.34))
+	img.set_pixel(2, 3, Color(0.26, 0.23, 0.19))
+	return _texture_from(img)
 
 
 static func _texture_from(img: Image) -> Texture2D:

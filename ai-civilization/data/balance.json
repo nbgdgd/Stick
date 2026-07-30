@@ -15,12 +15,14 @@
 	},
 	"world": {
 		"map_size": 192,
-		"island_radius_frac": 0.4,
+		"island_radius_frac": 0.46,
 		"noise_frequency": 0.028,
 		"sea_level": 0.46,
 		"tile_size": 16.0,
 		"start_settlements": 3,
-		"scrap_field_frequency": 0.06
+		"scrap_field_frequency": 0.06,
+		"prop_budget": 420,
+		"_comment_props": "prop_budget — предел числа статичных пропов на карте (камни, кучи лома, обломки); разброс детерминирован от world_seed."
 	},
 	"tier": {
 		"tier1_radius": 780.0,

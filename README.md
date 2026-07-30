@@ -1,5 +1,10 @@
 # Stick
 
+> This repository also hosts a second, unrelated Android app:
+> [**vpet-waifu**](vpet-waifu/README.md) — an anime desktop-pet that floats over
+> other apps. It shares only the Gradle wrapper and the version catalog.
+> Build it with `./gradlew :vpet-waifu:app:assembleDebug`.
+
 A modern Android app for **saving animated stickers from TikTok comments** and
 converting them into **Telegram sticker formats** — as fast and frictionless as
 possible.

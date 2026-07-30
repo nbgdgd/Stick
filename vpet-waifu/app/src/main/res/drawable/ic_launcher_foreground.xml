@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive-icon foreground: the idle sprite, scaled into the 72dp safe zone
+     of the 108dp canvas (200 * 0.34 = 68, centred at 20,20). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.34"
+        android:scaleY="0.34"
+        android:translateX="20"
+        android:translateY="20">
+
+        <path
+            android:fillColor="#6B4E96"
+            android:pathData="M13,120 a17,36 0 1,0 34,0 a17,36 0 1,0 -34,0 Z" />
+        <path
+            android:fillColor="#6B4E96"
+            android:pathData="M153,120 a17,36 0 1,0 34,0 a17,36 0 1,0 -34,0 Z" />
+        <path
+            android:fillColor="#7B5EA7"
+            android:pathData="M32,104 a68,72 0 1,0 136,0 a68,72 0 1,0 -136,0 Z" />
+        <path
+            android:fillColor="#5B4A8A"
+            android:pathData="M52,182 C58,164 78,156 100,156 C122,156 142,164 148,182 L148,200 L52,200 Z" />
+        <path
+            android:fillColor="#FFE0CE"
+            android:pathData="M50,110 a50,53 0 1,0 100,0 a50,53 0 1,0 -100,0 Z" />
+        <path
+            android:fillColor="#7B5EA7"
+            android:pathData="M50,100 C48,58 66,36 100,36 C134,36 152,58 150,100 C146,80 138,68 128,62 C122,80 108,86 96,74 C88,88 70,92 58,80 C55,88 52,94 50,100 Z" />
+        <path
+            android:fillColor="#3B2B52"
+            android:pathData="M69,116 a11,14 0 1,0 22,0 a11,14 0 1,0 -22,0 Z" />
+        <path
+            android:fillColor="#3B2B52"
+            android:pathData="M109,116 a11,14 0 1,0 22,0 a11,14 0 1,0 -22,0 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M72,110 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M112,110 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" />
+        <path
+            android:fillColor="#F58BA8"
+            android:fillAlpha="0.55"
+            android:pathData="M51,134 a11,6 0 1,0 22,0 a11,6 0 1,0 -22,0 Z" />
+        <path
+            android:fillColor="#F58BA8"
+            android:fillAlpha="0.55"
+            android:pathData="M127,134 a11,6 0 1,0 22,0 a11,6 0 1,0 -22,0 Z" />
+        <path
+            android:strokeColor="#C4576E"
+            android:strokeWidth="3.5"
+            android:strokeLineCap="round"
+            android:pathData="M92,140 Q100,148 108,140" />
+    </group>
+</vector>

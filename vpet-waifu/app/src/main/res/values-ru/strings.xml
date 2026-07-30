@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VPet Waifu</string>
+
+    <string name="stat_hunger">Голод</string>
+    <string name="stat_energy">Энергия</string>
+    <string name="stat_mood">Настроение</string>
+
+    <string name="state_idle">Отдыхает</string>
+    <string name="state_hungry">Голодная</string>
+    <string name="state_sleeping">Спит</string>
+
+    <string name="action_feed">Покормить</string>
+    <string name="action_sleep">Спать</string>
+    <string name="action_wake">Разбудить</string>
+    <string name="action_pet">Погладить</string>
+    <string name="action_open_app">Открыть приложение</string>
+    <string name="action_show_bubble">Показать питомца</string>
+    <string name="action_hide_bubble">Скрыть питомца</string>
+    <string name="action_grant_overlay">Открыть настройки</string>
+
+    <string name="bubble_title">Плавающий питомец</string>
+    <string name="bubble_subtitle">Держать её на экране поверх других приложений</string>
+    <string name="overlay_permission_rationale">Чтобы висеть поверх других приложений, нужно разрешение «Поверх других приложений».</string>
+
+    <string name="overlay_channel_name">Плавающий питомец</string>
+    <string name="overlay_channel_description">Держит питомца на экране поверх других приложений.</string>
+    <string name="overlay_notification_title">Питомец на экране</string>
+    <string name="overlay_notification_text">Нажмите на неё, чтобы покормить или уложить спать.</string>
+</resources>

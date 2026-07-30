@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VPet Waifu</string>
+
+    <string name="stat_hunger">Hunger</string>
+    <string name="stat_energy">Energy</string>
+    <string name="stat_mood">Mood</string>
+
+    <string name="state_idle">Hanging out</string>
+    <string name="state_hungry">Hungry</string>
+    <string name="state_sleeping">Sleeping</string>
+
+    <string name="action_feed">Feed</string>
+    <string name="action_sleep">Sleep</string>
+    <string name="action_wake">Wake up</string>
+    <string name="action_pet">Pet</string>
+    <string name="action_open_app">Open app</string>
+    <string name="action_show_bubble">Show bubble</string>
+    <string name="action_hide_bubble">Hide bubble</string>
+    <string name="action_grant_overlay">Open settings</string>
+
+    <string name="bubble_title">Floating bubble</string>
+    <string name="bubble_subtitle">Keep her on screen over other apps</string>
+    <string name="overlay_permission_rationale">To float over other apps she needs the "Display over other apps" permission.</string>
+
+    <string name="overlay_channel_name">Floating pet</string>
+    <string name="overlay_channel_description">Keeps the pet on screen over other apps.</string>
+    <string name="overlay_notification_title">Your pet is on screen</string>
+    <string name="overlay_notification_text">Tap the bubble to feed her or put her to bed.</string>
+</resources>

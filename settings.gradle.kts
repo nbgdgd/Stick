@@ -34,3 +34,18 @@ include(":sticker-source")
 // The application module: UI (Compose/Material 3), persistence, media conversion,
 // dependency injection and navigation.
 include(":app")
+
+// ---------------------------------------------------------------------------
+// vpet-waifu — a second, independent Android app that lives in this repository.
+// It shares nothing with Stick except the Gradle wrapper and the version
+// catalog. See vpet-waifu/README.md.
+// ---------------------------------------------------------------------------
+
+// Pure-Kotlin simulation: stats, balance tuning, the state machine and the
+// deterministic "advance the world by N minutes" core. No Android APIs, so the
+// whole game loop is unit-testable on the JVM.
+include(":vpet-waifu:domain")
+
+// The Android app: overlay bubble service, Compose UI, Room persistence and the
+// WorkManager catch-up tick.
+include(":vpet-waifu:app")

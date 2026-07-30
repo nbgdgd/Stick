@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Placeholder sprite: IDLE.
+
+  Hand-authored vectors stand in for the real art so the state machine, the
+  overlay and the balance can all be exercised now. The art pipeline (ComfyUI +
+  Wan 2.2 I2V → sprite sheet / WebM with alpha) replaces these three files
+  without touching a line of Kotlin: keep the names pet_idle / pet_hungry /
+  pet_sleeping and the mapping in ui/PetSprites.kt keeps working.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Twin tails -->
+    <path
+        android:fillColor="#6B4E96"
+        android:pathData="M13,120 a17,36 0 1,0 34,0 a17,36 0 1,0 -34,0 Z" />
+    <path
+        android:fillColor="#6B4E96"
+        android:pathData="M153,120 a17,36 0 1,0 34,0 a17,36 0 1,0 -34,0 Z" />
+
+    <!-- Hair, back layer -->
+    <path
+        android:fillColor="#7B5EA7"
+        android:pathData="M32,104 a68,72 0 1,0 136,0 a68,72 0 1,0 -136,0 Z" />
+
+    <!-- Shoulders -->
+    <path
+        android:fillColor="#5B4A8A"
+        android:pathData="M52,182 C58,164 78,156 100,156 C122,156 142,164 148,182 L148,200 L52,200 Z" />
+    <path
+        android:fillColor="#F2EAFB"
+        android:pathData="M88,157 L100,172 L112,157 L104,154 L100,160 L96,154 Z" />
+
+    <!-- Face -->
+    <path
+        android:fillColor="#FFE0CE"
+        android:pathData="M44,114 a8,11 0 1,0 16,0 a8,11 0 1,0 -16,0 Z" />
+    <path
+        android:fillColor="#FFE0CE"
+        android:pathData="M140,114 a8,11 0 1,0 16,0 a8,11 0 1,0 -16,0 Z" />
+    <path
+        android:fillColor="#FFE0CE"
+        android:pathData="M50,110 a50,53 0 1,0 100,0 a50,53 0 1,0 -100,0 Z" />
+
+    <!-- Fringe -->
+    <path
+        android:fillColor="#7B5EA7"
+        android:pathData="M50,100 C48,58 66,36 100,36 C134,36 152,58 150,100 C146,80 138,68 128,62 C122,80 108,86 96,74 C88,88 70,92 58,80 C55,88 52,94 50,100 Z" />
+    <path
+        android:fillColor="#9C7FCB"
+        android:pathData="M64,64 C76,48 96,41 116,45 C100,48 82,55 70,70 Z" />
+
+    <!-- Brows -->
+    <path
+        android:strokeColor="#5A4276"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M68,97 Q80,92 92,95" />
+    <path
+        android:strokeColor="#5A4276"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M132,97 Q120,92 108,95" />
+
+    <!-- Eyes -->
+    <path
+        android:fillColor="#3B2B52"
+        android:pathData="M69,116 a11,14 0 1,0 22,0 a11,14 0 1,0 -22,0 Z" />
+    <path
+        android:fillColor="#3B2B52"
+        android:pathData="M109,116 a11,14 0 1,0 22,0 a11,14 0 1,0 -22,0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M72,110 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M112,110 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6"
+        android:pathData="M82,122 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6"
+        android:pathData="M122,122 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0 Z" />
+
+    <!-- Blush -->
+    <path
+        android:fillColor="#F58BA8"
+        android:fillAlpha="0.55"
+        android:pathData="M51,134 a11,6 0 1,0 22,0 a11,6 0 1,0 -22,0 Z" />
+    <path
+        android:fillColor="#F58BA8"
+        android:fillAlpha="0.55"
+        android:pathData="M127,134 a11,6 0 1,0 22,0 a11,6 0 1,0 -22,0 Z" />
+
+    <!-- Mouth: a small smile -->
+    <path
+        android:strokeColor="#C4576E"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M92,140 Q100,148 108,140" />
+</vector>

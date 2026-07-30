@@ -7,7 +7,7 @@ import com.stick.app.media.AnimatedFrameExtractor
 import com.stick.app.media.FfmpegFrameFormatConverter
 import com.stick.app.media.FrameFormatConverter
 import com.stick.app.media.LottiePacker
-import com.stick.app.media.Media3MediaConverter
+import com.stick.app.media.PlatformMediaConverter
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -41,5 +41,5 @@ object MediaModule {
     fun provideMediaConverter(
         @ApplicationContext context: Context,
         frameFormatConverter: FrameFormatConverter,
-    ): MediaConverter = Media3MediaConverter(context, frameFormatConverter)
+    ): MediaConverter = PlatformMediaConverter(context, frameFormatConverter)
 }

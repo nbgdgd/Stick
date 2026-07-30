@@ -25,7 +25,7 @@ import java.io.File
  * write every target — including Telegram `.webm` from a still image, which the
  * platform `Transformer` cannot do (and which used to crash export).
  */
-class Media3MediaConverter(
+class PlatformMediaConverter(
     private val context: Context,
     private val frameFormatConverter: FrameFormatConverter,
 ) : MediaConverter {

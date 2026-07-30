@@ -93,9 +93,6 @@ dependencies {
     implementation(libs.coil.gif)
 
     // Media playback + transform (hardware-accelerated conversion pipeline)
-    implementation(libs.media3.exoplayer)
-    implementation(libs.media3.ui)
-    implementation(libs.media3.transformer)
 
     // FFmpeg backend for frame-container encoders the platform codecs can't write
     // (animated GIF/WebP/APNG). Bound in di/MediaModule.

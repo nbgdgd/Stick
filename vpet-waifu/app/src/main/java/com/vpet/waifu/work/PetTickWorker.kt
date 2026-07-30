@@ -8,6 +8,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vpet.waifu.data.PetRepository
+import com.vpet.waifu.widget.WidgetRefresher
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -25,11 +26,21 @@ class PetTickWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val repository: PetRepository,
+    private val widgets: WidgetRefresher,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        // Writing here is what wakes WidgetSync, which redraws the widget.
         repository.tick()
+        // Unconditionally, not by way of the write.
+        //
+        // The widget renders the world advanced to now, so what it should show
+        // drifts whether or not anything is being written down: she gets
+        // hungry, she wakes up by herself, her shift ends. Hanging the redraw
+        // off a database write meant that with the app closed — the only time
+        // this worker runs at all — a tick that changed no stored value, or
+        // changed one the picture does not depend on, left the widget frozen
+        // until something else happened to write. This is the heartbeat.
+        widgets.refresh()
         return Result.success()
     }
 

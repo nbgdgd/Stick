@@ -1,6 +1,8 @@
 package com.vpet.waifu.widget
 
 import com.vpet.waifu.TestPet
+import com.vpet.waifu.domain.Occupations
+import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.waitUntil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * The fix moved the trigger off the callers and onto the data, so these assert
  * the behaviour that matters: any write to the save file, from anywhere, ends
- * in exactly one widget redraw.
+ * in exactly one widget redraw — and nothing else does.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -38,7 +40,12 @@ class WidgetSyncTest {
     fun setUp() {
         pet = TestPet()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        WidgetSync(pet.repository) { refreshes.incrementAndGet() }.start(scope)
+        WidgetSync(
+            repository = pet.repository,
+            refresher = { refreshes.incrementAndGet() },
+            simulation = PetSimulation(),
+            clock = pet.clock,
+        ).start(scope)
     }
 
     @After
@@ -46,6 +53,9 @@ class WidgetSyncTest {
         scope.cancel()
         pet.close()
     }
+
+    private fun key(snapshot: com.vpet.waifu.domain.PetSnapshot) =
+        widgetKey(snapshot, pet.clock.nowMillis)
 
     @Test
     fun `putting her to sleep redraws the widget`() = runBlocking {
@@ -73,11 +83,11 @@ class WidgetSyncTest {
     }
 
     @Test
-    fun `feeding her redraws the widget`() = runBlocking {
+    fun `sending her to work redraws the widget`() = runBlocking {
         waitUntil { refreshes.get() >= 1 }
         val before = refreshes.get()
 
-        pet.repository.feed()
+        pet.repository.startOccupation(Occupations.WORK.first())
 
         waitUntil { refreshes.get() > before }
     }
@@ -101,52 +111,43 @@ class WidgetSyncTest {
         val awake = pet.repository.peek()
         val asleep = pet.repository.startSleep()
 
-        assertNotEquals(widgetKey(awake), widgetKey(asleep))
+        assertNotEquals(key(awake), key(asleep))
     }
 
     @Test
-    fun `the key ignores drift too small to show`() = runBlocking {
-        val before = pet.repository.peek()
-        // A few seconds of decay moves the floats but not the rounded numbers
-        // the widget prints, so it must not trigger a redraw.
-        pet.clock.nowMillis += 3_000
-        val after = pet.repository.peek()
+    fun `the key is what the widget draws and nothing else`() = runBlocking {
+        // The widget is the character alone now. A shift paying a coin a
+        // minute, and a few points of decay, produce a picture that is pixel
+        // for pixel the same — and every redraw marshals ten PNG frames to the
+        // launcher, so wanting one would be pure battery cost.
+        pet.repository.startOccupation(Occupations.WORK.first())
+        val atStart = key(pet.repository.peek())
 
-        assertEquals(widgetKey(before), widgetKey(after))
-    }
+        pet.clock.advanceMinutes(10)
+        val tenMinutesIn = key(pet.repository.peek())
 
-    @Test
-    fun `the key follows the wallet and the shift`() = runBlocking {
-        val idle = pet.repository.peek()
-        val working = pet.repository.startOccupation(com.vpet.waifu.domain.Occupations.WORK.first())
-
-        assertNotEquals(widgetKey(idle), widgetKey(working))
-    }
-
-    @Test
-    fun `a shift does not redraw the widget once a minute`() = runBlocking {
-        // Wages land every simulated minute now. Every frame of her animation
-        // is marshalled to the launcher on a redraw, so paying attention to
-        // single coins would mean a full transaction a minute for two hours.
-        pet.repository.startOccupation(com.vpet.waifu.domain.Occupations.WORK.first())
-
-        val keys = mutableSetOf<String>()
-        repeat(30) {
-            pet.clock.nowMillis += 60_000
-            keys += widgetKey(pet.repository.peek())
-        }
-
-        assertTrue("30 minutes on the clock wanted ${keys.size} redraws", keys.size <= 12)
+        assertEquals(atStart, tenMinutesIn)
     }
 
     @Test
     fun `the key still notices her getting hungry`() = runBlocking {
-        val fed = pet.repository.feed()
-        // Long enough for the bars to visibly move, but well short of a state
-        // change — the coarsening must not turn into blindness.
-        pet.clock.nowMillis += 60 * 60_000
-        val later = pet.repository.peek()
+        val fed = key(pet.repository.feed())
+        // Long enough to fall past the hungry threshold — the coarsening must
+        // not turn into blindness.
+        pet.clock.advanceMinutes(12 * 60)
+        val later = key(pet.repository.peek())
 
-        assertNotEquals(widgetKey(fed), widgetKey(later))
+        assertNotEquals(fed, later)
+    }
+
+    @Test
+    fun `the key notices a shift ending on its own`() = runBlocking {
+        val cafe = Occupations.WORK.first()
+        val working = key(pet.repository.startOccupation(cafe))
+
+        pet.clock.advanceMinutes(cafe.durationMinutes + 1L)
+        val done = key(pet.repository.peek())
+
+        assertNotEquals("she clocked off and the widget never noticed", working, done)
     }
 }

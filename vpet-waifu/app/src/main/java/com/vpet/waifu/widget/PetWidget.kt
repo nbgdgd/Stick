@@ -6,7 +6,6 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
@@ -14,51 +13,32 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.action.ActionCallback
-import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
-import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.ContentScale
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.vpet.waifu.MainActivity
 import com.vpet.waifu.R
 import com.vpet.waifu.data.PetRepository
-import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
-import com.vpet.waifu.domain.PetStats
 import com.vpet.waifu.ui.character.ART_HEIGHT
 import com.vpet.waifu.ui.character.ART_WIDTH
 import com.vpet.waifu.ui.character.PetRasterizer
 import com.vpet.waifu.ui.character.RoomColors
 import com.vpet.waifu.ui.character.RoomDetail
 import com.vpet.waifu.ui.theme.StageColors
-import com.vpet.waifu.ui.theme.StatColors
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -67,7 +47,12 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * The home-screen widget: the pet, animating, in the middle.
+ * The home-screen widget: her, in her room, and nothing else.
+ *
+ * No bars, no counters, no buttons. A widget of this size read as a dashboard
+ * with a mascot wedged in the corner; the stats belong in the app, and what
+ * belongs here is the character, big enough to actually see. Tapping anywhere
+ * opens the app.
  *
  * Two things a widget normally cannot do are solved here.
  *
@@ -91,29 +76,35 @@ class PetWidget : GlanceAppWidget() {
         // peek, not tick: the widget shows the world advanced to now, but a
         // redraw must not itself write to the save file.
         val snapshot = repositoryOf(context).peek()
-        val state = snapshot.state(System.currentTimeMillis())
+        // The same state WidgetSync keys the redraw on, so the picture and the
+        // decision to redraw it can never disagree.
+        val state = widgetState(snapshot, System.currentTimeMillis())
         val palette = WidgetPalette.of(context)
         val size = widgetSize(context, id)
-        val layout = WidgetLayout.forSize(size)
         val density = context.resources.displayMetrics.density
 
-        val stageHeightDp = layout.stageHeight(size)
+        val padding = paddingFor(size)
+        val stageHeightDp = stageHeight(size, padding)
         val stageWidthDp = stageHeightDp * (ART_WIDTH / ART_HEIGHT)
         val tempo = FlipTempo.forState(state)
 
         // Both bitmaps depend only on what is in their keys, and neither
-        // depends on a stat. Without the cache a wage landing every minute of a
-        // shift re-encoded the entire loop every minute.
+        // depends on a stat. Without the cache every redraw re-encoded the
+        // entire loop from scratch.
         val roomWidthPx = (size.width.value * density).roundToInt().coerceAtMost(MAX_ROOM_PX)
         val roomHeightPx = (size.height.value * density).roundToInt().coerceAtMost(MAX_ROOM_PX)
-        val floorFraction = (layout.padding + stageHeightDp * FEET_FRACTION) / size.height.value
-        val detail = if (layout == WidgetLayout.PORTRAIT_ONLY) RoomDetail.NONE else RoomDetail.WALL
+        val floorFraction = (padding + stageHeightDp * FEET_FRACTION) / size.height.value
+        val detail = if (size.height.value < 150f) RoomDetail.NONE else RoomDetail.WALL
 
-        val frames = FRAMES.getOrPut("$state|$tempo|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density") {
+        val frames = FRAMES.getOrPut(
+            "$state|$tempo|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density",
+        ) {
             renderFrames(state, tempo, stageWidthDp, stageHeightDp, density)
         }
         val flipper = buildFlipper(context, tempo, frames)
-        val room = ROOMS.getOrPut("${roomWidthPx}x$roomHeightPx|${palette.room.night}|${floorFraction.round3()}|$detail") {
+        val room = ROOMS.getOrPut(
+            "${roomWidthPx}x$roomHeightPx|${palette.room.night}|${floorFraction.round3()}|$detail",
+        ) {
             PetRasterizer.roomPng(
                 widthPx = roomWidthPx,
                 heightPx = roomHeightPx,
@@ -130,12 +121,9 @@ class PetWidget : GlanceAppWidget() {
         provideContent {
             GlanceTheme {
                 WidgetBody(
-                    snapshot = snapshot,
-                    state = state,
-                    palette = palette,
-                    layout = layout,
                     stageWidthDp = stageWidthDp,
                     stageHeightDp = stageHeightDp,
+                    padding = padding,
                     flipper = flipper,
                     room = ImageProvider(Icon.createWithData(room, 0, room.size)),
                 )
@@ -201,12 +189,9 @@ class PetWidget : GlanceAppWidget() {
 
     @Composable
     private fun WidgetBody(
-        snapshot: PetSnapshot,
-        state: PetState,
-        palette: WidgetPalette,
-        layout: WidgetLayout,
         stageWidthDp: Float,
         stageHeightDp: Float,
+        padding: Float,
         flipper: RemoteViews,
         room: ImageProvider,
     ) {
@@ -215,6 +200,7 @@ class PetWidget : GlanceAppWidget() {
                 .fillMaxSize()
                 .cornerRadius(CARD_CORNER_DP.dp)
                 .clickable(actionStartActivity<MainActivity>()),
+            contentAlignment = Alignment.Center,
         ) {
             // The room spans the whole widget so there is no panel edge around
             // the character; its rounded corners are baked into the bitmap
@@ -226,104 +212,15 @@ class PetWidget : GlanceAppWidget() {
                 modifier = GlanceModifier.fillMaxSize(),
             )
 
-            Column(
-                modifier = GlanceModifier.fillMaxSize().padding(layout.padding.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalAlignment = Alignment.CenterVertically,
+            Box(
+                modifier = GlanceModifier.fillMaxSize().padding(padding.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AndroidRemoteViews(
-                        remoteViews = flipper,
-                        modifier = GlanceModifier.size(stageWidthDp.dp, stageHeightDp.dp),
-                    )
-                }
-
-                if (layout.showsStats) {
-                    Spacer(GlanceModifier.height(8.dp))
-                    Text(
-                        text = headlineFor(state),
-                        style = TextStyle(
-                            fontWeight = FontWeight.Medium,
-                            color = ColorProvider(palette.textPrimary),
-                        ),
-                    )
-                    Spacer(GlanceModifier.height(6.dp))
-                    StatRow("🍙", snapshot.stats.hunger, StatColors.Hunger, palette)
-                    StatRow("⚡", snapshot.stats.energy, StatColors.Energy, palette)
-                    StatRow("💜", snapshot.stats.mood, StatColors.Mood, palette)
-                }
-
-                if (layout.showsFooter) {
-                    Spacer(GlanceModifier.height(6.dp))
-                    Row(
-                        modifier = GlanceModifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Lv ${snapshot.level}  ·  ${snapshot.progress.money} ¥",
-                            style = TextStyle(color = ColorProvider(palette.textSecondary)),
-                        )
-                        Spacer(GlanceModifier.defaultWeight())
-                        // Care without opening the app — the point of a widget.
-                        QuickAction("🍽", WidgetAction.FEED, snapshot.canFeed(), palette)
-                        Spacer(GlanceModifier.width(6.dp))
-                        QuickAction(
-                            if (snapshot.isSleeping) "☀" else "🌙",
-                            WidgetAction.TOGGLE_SLEEP,
-                            !snapshot.isBusy,
-                            palette,
-                        )
-                    }
-                }
+                AndroidRemoteViews(
+                    remoteViews = flipper,
+                    modifier = GlanceModifier.size(stageWidthDp.dp, stageHeightDp.dp),
+                )
             }
-        }
-    }
-
-    @Composable
-    private fun StatRow(icon: String, value: Float, color: Color, palette: WidgetPalette) {
-        Row(
-            modifier = GlanceModifier.fillMaxWidth().padding(bottom = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = icon)
-            Spacer(GlanceModifier.width(6.dp))
-            LinearProgressIndicator(
-                progress = (value / PetStats.MAX).coerceIn(0f, 1f),
-                modifier = GlanceModifier.defaultWeight().height(7.dp).cornerRadius(4.dp),
-                color = ColorProvider(color),
-                backgroundColor = ColorProvider(palette.track),
-            )
-        }
-    }
-
-    @Composable
-    private fun QuickAction(
-        label: String,
-        action: WidgetAction,
-        enabled: Boolean,
-        palette: WidgetPalette,
-    ) {
-        val base = GlanceModifier
-            .size(32.dp)
-            .cornerRadius(16.dp)
-            .background(ColorProvider(if (enabled) palette.action else palette.actionDisabled))
-        // actionRunCallback is itself composable, so the clickable modifier is
-        // built here rather than inside a conditional argument.
-        val modifier = if (enabled) {
-            base.clickable(
-                actionRunCallback<PetWidgetAction>(
-                    actionParametersOf(PetWidgetAction.ACTION_KEY to action.name),
-                ),
-            )
-        } else {
-            base
-        }
-
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            Text(text = label)
         }
     }
 
@@ -362,6 +259,22 @@ class PetWidget : GlanceAppWidget() {
             ROOMS.clear()
         }
 
+        /** Breathing room around the character, tighter on a small placement. */
+        internal fun paddingFor(size: DpSize): Float = if (size.height.value < 150f) 8f else 14f
+
+        /**
+         * How tall the character is drawn.
+         *
+         * With nothing else in the widget she simply takes it all, bounded by
+         * whichever of the two dimensions runs out first so she never overflows
+         * a short, wide placement.
+         */
+        internal fun stageHeight(size: DpSize, padding: Float): Float {
+            val byHeight = (size.height.value - padding * 2f).coerceAtLeast(48f)
+            val byWidth = (size.width.value - padding * 2f) * (ART_HEIGHT / ART_WIDTH)
+            return min(byHeight, byWidth)
+        }
+
         /** Redraws every placed widget. Cheap, and safe to call from anywhere. */
         suspend fun refresh(context: Context) {
             PetWidget().updateAll(context)
@@ -395,45 +308,6 @@ private enum class FlipTempo(val layoutRes: Int, val loopSeconds: Float) {
 }
 
 /**
- * How much of the widget fits.
- *
- * Small placements get the character alone — a 2x2 cell has no room for three
- * bars and still reads as a pet rather than a dashboard.
- */
-private enum class WidgetLayout(
-    val padding: Int,
-    val showsStats: Boolean,
-    val showsFooter: Boolean,
-) {
-    PORTRAIT_ONLY(padding = 6, showsStats = false, showsFooter = false),
-    WITH_STATS(padding = 10, showsStats = true, showsFooter = false),
-    FULL(padding = 12, showsStats = true, showsFooter = true),
-    ;
-
-    /** Height for the character, leaving room for whatever else is shown. */
-    fun stageHeight(size: DpSize): Float {
-        val available = size.height.value - padding * 2f
-        val reserved = (if (showsStats) 78f else 0f) + (if (showsFooter) 44f else 0f)
-        val byHeight = (available - reserved).coerceAtLeast(48f)
-        // Never so wide that the character overflows a short, wide widget.
-        val byWidth = (size.width.value - padding * 2f) * (ART_HEIGHT / ART_WIDTH)
-        return min(byHeight, byWidth)
-    }
-
-    companion object {
-        fun forSize(size: DpSize): WidgetLayout {
-            val w = size.width.value
-            val h = size.height.value
-            return when {
-                h >= 200f && w >= 200f -> FULL
-                h >= 130f && w >= 150f -> WITH_STATS
-                else -> PORTRAIT_ONLY
-            }
-        }
-    }
-}
-
-/**
  * Widget colours.
  *
  * Glance 1.1 exposes only the single-`Color` provider — the resource-id and
@@ -441,14 +315,7 @@ private enum class WidgetLayout(
  * is resolved from the configuration here instead. Widgets are re-provided on a
  * configuration change, so this stays correct when the system theme flips.
  */
-private data class WidgetPalette(
-    val textPrimary: Color,
-    val textSecondary: Color,
-    val track: Color,
-    val action: Color,
-    val actionDisabled: Color,
-    val room: RoomColors,
-) {
+private data class WidgetPalette(val room: RoomColors) {
     companion object {
         fun of(context: Context): WidgetPalette {
             val night = context.resources.configuration.uiMode and
@@ -456,34 +323,21 @@ private data class WidgetPalette(
             return if (night) Dark else Light
         }
 
-        private val DayRoom = RoomColors(
-            top = StageColors.DayTop,
-            bottom = StageColors.DayBottom,
-            floor = StageColors.FloorLight,
-            night = false,
-        )
-        private val NightRoom = RoomColors(
-            top = StageColors.NightTop,
-            bottom = StageColors.NightBottom,
-            floor = StageColors.FloorDark,
-            night = true,
-        )
-
         private val Light = WidgetPalette(
-            textPrimary = Color(0xFF3C2F60),
-            textSecondary = Color(0xFF6E5D97),
-            track = Color(0x22000000),
-            action = Color(0xFFE2D6F8),
-            actionDisabled = Color(0x14000000),
-            room = DayRoom,
+            RoomColors(
+                top = StageColors.DayTop,
+                bottom = StageColors.DayBottom,
+                floor = StageColors.FloorLight,
+                night = false,
+            ),
         )
         private val Dark = WidgetPalette(
-            textPrimary = Color(0xFFE7DDFB),
-            textSecondary = Color(0xFFB9A8DC),
-            track = Color(0x33FFFFFF),
-            action = Color(0xFF3E3363),
-            actionDisabled = Color(0x1AFFFFFF),
-            room = NightRoom,
+            RoomColors(
+                top = StageColors.NightTop,
+                bottom = StageColors.NightBottom,
+                floor = StageColors.FloorDark,
+                night = true,
+            ),
         )
     }
 }
@@ -513,50 +367,13 @@ private val DEFAULT_WIDGET_SIZE = DpSize(250.dp, 180.dp)
 /** Keeps float rounding out of a cache key. */
 private fun Float.round3(): Int = (this * 1000f).roundToInt()
 
-private fun headlineFor(state: PetState): String = when (state) {
-    PetState.WORKING -> "На работе"
-    PetState.STUDYING -> "Учится"
-    PetState.SLEEPING -> "Спит"
-    PetState.HUNGRY -> "Хочет есть"
-    PetState.TIRED -> "Устала"
-    PetState.PLAYING -> "Играет"
-    PetState.HAPPY -> "Отлично!"
-    PetState.EATING -> "Кушает"
-    PetState.LOVED -> "Довольна"
-    PetState.CELEBRATING -> "Ура!"
-    PetState.IDLE -> "Ждёт тебя"
-}
-
-enum class WidgetAction { FEED, TOGGLE_SLEEP }
-
-/** Runs a care action straight from the home screen and redraws the widget. */
-class PetWidgetAction : ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters,
-    ) {
-        val repository = repositoryOf(context)
-        when (parameters[ACTION_KEY]?.let { runCatching { WidgetAction.valueOf(it) }.getOrNull() }) {
-            WidgetAction.FEED -> repository.feed()
-            WidgetAction.TOGGLE_SLEEP -> repository.toggleSleep()
-            null -> repository.tick()
-        }
-        PetWidget().updateAll(context)
-    }
-
-    companion object {
-        val ACTION_KEY = ActionParameters.Key<String>("vpet_widget_action")
-    }
-}
-
 class PetWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = PetWidget()
 }
 
 /**
- * Widgets and their action callbacks are created by the system, not by Hilt, so
- * they reach the singleton graph through an entry point.
+ * Widgets are created by the system, not by Hilt, so they reach the singleton
+ * graph through an entry point.
  */
 @EntryPoint
 @InstallIn(SingletonComponent::class)

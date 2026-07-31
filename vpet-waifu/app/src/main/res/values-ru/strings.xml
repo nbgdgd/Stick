@@ -40,6 +40,7 @@
     <string name="section_food">Еда</string>
     <string name="section_gifts">Подарки</string>
     <string name="section_pills">Таблетки</string>
+    <string name="section_boosts">Баффы</string>
 
     <string name="job_cafe">Кафе</string>
     <string name="job_shop">Магазин</string>
@@ -61,6 +62,11 @@
     <string name="item_ring">Колечко</string>
     <string name="item_advance">Аванс</string>
     <string name="item_exp_pill">EXP-таблетка</string>
+    <string name="item_haste_shot">Шот ускорения</string>
+    <string name="item_overtime_pass">Сверхурочный пропуск</string>
+    <string name="item_focus_tea">Чай для фокуса</string>
+    <string name="item_second_wind">Второе дыхание</string>
+    <string name="item_good_vibes">Плейлист вайба</string>
     <string name="unlocks_at_level">Откроется на %1$d уровне</string>
     <string name="session_remaining">осталось %1$s</string>
     <string name="duration_minutes">смена %1$d мин</string>
@@ -212,6 +218,12 @@
     <string name="pills_warning">Таблетки дают всё сразу, а счёт приходит потом. Бери, когда понимаешь, что делаешь.</string>
     <string name="effect_hunger_surge">голод падает быстрее %1$s</string>
     <string name="effect_exhaustion">энергия падает быстрее %1$s</string>
+    <string name="effect_haste">смена идёт ×2 быстрее %1$s</string>
+    <string name="effect_overtime">оплата ×1.5 %1$s</string>
+    <string name="effect_focus">опыт ×1.5 %1$s</string>
+    <string name="effect_second_wind">энергия тратится ×0.5 %1$s</string>
+    <string name="effect_good_vibes">настроение растёт %1$s</string>
+    <string name="boost_already_running">Этот бафф ещё действует</string>
 
     <string name="outcome_title">%1$s — смена закончена</string>
     <string name="outcome_title_early">%1$s — ушла раньше</string>

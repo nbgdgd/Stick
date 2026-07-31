@@ -3,6 +3,7 @@ package com.vpet.waifu.ui
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Backpack
 import androidx.compose.material.icons.rounded.Bed
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.rounded.Checkroom
 import androidx.compose.material.icons.rounded.Coffee
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.Diamond
+import androidx.compose.material.icons.rounded.EmojiFoodBeverage
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Healing
@@ -27,18 +29,21 @@ import androidx.compose.material.icons.rounded.LunchDining
 import androidx.compose.material.icons.rounded.MarkEmailUnread
 import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.Piano
 import androidx.compose.material.icons.rounded.RamenDining
 import androidx.compose.material.icons.rounded.RiceBowl
+import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.SentimentVeryDissatisfied
 import androidx.compose.material.icons.rounded.Sick
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Storefront
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Toys
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.ui.graphics.Color
@@ -99,6 +104,11 @@ fun shopItemNameRes(id: String): Int = when (id) {
     "advance" -> R.string.item_advance
     "exp_pill" -> R.string.item_exp_pill
     "medicine" -> R.string.item_medicine
+    "haste_shot" -> R.string.item_haste_shot
+    "overtime_pass" -> R.string.item_overtime_pass
+    "focus_tea" -> R.string.item_focus_tea
+    "second_wind" -> R.string.item_second_wind
+    "good_vibes" -> R.string.item_good_vibes
     else -> R.string.item_onigiri
 }
 
@@ -116,6 +126,11 @@ fun shopItemIcon(id: String): ImageVector = when (id) {
     "advance" -> Icons.Rounded.Payments
     "medicine" -> Icons.Rounded.Healing
     "exp_pill" -> Icons.Rounded.Medication
+    "haste_shot" -> Icons.Rounded.RocketLaunch
+    "overtime_pass" -> Icons.Rounded.Timer
+    "focus_tea" -> Icons.Rounded.EmojiFoodBeverage
+    "second_wind" -> Icons.Rounded.Air
+    "good_vibes" -> Icons.Rounded.MusicNote
     else -> Icons.Rounded.CardGiftcard
 }
 
@@ -151,6 +166,11 @@ fun shopItemTint(id: String): Color = when (id) {
     "advance" -> Color(0xFFDCE04A)
     "exp_pill" -> Color(0xFFC455E0)
     "medicine" -> Color(0xFF54E070)
+    "haste_shot" -> Color(0xFFE6710B)
+    "overtime_pass" -> Color(0xFF2F6BE0)
+    "focus_tea" -> Color(0xFF7FA845)
+    "second_wind" -> Color(0xFF0AACCC)
+    "good_vibes" -> Color(0xFFE01E68)
     else -> Color(0xFFB9A8DC)
 }
 

@@ -315,7 +315,8 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             (if (snapshot.hasEffect(EffectKind.HUNGER_SURGE, clock)) tuning.hungerSurgeMultiplier else 1f)
 
         val exhaustion =
-            if (snapshot.hasEffect(EffectKind.EXHAUSTION, clock)) tuning.exhaustionMultiplier else 1f
+            (if (snapshot.hasEffect(EffectKind.EXHAUSTION, clock)) tuning.exhaustionMultiplier else 1f) *
+                (if (snapshot.hasEffect(EffectKind.SECOND_WIND, clock)) tuning.secondWindMultiplier else 1f)
 
         val energyDelta = when (snapshot.activity) {
             PetActivity.SLEEPING -> tuning.energyRecoveryPerMinute * mods.sleepSpeed
@@ -346,7 +347,9 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             minutesSinceInteraction = minutesBetween(interactionAnchor, clock) * mods.neglect,
         ) - activityMoodCost -
             // Being ill is its own misery, on top of whatever caused it.
-            (if (snapshot.isSick) tuning.sickMoodPerMinute else 0f)
+            (if (snapshot.isSick) tuning.sickMoodPerMinute else 0f) +
+            // …and the favourite playlist is its own small joy.
+            (if (snapshot.hasEffect(EffectKind.GOOD_VIBES, clock)) tuning.goodVibesMoodPerMinute else 0f)
         stats = PetStats.coerced(stats.hunger, stats.energy, mood)
 
         // The road to sickness. Minutes with hunger or energy pinned at zero
@@ -387,8 +390,18 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
 
         val session = next.session
         if (occupation != null && session != null) {
-            next = accrue(next, occupation)
-            if (clock >= session.endsAt) {
+            next = accrue(next, occupation, clock)
+            // Haste doubles the session clock: this minute earns twice and
+            // brings the bell one extra minute closer, so a shift finishes in
+            // half the time at exactly its full pay.
+            if (next.hasEffect(EffectKind.HASTE, clock)) {
+                next = accrue(next, occupation, clock)
+                next = next.copy(
+                    session = next.session?.let { it.copy(endsAt = it.endsAt - MS_PER_MINUTE) },
+                )
+            }
+            val endsAt = next.session?.endsAt ?: session.endsAt
+            if (clock >= endsAt) {
                 next = complete(next, occupation, clock, cancelled = false)
             } else if (stats.energy <= PetStats.MIN) {
                 // Running out of energy on the clock ends the shift there and
@@ -518,20 +531,24 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
      * ends miserable pays somewhere in between — no retroactive adjustment, and
      * nothing can ever be taken back out of the wallet.
      */
-    private fun accrue(snapshot: PetSnapshot, occupation: Occupation): PetSnapshot {
+    private fun accrue(snapshot: PetSnapshot, occupation: Occupation, clock: Long): PetSnapshot {
         val session = snapshot.session ?: return snapshot
         val mods = snapshot.modifiers()
         val rate = multiplierFor(qualityFor(snapshot.stats.mood), occupation.kind)
         val perMinute = occupation.payout.toFloat() / occupation.durationMinutes * rate
 
+        // The boosts bought mid-shift land here, on the minutes they cover.
+        val overtime = if (snapshot.hasEffect(EffectKind.OVERTIME, clock)) tuning.overtimeMultiplier else 1f
+        val focus = if (snapshot.hasEffect(EffectKind.FOCUS, clock)) tuning.focusMultiplier else 1f
+
         var pay = session.accruedPay
         var exp = session.accruedExp
         when (occupation.kind) {
             OccupationKind.WORK -> {
-                pay += perMinute * mods.pay
-                exp += tuning.workExpPerMinute * mods.study
+                pay += perMinute * mods.pay * overtime
+                exp += tuning.workExpPerMinute * mods.study * focus
             }
-            OccupationKind.STUDY -> exp += perMinute * mods.study
+            OccupationKind.STUDY -> exp += perMinute * mods.study * focus
         }
 
         val payDue = pay.toInt() - session.paidOut
@@ -819,12 +836,12 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         val emote = when (item.category) {
             ShopCategory.FOOD -> Emote.EATING
             ShopCategory.GIFT -> Emote.LOVED
-            ShopCategory.PILL -> Emote.CELEBRATING
+            ShopCategory.PILL, ShopCategory.BOOST -> Emote.CELEBRATING
         }
         val emoteMillis = when (item.category) {
             ShopCategory.FOOD -> tuning.eatingEmoteMillis
             ShopCategory.GIFT -> tuning.lovedEmoteMillis
-            ShopCategory.PILL -> tuning.celebrateEmoteMillis
+            ShopCategory.PILL, ShopCategory.BOOST -> tuning.celebrateEmoteMillis
         }
 
         // Feeding her the same thing over and over is something she notices.

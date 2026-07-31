@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.RamenDining
 import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Icon
@@ -107,6 +108,9 @@ fun ShopScreen(
         section(R.string.section_food, Icons.Rounded.RamenDining, Color(0xFFF2A65A), Shop.FOOD, snapshot, nowMillis, onBuy, onCategoryTap, patting)
         section(R.string.section_gifts, Icons.Rounded.CardGiftcard, Color(0xFFF477B8), Shop.GIFTS, snapshot, nowMillis, onBuy, onCategoryTap, patting)
         section(R.string.section_pills, Icons.Rounded.Medication, Color(0xFFE8756A), Shop.PILLS, snapshot, nowMillis, onBuy, onCategoryTap, patting)
+        // The one shelf that stays open while she is on a shift — that is the
+        // entire point of it, so it sits right where a dragging shift sends you.
+        section(R.string.section_boosts, Icons.Rounded.RocketLaunch, Color(0xFFE6710B), Shop.BOOSTS, snapshot, nowMillis, onBuy, onCategoryTap, patting)
 
         item {
             Text(
@@ -338,7 +342,12 @@ private fun ShopCard(
                     PurchaseBlock.LEVEL -> stringResource(R.string.unlocks_at_level, item.requiredLevel)
                     PurchaseBlock.MONEY -> stringResource(R.string.not_enough_money)
                     PurchaseBlock.BUSY -> stringResource(R.string.section_busy)
-                    PurchaseBlock.STILL_PAYING -> stringResource(R.string.still_paying_it_off)
+                    // The same domain rule — "that effect is already running" —
+                    // reads as debt on a pill and as a live timer on a boost.
+                    PurchaseBlock.STILL_PAYING -> stringResource(
+                        if (item.category == ShopCategory.BOOST) R.string.boost_already_running
+                        else R.string.still_paying_it_off,
+                    )
                     PurchaseBlock.NOT_SICK -> stringResource(R.string.she_is_healthy)
                     null -> null
                 }
@@ -402,6 +411,23 @@ private fun EffectChips(item: ShopItem) {
             )
             EffectKind.EXHAUSTION -> add(
                 Triple(Icons.Rounded.WarningAmber, label(R.string.effect_exhaustion, formatMinutes(item.effectMinutes)), Accents.Danger),
+            )
+            // The boosts are the good kind of timer, so they get the item's own
+            // colour rather than the warning amber the pills wear.
+            EffectKind.HASTE -> add(
+                Triple(Icons.Rounded.RocketLaunch, label(R.string.effect_haste, formatMinutes(item.effectMinutes)), shopItemTint(item.id)),
+            )
+            EffectKind.OVERTIME -> add(
+                Triple(Icons.Rounded.Paid, label(R.string.effect_overtime, formatMinutes(item.effectMinutes)), shopItemTint(item.id)),
+            )
+            EffectKind.FOCUS -> add(
+                Triple(Icons.Rounded.Star, label(R.string.effect_focus, formatMinutes(item.effectMinutes)), shopItemTint(item.id)),
+            )
+            EffectKind.SECOND_WIND -> add(
+                Triple(Icons.Rounded.Bolt, label(R.string.effect_second_wind, formatMinutes(item.effectMinutes)), shopItemTint(item.id)),
+            )
+            EffectKind.GOOD_VIBES -> add(
+                Triple(Icons.Rounded.Favorite, label(R.string.effect_good_vibes, formatMinutes(item.effectMinutes)), shopItemTint(item.id)),
             )
             null -> Unit
         }

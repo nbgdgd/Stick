@@ -1,6 +1,6 @@
 package com.vpet.waifu.domain
 
-enum class ShopCategory { FOOD, GIFT, PILL }
+enum class ShopCategory { FOOD, GIFT, PILL, BOOST }
 
 /**
  * A lingering side effect, currently only ever applied by pills.
@@ -14,7 +14,33 @@ enum class EffectKind {
 
     /** Energy drains faster — the crash after an EXP pill. */
     EXHAUSTION,
+
+    // --- boosts: bought mid-shift, felt mid-shift ---------------------------
+
+    /**
+     * The session clock runs double: each real minute counts as two, so a
+     * shift finishes in half the time at full pay. Speed, literally.
+     */
+    HASTE,
+
+    /** Wages ×1.5 while it runs. */
+    OVERTIME,
+
+    /** Study EXP ×1.5 while it runs. */
+    FOCUS,
+
+    /** Energy drains at half rate while it runs. */
+    SECOND_WIND,
+
+    /** Mood climbs a little every minute while it runs. */
+    GOOD_VIBES,
 }
+
+/** The boosts, as a set — several rules ask "is this a boost" at once. */
+val BOOST_EFFECTS: Set<EffectKind> = setOf(
+    EffectKind.HASTE, EffectKind.OVERTIME, EffectKind.FOCUS,
+    EffectKind.SECOND_WIND, EffectKind.GOOD_VIBES,
+)
 
 data class ActiveEffect(val kind: EffectKind, val expiresAt: Long) {
     fun isActive(nowMillis: Long): Boolean = nowMillis < expiresAt
@@ -91,7 +117,39 @@ object Shop {
     /** The one item [com.vpet.waifu.domain.PetSimulation.buy] treats as a cure. */
     const val MEDICINE_ID = "medicine"
 
-    val ALL: List<ShopItem> = FOOD + GIFTS + PILLS
+    /**
+     * Boosts: timed help, bought in the moment it is needed.
+     *
+     * Their defining property is *when* they can be bought — mid-shift,
+     * mid-lesson — because a buff you can only take before committing is a
+     * planning tool, and a buff you can grab when the office grind is dragging
+     * is a lever. None of them stack with themselves; the price is per use.
+     */
+    val BOOSTS: List<ShopItem> = listOf(
+        // Half the remaining shift, at full pay. The premium buff.
+        ShopItem(
+            "haste_shot", ShopCategory.BOOST, price = 140, requiredLevel = 3,
+            effect = EffectKind.HASTE, effectMinutes = 30,
+        ),
+        ShopItem(
+            "overtime_pass", ShopCategory.BOOST, price = 90, requiredLevel = 4,
+            effect = EffectKind.OVERTIME, effectMinutes = 45,
+        ),
+        ShopItem(
+            "focus_tea", ShopCategory.BOOST, price = 70, requiredLevel = 2,
+            effect = EffectKind.FOCUS, effectMinutes = 45,
+        ),
+        ShopItem(
+            "second_wind", ShopCategory.BOOST, price = 80,
+            effect = EffectKind.SECOND_WIND, effectMinutes = 60,
+        ),
+        ShopItem(
+            "good_vibes", ShopCategory.BOOST, price = 110, requiredLevel = 3,
+            effect = EffectKind.GOOD_VIBES, effectMinutes = 60,
+        ),
+    )
+
+    val ALL: List<ShopItem> = FOOD + GIFTS + PILLS + BOOSTS
 
     fun byId(id: String): ShopItem? = ALL.firstOrNull { it.id == id }
 }

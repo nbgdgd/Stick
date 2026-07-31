@@ -156,6 +156,11 @@ data class PetTuning(
     /** Multipliers applied while the matching [EffectKind] is live. */
     val hungerSurgeMultiplier: Float = 2.5f,
     val exhaustionMultiplier: Float = 1.6f,
+    /** The boosts. Speed (HASTE) is structural — see the simulation — not a number. */
+    val overtimeMultiplier: Float = 1.5f,
+    val focusMultiplier: Float = 1.5f,
+    val secondWindMultiplier: Float = 0.5f,
+    val goodVibesMoodPerMinute: Float = 0.4f,
 
     // --- thresholds the sprite FSM reads -------------------------------------
 

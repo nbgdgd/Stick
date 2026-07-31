@@ -40,6 +40,7 @@
     <string name="section_food">Food</string>
     <string name="section_gifts">Gifts</string>
     <string name="section_pills">Pills</string>
+    <string name="section_boosts">Boosts</string>
 
     <string name="job_cafe">Café</string>
     <string name="job_shop">Shop assistant</string>
@@ -61,6 +62,11 @@
     <string name="item_ring">Ring</string>
     <string name="item_advance">Cash advance</string>
     <string name="item_exp_pill">EXP pill</string>
+    <string name="item_haste_shot">Haste shot</string>
+    <string name="item_overtime_pass">Overtime pass</string>
+    <string name="item_focus_tea">Focus tea</string>
+    <string name="item_second_wind">Second wind</string>
+    <string name="item_good_vibes">Good vibes mix</string>
     <string name="unlocks_at_level" tools:ignore="PluralsCandidate">Unlocks at level %1$d</string>
     <string name="session_remaining">%1$s left</string>
     <string name="duration_minutes" tools:ignore="PluralsCandidate">%1$d min shift</string>
@@ -212,6 +218,12 @@
     <string name="pills_warning">Pills pay out instantly and bill you later. Use them when you know what you are doing.</string>
     <string name="effect_hunger_surge">hunger drains faster for %1$s</string>
     <string name="effect_exhaustion">energy drains faster for %1$s</string>
+    <string name="effect_haste">shift runs ×2 speed for %1$s</string>
+    <string name="effect_overtime">pay ×1.5 for %1$s</string>
+    <string name="effect_focus">EXP ×1.5 for %1$s</string>
+    <string name="effect_second_wind">energy drains ×0.5 for %1$s</string>
+    <string name="effect_good_vibes">mood climbs for %1$s</string>
+    <string name="boost_already_running">This boost is still running</string>
 
     <string name="outcome_title">%1$s — done</string>
     <string name="outcome_title_early">%1$s — cut short</string>

@@ -14,6 +14,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -99,6 +101,7 @@ import com.vpet.waifu.domain.PetActivity
 import com.vpet.waifu.domain.PetRequest
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.RequestKind
+import com.vpet.waifu.domain.BOOST_EFFECTS
 import com.vpet.waifu.domain.Shop
 import com.vpet.waifu.domain.ShopItem
 import com.vpet.waifu.domain.Story
@@ -127,6 +130,7 @@ import com.vpet.waifu.ui.formatRemaining
 import com.vpet.waifu.ui.occupationIcon
 import com.vpet.waifu.ui.chapterTitleRes
 import com.vpet.waifu.ui.occupationTint
+import com.vpet.waifu.ui.formatMinutes
 import com.vpet.waifu.ui.shopItemIcon
 import com.vpet.waifu.ui.shopItemNameRes
 import com.vpet.waifu.ui.shopItemTint
@@ -335,6 +339,8 @@ fun HomeScreen(
             SessionCard(snapshot, nowMillis, onCancelOccupation)
         }
 
+        ActiveBoosts(snapshot, nowMillis)
+
         StatsCard(snapshot)
         ProgressCard(snapshot, simulation, tuning)
         CareRow(snapshot, tuning, onFeed, onPet, onToggleSleep)
@@ -389,6 +395,33 @@ fun HomeScreen(
         },
         modifier = Modifier.matchParentSize(),
     )
+    }
+}
+
+/**
+ * The boosts currently running, each with its countdown.
+ *
+ * They are bought to be felt *right now* — mid-shift, mid-lesson — so the
+ * receipt lives on the main screen where the shift is, not back in the shop.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ActiveBoosts(snapshot: PetSnapshot, nowMillis: Long) {
+    val running = snapshot.effects.filter { it.kind in BOOST_EFFECTS && it.isActive(nowMillis) }
+    if (running.isEmpty()) return
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        running.forEach { effect ->
+            val item = Shop.BOOSTS.firstOrNull { it.effect == effect.kind } ?: return@forEach
+            val minutesLeft = (((effect.expiresAt - nowMillis) + 59_999L) / 60_000L).toInt()
+            EffectChip(
+                icon = shopItemIcon(item.id),
+                text = "${stringResource(shopItemNameRes(item.id))} · ${formatMinutes(minutesLeft)}",
+                tint = shopItemTint(item.id),
+            )
+        }
     }
 }
 

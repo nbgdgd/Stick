@@ -82,7 +82,7 @@ fun ActivitiesScreen(
     modifier: Modifier = Modifier,
 ) {
     // Same as the shop: headers and tiles are places to pat her.
-    val patting = snapshot.acceptsInteraction
+    val patting = snapshot.acceptsPat
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),

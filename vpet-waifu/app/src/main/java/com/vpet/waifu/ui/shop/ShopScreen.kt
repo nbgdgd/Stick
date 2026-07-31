@@ -92,7 +92,7 @@ fun ShopScreen(
     // Every category header and every item tile is also a place to pat her:
     // a tap is worth a point or two of mood, a click and a puff of hearts. She
     // has to be free to notice, so it is off while she is asleep or on a shift.
-    val patting = snapshot.acceptsInteraction
+    val patting = snapshot.acceptsPat
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),

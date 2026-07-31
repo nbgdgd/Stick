@@ -110,6 +110,44 @@ class PetSoundsTest {
         assertTrue("tap=$tap coin=$coin — the samples are swapped", coin > tap * 2)
     }
 
+    /**
+     * The three touches sound like three different things.
+     *
+     * The category pop *rises* in pitch, her boop *falls*, and neither may be
+     * the other: pitch direction is the one property a listener can name after
+     * a single hearing, so it is the one the test pins. Measured as
+     * zero-crossing rate of each half of the sample.
+     */
+    @Test
+    fun `the category pop rises while her boop falls`() {
+        val (popEarly, popLate) = halves(R.raw.sfx_pop)
+        val (petEarly, petLate) = halves(R.raw.sfx_pet)
+
+        assertTrue("the pop must rise: $popEarly -> $popLate", popLate > popEarly)
+        assertTrue("her boop must fall: $petEarly -> $petLate", petLate < petEarly)
+    }
+
+    @Test
+    fun `the category pop is a blip, not a jingle`() {
+        // It fires on every tab switch; anything long enough to overlap itself
+        // turns navigation into a bell choir.
+        assertTrue(seconds(R.raw.sfx_pop) <= 0.25f)
+    }
+
+    /** Zero-crossing rate of the first and second halves of a sample. */
+    private fun halves(resId: Int): Pair<Float, Float> {
+        val samples = pcm(resId)
+        val half = samples.size / 2
+        fun zcr(from: Int, until: Int): Float {
+            var crossings = 0
+            for (i in (from + 1) until until) {
+                if ((samples[i - 1] < 0) != (samples[i] < 0)) crossings++
+            }
+            return crossings / ((until - from) / 44_100f)
+        }
+        return zcr(0, half) to zcr(half, samples.size)
+    }
+
     @Test
     fun `a tap is short enough to survive being mashed`() {
         // The clicker fires this as fast as a finger moves, and SoundPool only

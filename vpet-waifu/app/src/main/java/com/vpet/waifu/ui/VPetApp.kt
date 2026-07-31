@@ -135,9 +135,13 @@ fun VPetApp(
         bottomBar = {
             PetNavBar(
                 selected = tab,
-                patting = snapshot.acceptsInteraction,
+                // acceptsPat, not acceptsInteraction: cheering her on through
+                // a shift is allowed everywhere else a tap lands, so the tabs
+                // must not be the one place that stays mute.
+                patting = snapshot.acceptsPat,
                 onSelect = { tab = it },
                 onCategoryTap = viewModel::categoryTap,
+                onQuietTap = viewModel::uiTap,
             )
         },
     ) { insets ->
@@ -240,6 +244,7 @@ private fun PetNavBar(
     patting: Boolean,
     onSelect: (Tab) -> Unit,
     onCategoryTap: () -> Unit,
+    onQuietTap: () -> Unit,
 ) {
     // The bar is a category picker, so tapping it is also a pat: hearts come
     // off the tab you pressed, wherever in the bar it is.
@@ -272,11 +277,14 @@ private fun PetNavBar(
                         selected = entry == selected,
                         onClick = {
                             onSelect(entry)
-                            // The pat also *is* the click sound, so this must
-                            // not double up with uiTap().
+                            // The pat also *is* the click sound, so the two
+                            // paths never double up: hearts and the pop while
+                            // she can be petted, a plain click while she sleeps.
                             if (patting) {
                                 onCategoryTap()
                                 hearts.pop(centre)
+                            } else {
+                                onQuietTap()
                             }
                         },
                         modifier = Modifier

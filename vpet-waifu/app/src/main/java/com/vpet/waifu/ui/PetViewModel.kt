@@ -86,7 +86,7 @@ class PetViewModel @Inject constructor(
      * and the alternative — a tap that does nothing but navigate — is the one
      * interaction in the app that gives nothing back.
      */
-    fun categoryTap() = act(Cue.TAP) { repository.pet() }
+    fun categoryTap() = act(Cue.POP) { repository.pet() }
 
     /** A flying coin reaching the wallet. */
     fun coinLanded() = sounds.play(Cue.COIN)

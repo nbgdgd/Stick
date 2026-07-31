@@ -53,6 +53,16 @@ enum class Cue(
      * instead of a transient that stabs.
      */
     PET_TAP(R.raw.sfx_pet, 0.9f, longArrayOf(0, 25), intArrayOf(0, 210)),
+    /**
+     * Tapping a category — a tab, a section header, an item's tile.
+     *
+     * Its own voice, a quick rising marimba double-tap, because the three
+     * kinds of touch in this app answer three different questions: the dry
+     * click says "the interface heard you", her falling boop says "*she*
+     * heard you", and this rise says "you moved somewhere". When every tap
+     * made the same noise, none of them said anything.
+     */
+    POP(R.raw.sfx_pop, 0.8f, longArrayOf(0, 22), intArrayOf(0, 170)),
     /** A coin landing in the wallet. The bright one. */
     COIN(R.raw.sfx_coin, 1f, longArrayOf(0, 30, 50, 35), intArrayOf(0, 180, 0, 255)),
     /**

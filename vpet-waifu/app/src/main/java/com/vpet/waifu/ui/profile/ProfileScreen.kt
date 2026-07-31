@@ -86,7 +86,7 @@ fun ProfileScreen(
     onCategoryTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val patting = snapshot.acceptsInteraction
+    val patting = snapshot.acceptsPat
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),

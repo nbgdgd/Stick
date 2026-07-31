@@ -6,6 +6,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -29,9 +30,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CurrencyYen
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Storefront
@@ -81,6 +82,7 @@ import com.vpet.waifu.ui.activities.ActivitiesScreen
 import com.vpet.waifu.ui.game.GameScreen
 import com.vpet.waifu.ui.home.HomeScreen
 import com.vpet.waifu.ui.profile.ProfileScreen
+import com.vpet.waifu.ui.settings.SettingsScreen
 import com.vpet.waifu.ui.shop.ShopScreen
 import kotlinx.coroutines.delay
 
@@ -108,6 +110,17 @@ fun VPetApp(
 ) {
     val snapshot = state.snapshot ?: return
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+
+    // The wallet's count-up lives here, once, so every money pill in the app
+    // shows the identical digits in the same frame. Each pill animating its
+    // own copy is how three screens once showed three different balances.
+    val walletShown by animateIntAsState(
+        targetValue = snapshot.progress.money,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "wallet",
+    )
+    val walletSettled = walletShown == snapshot.progress.money
 
     // Once a second, not twice: this drives every countdown and emote timeout in
     // the app, and a change here recomposes the whole visible tab. The shortest
@@ -170,13 +183,9 @@ fun VPetApp(
                     tuning = viewModel.tuning,
                     nowMillis = nowMillis,
                     settings = state.settings,
-                    overlayPermissionGranted = overlayPermissionGranted,
-                    onGrantOverlayPermission = onGrantOverlayPermission,
-                    onBubbleEnabledChange = viewModel::setBubbleEnabled,
-                    onSoundChange = viewModel::setSoundEnabled,
-                    onMusicChange = viewModel::setMusicEnabled,
-                    onHapticsChange = viewModel::setHapticsEnabled,
-                    onNotificationsChange = viewModel::setNotificationsEnabled,
+                    wallet = walletShown,
+                    walletSettled = walletSettled,
+                    onOpenSettings = { showSettings = true },
                     onNameChange = viewModel::setPetName,
                     onFeed = viewModel::feed,
                     onPet = viewModel::pet,
@@ -195,6 +204,8 @@ fun VPetApp(
                     simulation = viewModel.simulation,
                     tuning = viewModel.tuning,
                     nowMillis = nowMillis,
+                    wallet = walletShown,
+                    walletSettled = walletSettled,
                     onStart = viewModel::startOccupation,
                     onCancel = viewModel::cancelOccupation,
                     onCategoryTap = viewModel::categoryTap,
@@ -202,6 +213,8 @@ fun VPetApp(
                 Tab.SHOP -> ShopScreen(
                     snapshot = snapshot,
                     nowMillis = nowMillis,
+                    wallet = walletShown,
+                    walletSettled = walletSettled,
                     onBuy = viewModel::buy,
                     onBuyUpgrade = viewModel::buyUpgrade,
                     onWear = viewModel::wear,
@@ -229,6 +242,22 @@ fun VPetApp(
 
         snapshot.lastOutcome?.let { outcome ->
             OutcomeDialog(outcome, viewModel::acknowledgeOutcome)
+        }
+
+        // Settings are a place you go, not a card at the bottom of Home.
+        if (showSettings) {
+            SettingsScreen(
+                settings = state.settings,
+                overlayPermissionGranted = overlayPermissionGranted,
+                onGrantOverlayPermission = onGrantOverlayPermission,
+                onBubbleEnabledChange = viewModel::setBubbleEnabled,
+                onSoundChange = viewModel::setSoundEnabled,
+                onMusicChange = viewModel::setMusicEnabled,
+                onHapticsChange = viewModel::setHapticsEnabled,
+                onNotificationsChange = viewModel::setNotificationsEnabled,
+                onNameChange = viewModel::setPetName,
+                onBack = { showSettings = false },
+            )
         }
     }
 }
@@ -264,7 +293,7 @@ private fun PetNavBar(
     ) {
         Surface(
             color = Surfaces.Card,
-            shape = RoundedCornerShape(26.dp),
+            shape = RoundedCornerShape(24.dp),
             border = BorderStroke(1.dp, Surfaces.CardBorder),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -370,7 +399,7 @@ private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
         containerColor = Surfaces.Card,
         titleContentColor = Accents.Text,
         textContentColor = Accents.TextMuted,
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(24.dp),
         confirmButton = {
             PrimaryButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
         },
@@ -403,7 +432,7 @@ private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (outcome.money > 0) {
-                        EffectChip(icon = Icons.Rounded.Paid, text = "+${outcome.money}", tint = StatColors.Money)
+                        EffectChip(icon = Icons.Rounded.CurrencyYen, text = "+${outcome.money} ¥", tint = StatColors.Money)
                     }
                     if (outcome.exp > 0) {
                         EffectChip(icon = Icons.Rounded.Star, text = "+${outcome.exp}", tint = StatColors.Exp)

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">VPet Waifu</string>
+    <string name="app_name">Waifu</string>
 
     <string name="tab_home">Home</string>
     <string name="tab_activities">Work</string>
@@ -70,12 +70,11 @@
     <string name="unlocks_at_level" tools:ignore="PluralsCandidate">Unlocks at level %1$d</string>
     <string name="session_remaining">%1$s left</string>
     <string name="duration_minutes" tools:ignore="PluralsCandidate">%1$d min shift</string>
-    <string name="pay_scales_with_mood">mood</string>
-    <string name="too_tired_to_work">She is too worn out to go anywhere. Let her sleep or feed her first.</string>
+    <string name="too_tired_to_work">Low energy — she needs food or sleep</string>
     <string name="tab_her">Her</string>
     <string name="state_sick">Under the weather</string>
     <string name="item_medicine">Medicine</string>
-    <string name="she_is_healthy">She is healthy — save it for a rainy day</string>
+    <string name="she_is_healthy">Available only while she is sick</string>
     <string name="say_sick_0">I don\u2019t feel so good…</string>
     <string name="say_sick_1">My head is all fuzzy… could you get me something?</string>
     <string name="say_sick_2">*sniffle*… I think I caught a cold.</string>
@@ -84,20 +83,20 @@
     <string name="say_request_2">Hey, hey — I have a tiny wish!</string>
 
     <string name="sick_title">She is ill</string>
-    <string name="sick_body">Too long on an empty stomach or no sleep wore her down. She cannot work, study or play until she is well — medicine will fix it right away, or she will shake it off in a day.</string>
+    <string name="sick_body">Work, study and games are unavailable until she recovers.</string>
     <string name="sick_buy_medicine">Medicine · %1$d ¥</string>
 
     <string name="request_title">She is asking</string>
-    <string name="request_food">She would love %1$s right now</string>
-    <string name="request_gift">She is dreaming of %1$s</string>
-    <string name="request_play">She wants to play a round with you</string>
-    <string name="request_window">granting it now means a lot · %1$s left</string>
+    <string name="request_food">She asks for: %1$s</string>
+    <string name="request_gift">Gift wish: %1$s</string>
+    <string name="request_play">She wants to play one round</string>
+    <string name="request_window">%1$s left</string>
 
     <string name="bond_title">Bond</string>
     <string name="bond_level_label" tools:ignore="PluralsCandidate">Bond %1$d</string>
     <string name="bond_progress">%1$d / %2$d</string>
     <string name="bond_today">today +%1$d / %2$d</string>
-    <string name="bond_hint">Bond only ever grows: meals, considered pats, gifts, finished shifts and granted wishes all count, up to a little per day. It never goes down — it is the history you two share.</string>
+    <string name="bond_hint">Grows with care, never drops</string>
     <string name="bond_name_0">Strangers</string>
     <string name="bond_name_1">Acquaintances</string>
     <string name="bond_name_2">Roommates</string>
@@ -111,8 +110,8 @@
     <string name="bond_name_10">Home</string>
 
     <string name="focus_title">Her path</string>
-    <string name="focus_locked">She will choose a path at level %1$d — a permanent choice.</string>
-    <string name="focus_pick_hint">Choose once, for good. Each path is better at one thing and worse at another.</string>
+    <string name="focus_locked">Unlocks at level %1$d</string>
+    <string name="focus_pick_hint">The choice is permanent</string>
     <string name="focus_career">Career</string>
     <string name="focus_career_desc">Pay +15%, studying −10%</string>
     <string name="focus_scholar">Scholar</string>
@@ -123,22 +122,22 @@
 
     <string name="story_title">Her story</string>
     <string name="story_progress">Chapter %1$d of %2$d</string>
-    <string name="story_complete">The story is complete. Life goes on.</string>
+    <string name="story_complete">The story is complete</string>
     <string name="story_chapter_done">Chapter complete!</string>
     <string name="story_reward_money">+%1$d ¥</string>
-    <string name="story_reward_outfit">A gift: a new outfit</string>
+    <string name="story_reward_outfit">New outfit</string>
     <string name="story_ch_meeting">Getting acquainted</string>
     <string name="story_ch_meeting_goal">Care for her a little — feed her, pat her.</string>
     <string name="story_ch_first_shift">First wages</string>
     <string name="story_ch_first_shift_goal">See her through her first shift.</string>
     <string name="story_ch_diligent">Diligent</string>
-    <string name="story_ch_diligent_goal">Finish three lessons.</string>
+    <string name="story_ch_diligent_goal">Finish 3 lessons</string>
     <string name="story_ch_settling_in">Settling in</string>
-    <string name="story_ch_settling_in_goal">Own two home or gear upgrades.</string>
+    <string name="story_ch_settling_in_goal">Buy 2 upgrades</string>
     <string name="story_ch_kindred">Kindred spirits</string>
     <string name="story_ch_kindred_goal">Reach bond 4.</string>
     <string name="story_ch_professional">A professional</string>
-    <string name="story_ch_professional_goal">Fifteen shifts and level 10.</string>
+    <string name="story_ch_professional_goal">15 shifts · level 10</string>
     <string name="story_ch_her_own_path">Her own path</string>
     <string name="story_ch_her_own_path_goal">Choose a path and reach level 15.</string>
     <string name="story_ch_finale">Where she belongs</string>
@@ -172,9 +171,9 @@
     <string name="wardrobe_title">Wardrobe</string>
 
     <string name="notify_sick_title">%1$s is ill</string>
-    <string name="notify_sick_body">She needs medicine, or a day of rest.</string>
+    <string name="notify_sick_body">She is sick — she needs medicine</string>
     <string name="notify_request_title">%1$s is asking for something</string>
-    <string name="notify_request_body">A small wish — granting it means a lot to her.</string>
+    <string name="notify_request_body">She has a wish · time is limited</string>
     <string name="say_morning_0">Good morning! I was waiting for you.</string>
     <string name="say_morning_1">Morning! Shall we make today a good one?</string>
     <string name="say_morning_2">You\u2019re up! I already have plans for us~</string>
@@ -184,13 +183,13 @@
     <string name="recap_lesson">Finished %1$s · +%2$d EXP</string>
     <string name="recap_fell_sick">She fell ill</string>
     <string name="recap_recovered">She got better on her own</string>
-    <string name="recap_wish_expired">A little wish went ungranted</string>
-    <string name="recap_event">Something happened — see today\u2019s card</string>
+    <string name="recap_wish_expired">A wish expired</string>
+    <string name="recap_event">A new daily event</string>
     <string name="recap_goal">Weekly goal done · +%1$d ¥</string>
     <string name="recap_anniversary">%1$d days together!</string>
 
     <string name="anniversary_title">%1$d days together!</string>
-    <string name="anniversary_body">A little celebration: a gift landed in the wallet and she is beaming all day.</string>
+    <string name="anniversary_body">The reward is already in the wallet</string>
 
     <string name="goal_title">Goal of the week</string>
     <string name="goal_shifts">Work %1$d shifts</string>
@@ -198,24 +197,22 @@
     <string name="goal_games">Play %1$d arcade rounds</string>
     <string name="goal_earn">Earn %1$d ¥</string>
     <string name="goal_progress">%1$d / %2$d</string>
-    <string name="goal_reward">Reward: %1$d ¥ and +%2$d bond</string>
-    <string name="goal_done">Done! A new goal arrives next week.</string>
-    <string name="goal_locked">Weekly goals open at story chapter %1$d.</string>
+    <string name="goal_reward">+%1$d ¥ · bond +%2$d</string>
+    <string name="goal_done">Done · a new goal arrives on Monday</string>
+    <string name="goal_locked">Unlocks after story chapter %1$d</string>
 
     <string name="game_best">Best: %1$d</string>
     <string name="game_new_record">New record: %1$d!</string>
-    <string name="still_paying_it_off">She is still working the last one off</string>
+    <string name="still_paying_it_off">The previous one is still active</string>
     <string name="section_busy">She is busy right now</string>
-    <string name="tip_jar_title">Tip jar</string>
+    <string name="tip_jar_title">Passive income</string>
     <string name="tip_jar_body">Loose change while you are watching her at home: %1$d ¥ a minute, up to %2$d ¥ a day. It stops while she is out on a shift — what a shift pays is all a shift pays.</string>
     <string name="exp_title">Level %1$d</string>
     <string name="exp_progress">%1$d / %2$d EXP</string>
-    <string name="exp_from_study">Study pays EXP directly — that is what it is for.</string>
-    <string name="exp_from_work">Work pays a little too: +%1$s EXP a minute on the clock.</string>
     <string name="exp_next_level">%1$d EXP to level %2$d</string>
-    <string name="exp_maxed">Top level. Nothing left to learn.</string>
+    <string name="exp_maxed">Maximum level</string>
     <string name="not_enough_money">Too pricey</string>
-    <string name="pills_warning">Pills pay out instantly and bill you later. Use them when you know what you are doing.</string>
+    <string name="pills_warning">Instant effect, temporary penalty — listed on the card</string>
     <string name="effect_hunger_surge">hunger drains faster for %1$s</string>
     <string name="effect_exhaustion">energy drains faster for %1$s</string>
     <string name="effect_haste">shift runs ×2 speed for %1$s</string>
@@ -223,7 +220,7 @@
     <string name="effect_focus">EXP ×1.5 for %1$s</string>
     <string name="effect_second_wind">energy drains ×0.5 for %1$s</string>
     <string name="effect_good_vibes">mood climbs for %1$s</string>
-    <string name="boost_already_running">This boost is still running</string>
+    <string name="boost_already_running">Already running</string>
 
     <string name="outcome_title">%1$s — done</string>
     <string name="outcome_title_early">%1$s — cut short</string>
@@ -231,8 +228,8 @@
     <string name="quality_good">Went fine</string>
     <string name="quality_poor">A bit rough</string>
     <string name="quality_bad">A disaster</string>
-    <string name="outcome_hint_work">A happier pet earns much more. Feed her and let her rest before the next shift.</string>
-    <string name="outcome_hint_study">Studying in a bad mood barely sticks. Cheer her up first.</string>
+    <string name="outcome_hint_work">Low mood cut the pay — feed her and let her rest</string>
+    <string name="outcome_hint_study">Low mood means less EXP</string>
 
     <string name="game_start">Start</string>
     <string name="game_again">Play again</string>
@@ -242,13 +239,13 @@
     <string name="game_catch">Catch</string>
     <string name="game_rhythm">Rhythm</string>
     <string name="game_memory">Memory</string>
-    <string name="game_rhythm_hint">Tap anywhere the instant a ring lands on its target. Where you tap does not matter — only when.</string>
-    <string name="game_memory_hint">Watch the order the pads light up in, then repeat it. Three lives.</string>
+    <string name="game_rhythm_hint">Tap when the ring meets the circle</string>
+    <string name="game_memory_hint">Repeat the highlight order · 3 lives</string>
     <string name="game_memory_watch">Watch…</string>
     <string name="game_memory_repeat">Your turn</string>
     <string name="game_memory_wrong">Not that one!</string>
-    <string name="game_hint">Tap what pops up. Playing lifts her mood but costs energy.</string>
-    <string name="game_busy">She is busy right now.</string>
+    <string name="game_hint">Catch everything that appears</string>
+    <string name="game_busy">She is busy right now</string>
 
     <string name="bubble_title">Floating bubble</string>
     <string name="bubble_subtitle">Keep her on screen over other apps</string>
@@ -257,7 +254,7 @@
     <string name="overlay_channel_name">Floating pet</string>
     <string name="overlay_channel_description">Keeps the pet on screen over other apps.</string>
     <string name="overlay_notification_title">Your pet is on screen</string>
-    <string name="overlay_notification_text">Tap the bubble to feed her or put her to bed.</string>
+    <string name="overlay_notification_text">Tap — feed her or put her to bed</string>
 
     <string name="widget_description">Your pet, her stats and one-tap care.</string>
     <string name="widget_pet_description">Your pet</string>
@@ -298,21 +295,21 @@
     <string name="event_title_letter">A letter</string>
     <string name="event_title_inspired">Inspired</string>
     <string name="event_title_restless">A bad night</string>
-    <string name="event_lucky_day">Everything is going her way today — work and study both pay more.</string>
-    <string name="event_cold">She has caught something. She tires faster and works worse until tomorrow.</string>
-    <string name="event_letter">An envelope with no return address, and money inside.</string>
-    <string name="event_inspired">Something clicked. Studying sticks much better today.</string>
-    <string name="event_restless">She barely slept. Today starts tired.</string>
+    <string name="event_lucky_day">Work and study pay more today</string>
+    <string name="event_cold">She caught a cold: tires faster until tomorrow</string>
+    <string name="event_letter">Unexpected income — already in the wallet</string>
+    <string name="event_inspired">Studying is more effective today</string>
+    <string name="event_restless">She barely slept: energy is lower</string>
 
     <!-- Notifications -->
     <string name="notify_channel_name">Your pet</string>
     <string name="notify_channel_description">Shifts finishing, and when she needs something.</string>
     <string name="notify_shift_title">%1$s is back</string>
-    <string name="notify_shift_body">She earned %1$d ¥. Open the app to see how it went.</string>
+    <string name="notify_shift_body">Shift over · +%1$d ¥</string>
     <string name="notify_hungry_title">%1$s is hungry</string>
-    <string name="notify_hungry_body">Her mood will start slipping if she is left like this.</string>
+    <string name="notify_hungry_body">She is hungry</string>
     <string name="notify_tired_title">%1$s is worn out</string>
-    <string name="notify_tired_body">She cannot be sent anywhere until she sleeps.</string>
+    <string name="notify_tired_body">She is tired — she needs sleep</string>
     <string name="notify_event_title">Something happened</string>
 
     <!-- Her -->
@@ -376,4 +373,22 @@
     <string name="say_content_0">Everything is just right.</string>
     <string name="say_content_1">I am happy. That is all.</string>
     <string name="say_content_2">Days like this are the good ones.</string>
+
+    <string name="passive_rate" tools:ignore="PluralsCandidate">%1$d ¥/min</string>
+    <string name="passive_cap" tools:ignore="PluralsCandidate">cap %1$d ¥/day</string>
+    <string name="passive_paused_busy">Not earned during a shift</string>
+    <string name="progress_title">Level &amp; income</string>
+    <string name="progress_info">Studying earns EXP; work adds +%1$s EXP per minute. Passive income accrues while the app is open and she is free; the daily cap resets at midnight.</string>
+    <string name="settings_title">Settings</string>
+    <string name="licenses_title">Licenses</string>
+    <string name="licenses_body">Icons: Material Icons (Apache 2.0). Font: Golos Text (SIL OFL 1.1, Paratype). Sounds, music and character art were made for this app. The full register lives in the project\'s ATTRIBUTIONS.md.</string>
+    <string name="shop_busy_banner">Busy until %1$s — food is unavailable</string>
+    <string name="shop_asleep_banner">She is asleep — food is unavailable</string>
+    <string name="action_start_work">Start shift</string>
+    <string name="action_start_study">Start</string>
+    <string name="level_badge" tools:ignore="PluralsCandidate">lvl %1$d</string>
+    <string name="chip_minutes" tools:ignore="PluralsCandidate">%1$d min</string>
+    <string name="ach_progress">%1$d of %2$d earned</string>
+    <string name="ach_show_all">All (%1$d)</string>
+    <string name="ach_hide">Collapse</string>
 </resources>

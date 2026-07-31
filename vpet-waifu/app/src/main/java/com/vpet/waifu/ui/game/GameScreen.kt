@@ -36,7 +36,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LocalFlorist
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Psychology
-import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.CurrencyYen
 import androidx.compose.material.icons.rounded.Redeem
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
@@ -94,7 +94,7 @@ private const val FRAME_MILLIS = 50L
 
 /** What a target looks like: an icon and the colour it glows. */
 private enum class TargetKind(val tint: Color) {
-    HEART(Color(0xFFB388FF)),
+    HEART(Color(0xFFF27CA0)),
     STAR(Color(0xFFFFC46B)),
     COOKIE(Color(0xFFE8A87C)),
     FLOWER(Color(0xFFF48FB1)),
@@ -233,11 +233,7 @@ fun GameScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .clip(RoundedCornerShape(24.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Accents.Deep.copy(alpha = 0.35f), Surfaces.Screen),
-                    ),
-                )
+                .background(Surfaces.Card)
                 .border(1.dp, Surfaces.CardBorder, RoundedCornerShape(24.dp)),
         ) {
             val boardWidth = maxWidth
@@ -312,46 +308,51 @@ fun GameScreen(
     }
 }
 
-/** Three cards; the selected one is lit. */
+/**
+ * The mode switch: one segmented control, not three coloured cards.
+ *
+ * The selected segment carries the accent; the games keep their own colours
+ * inside the rounds, where they mean something.
+ */
 @Composable
 private fun GamePicker(selected: MiniGame, onSelect: (MiniGame) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Surfaces.Tile)
+            .border(1.dp, Surfaces.CardBorder, RoundedCornerShape(12.dp))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         MiniGame.entries.forEach { entry ->
             val chosen = entry == selected
-            val tint = entry.tint()
-            Column(
+            Row(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(tint.copy(alpha = if (chosen) 0.18f else 0.06f))
-                    .border(
-                        width = if (chosen) 1.5.dp else 1.dp,
-                        color = tint.copy(alpha = if (chosen) 0.7f else 0.2f),
-                        shape = RoundedCornerShape(18.dp),
-                    )
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(if (chosen) Accents.Primary else Color.Transparent)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = { onSelect(entry) },
                     )
-                    .padding(vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                    .padding(vertical = 9.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = entry.icon(),
                     contentDescription = null,
-                    tint = tint,
-                    modifier = Modifier.size(22.dp),
+                    tint = if (chosen) Color.White else Accents.TextDim,
+                    modifier = Modifier.size(16.dp),
                 )
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = stringResource(entry.titleRes()),
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal,
-                    color = if (chosen) Accents.Text else Accents.TextDim,
+                    color = if (chosen) Color.White else Accents.TextDim,
+                    maxLines = 1,
                 )
             }
         }
@@ -455,7 +456,7 @@ private fun StartOverlay(
                 Text(
                     text = stringResource(R.string.game_busy),
                     style = MaterialTheme.typography.bodySmall,
-                    color = StatColors.Hunger,
+                    color = Accents.TextMuted,
                 )
             }
         }
@@ -494,7 +495,7 @@ private fun RoundHeader(game: MiniGame, score: Int, secondsLeft: Int, onStop: ()
                     Text(
                         text = "$score",
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = Accents.Text,
                         modifier = Modifier.scale(pop),
                     )
@@ -582,8 +583,8 @@ private fun IdleHeader(
                             tint = StatColors.Mood,
                         )
                         EffectChip(
-                            icon = Icons.Rounded.Paid,
-                            text = "+${lastGame.coins(lastScore)}",
+                            icon = Icons.Rounded.CurrencyYen,
+                            text = "+${lastGame.coins(lastScore)} ¥",
                             tint = StatColors.Money,
                         )
                     }
@@ -623,11 +624,7 @@ private fun TargetBubble(
             .scale(scale)
             .alpha(fade)
             .clip(CircleShape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(target.kind.tint.copy(alpha = 0.30f), Accents.Deep.copy(alpha = 0.75f)),
-                ),
-            )
+            .background(target.kind.tint.copy(alpha = 0.22f))
             .border(1.dp, target.kind.tint.copy(alpha = 0.7f), CircleShape)
             // No ripple: it lags behind a target that vanishes on the same tap.
             .clickable(

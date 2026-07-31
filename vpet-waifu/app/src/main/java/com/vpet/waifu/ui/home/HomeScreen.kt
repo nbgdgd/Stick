@@ -9,6 +9,8 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
@@ -37,23 +40,20 @@ import androidx.compose.material.icons.rounded.Checkroom
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Healing
+import androidx.compose.material.icons.rounded.CurrencyYen
 import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.Paid
-import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Savings
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Vibration
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -159,13 +159,9 @@ fun HomeScreen(
     tuning: PetTuning,
     nowMillis: Long,
     settings: PetSettings,
-    overlayPermissionGranted: Boolean,
-    onGrantOverlayPermission: () -> Unit,
-    onBubbleEnabledChange: (Boolean) -> Unit,
-    onSoundChange: (Boolean) -> Unit,
-    onMusicChange: (Boolean) -> Unit,
-    onHapticsChange: (Boolean) -> Unit,
-    onNotificationsChange: (Boolean) -> Unit,
+    wallet: Int,
+    walletSettled: Boolean,
+    onOpenSettings: () -> Unit,
     onNameChange: (String) -> Unit,
     onFeed: () -> Unit,
     onPet: () -> Unit,
@@ -212,20 +208,42 @@ fun HomeScreen(
             .fillMaxSize()
             .onGloballyPositioned { overlayOrigin = it.positionInRoot() },
     ) {
+    // Naming lives in a dialog off the header now — and doubles as the
+    // onboarding step: a pet without a name asks for one on first visit.
+    var naming by rememberSaveable { mutableStateOf(false) }
+    var askedOnce by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(settings.petName) {
+        if (settings.petName.isBlank() && !askedOnce) {
+            askedOnce = true
+            naming = true
+        }
+    }
+    if (naming) {
+        NameDialog(
+            current = settings.petName,
+            onSave = { onNameChange(it); naming = false },
+            onDismiss = { naming = false },
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Header(
             snapshot = snapshot,
             petName = settings.petName,
+            wallet = wallet,
+            walletSettled = walletSettled,
             walletBump = walletBumps,
             ringBump = ringBumps,
             onPillPositioned = { pillCenter = it },
             onRingPositioned = { ringCenter = it },
+            onRename = { naming = true },
+            onOpenSettings = onOpenSettings,
         )
 
         Box(
@@ -344,17 +362,6 @@ fun HomeScreen(
         StatsCard(snapshot)
         ProgressCard(snapshot, simulation, tuning)
         CareRow(snapshot, tuning, onFeed, onPet, onToggleSleep)
-        SettingsCard(
-            settings = settings,
-            overlayPermissionGranted = overlayPermissionGranted,
-            onGrantOverlayPermission = onGrantOverlayPermission,
-            onBubbleEnabledChange = onBubbleEnabledChange,
-            onSoundChange = onSoundChange,
-            onMusicChange = onMusicChange,
-            onHapticsChange = onHapticsChange,
-            onNotificationsChange = onNotificationsChange,
-            onNameChange = onNameChange,
-        )
         Spacer(Modifier.height(4.dp))
     }
 
@@ -436,10 +443,14 @@ private fun statusDot(state: PetState): Color = when (state) {
 private fun Header(
     snapshot: PetSnapshot,
     petName: String,
+    wallet: Int,
+    walletSettled: Boolean,
     walletBump: Int,
     ringBump: Int,
     onPillPositioned: (Offset) -> Unit,
     onRingPositioned: (Offset) -> Unit,
+    onRename: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -451,12 +462,17 @@ private fun Header(
             modifier = Modifier.onGloballyPositioned { onRingPositioned(it.boundsInRoot().center) },
         )
         Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        // Her name is the edit affordance: tap it to rename her.
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onRename),
+        ) {
             Text(
-                text = petName.ifBlank { stringResource(R.string.app_name) },
+                text = petName.ifBlank { stringResource(R.string.name_hint) },
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = Accents.Text,
+                color = if (petName.isBlank()) Accents.TextMuted else Accents.Text,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -467,11 +483,68 @@ private fun Header(
             )
         }
         MoneyPill(
-            amount = snapshot.progress.money,
+            amount = wallet,
+            settled = walletSettled,
             bump = walletBump,
             modifier = Modifier.onGloballyPositioned { onPillPositioned(it.boundsInRoot().center) },
         )
+        Spacer(Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Surfaces.Tile)
+                .border(1.dp, Surfaces.CardBorder, RoundedCornerShape(12.dp))
+                .clickable(onClick = onOpenSettings),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Settings,
+                contentDescription = stringResource(R.string.settings_title),
+                tint = Accents.TextMuted,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
+}
+
+/** Naming her — the dialog behind a tap on her name, and the first-run ask. */
+@Composable
+private fun NameDialog(
+    current: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var draft by rememberSaveable(current) { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Surfaces.Card,
+        titleContentColor = Accents.Text,
+        shape = RoundedCornerShape(24.dp),
+        title = { Text(stringResource(R.string.name_title)) },
+        text = {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { if (it.length <= PetPreferences.MAX_NAME_LENGTH) draft = it },
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.name_hint)) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Accents.Text,
+                    unfocusedTextColor = Accents.Text,
+                    focusedBorderColor = Accents.Primary,
+                    unfocusedBorderColor = Surfaces.Divider,
+                    cursorColor = Accents.Bright,
+                ),
+            )
+        },
+        confirmButton = {
+            PrimaryButton(
+                text = stringResource(R.string.action_save),
+                onClick = { onSave(draft.trim()) },
+                enabled = draft.isNotBlank(),
+            )
+        },
+    )
 }
 
 @Composable
@@ -485,8 +558,8 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
                 Box(
                     modifier = Modifier
                         .size(46.dp)
-                        .clip(CircleShape)
-                        .background(Accents.Primary.copy(alpha = 0.14f)),
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(occupationTint(occupation.id).copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -518,8 +591,12 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
                 // the card — otherwise the only sign she is being paid is the
                 // wallet quietly ticking up somewhere else on the screen.
                 EffectChip(
-                    icon = if (occupation.kind == OccupationKind.WORK) Icons.Rounded.Paid else Icons.Rounded.Star,
-                    text = "+${if (occupation.kind == OccupationKind.WORK) session.paidOut else session.paidExp}",
+                    icon = if (occupation.kind == OccupationKind.WORK) Icons.Rounded.CurrencyYen else Icons.Rounded.Star,
+                    text = if (occupation.kind == OccupationKind.WORK) {
+                        "+${session.paidOut} ¥"
+                    } else {
+                        "+${session.paidExp} EXP"
+                    },
                     tint = if (occupation.kind == OccupationKind.WORK) StatColors.Money else StatColors.Exp,
                 )
             }
@@ -538,18 +615,25 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
 }
 
 /**
- * Where her level and her loose change come from.
+ * Level and passive income, in one compact card.
  *
- * Both were invisible mechanics. EXP arrived from somewhere and the ring in the
- * corner filled up; the tip jar pays every three seconds and nothing said so.
- * A player asking "how does experience even work?" is a missing screen, not a
- * missing explanation, so this is the screen.
+ * Facts live in chips, not in paragraphs; the mechanics behind them sit behind
+ * the "?" so the card itself stays one glance long.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProgressCard(snapshot: PetSnapshot, simulation: PetSimulation, tuning: PetTuning) {
     val exp = snapshot.progress.exp
     val (earned, needed) = Progression.levelProgress(exp)
     val maxed = snapshot.level >= Progression.MAX_LEVEL
+    var info by rememberSaveable { mutableStateOf(false) }
+    if (info) {
+        InfoDialog(
+            title = stringResource(R.string.progress_title),
+            body = stringResource(R.string.progress_info, formatRate(tuning.workExpPerMinute)),
+            onDismiss = { info = false },
+        )
+    }
 
     PanelCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -567,7 +651,6 @@ private fun ProgressCard(snapshot: PetSnapshot, simulation: PetSimulation, tunin
                 Text(
                     text = stringResource(R.string.exp_title, snapshot.level),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     color = Accents.Text,
                     modifier = Modifier.weight(1f),
                 )
@@ -576,6 +659,8 @@ private fun ProgressCard(snapshot: PetSnapshot, simulation: PetSimulation, tunin
                     style = MaterialTheme.typography.labelMedium,
                     color = Accents.TextMuted,
                 )
+                Spacer(Modifier.width(8.dp))
+                InfoButton(onClick = { info = true })
             }
             StatBarTrack(
                 fraction = if (maxed) 1f else earned.toFloat() / needed,
@@ -591,42 +676,30 @@ private fun ProgressCard(snapshot: PetSnapshot, simulation: PetSimulation, tunin
                 style = MaterialTheme.typography.bodySmall,
                 color = Accents.TextMuted,
             )
-            Text(
-                text = stringResource(R.string.exp_from_study),
-                style = MaterialTheme.typography.bodySmall,
-                color = Accents.TextDim,
-            )
-            Text(
-                text = stringResource(
-                    R.string.exp_from_work,
-                    formatRate(tuning.workExpPerMinute),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = Accents.TextDim,
-            )
 
             Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Rounded.Savings,
-                    contentDescription = null,
+            Text(
+                text = stringResource(R.string.tip_jar_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = Accents.Text,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                EffectChip(
+                    icon = Icons.Rounded.CurrencyYen,
+                    text = stringResource(R.string.passive_rate, simulation.passivePerMinute(snapshot)),
                     tint = StatColors.Money,
-                    modifier = Modifier.size(20.dp),
                 )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = stringResource(R.string.tip_jar_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Accents.Text,
+                EffectChip(
+                    icon = Icons.Rounded.Savings,
+                    text = stringResource(R.string.passive_cap, simulation.passiveDailyCap(snapshot)),
+                    tint = StatColors.Money,
                 )
             }
             Text(
-                text = stringResource(
-                    R.string.tip_jar_body,
-                    simulation.passivePerMinute(snapshot),
-                    simulation.passiveDailyCap(snapshot),
-                ),
+                text = stringResource(R.string.passive_paused_busy),
                 style = MaterialTheme.typography.bodySmall,
                 color = Accents.TextDim,
             )
@@ -638,6 +711,44 @@ private fun ProgressCard(snapshot: PetSnapshot, simulation: PetSimulation, tunin
 private fun formatRate(value: Float): String {
     val rounded = kotlin.math.round(value * 10f) / 10f
     return if (rounded == rounded.toInt().toFloat()) rounded.toInt().toString() else rounded.toString()
+}
+
+/** The small "?" that opens a card's detail dialog. */
+@Composable
+private fun InfoButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .background(Surfaces.Tile)
+            .border(1.dp, Surfaces.CardBorder, CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
+            contentDescription = null,
+            tint = Accents.TextMuted,
+            modifier = Modifier.size(15.dp),
+        )
+    }
+}
+
+/** Where the mechanics hide: one dialog per "?", body text only. */
+@Composable
+private fun InfoDialog(title: String, body: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Surfaces.Card,
+        titleContentColor = Accents.Text,
+        textContentColor = Accents.TextMuted,
+        shape = RoundedCornerShape(24.dp),
+        title = { Text(title) },
+        text = { Text(body, style = MaterialTheme.typography.bodyMedium) },
+        confirmButton = {
+            PrimaryButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
+        },
+    )
 }
 
 @Composable
@@ -710,168 +821,6 @@ private fun CareRow(
     }
 }
 
-@Composable
-private fun SettingsCard(
-    settings: PetSettings,
-    overlayPermissionGranted: Boolean,
-    onGrantOverlayPermission: () -> Unit,
-    onBubbleEnabledChange: (Boolean) -> Unit,
-    onSoundChange: (Boolean) -> Unit,
-    onMusicChange: (Boolean) -> Unit,
-    onHapticsChange: (Boolean) -> Unit,
-    onNotificationsChange: (Boolean) -> Unit,
-    onNameChange: (String) -> Unit,
-) {
-    PanelCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            NameField(settings.petName, onNameChange)
-
-            SettingRow(
-                icon = Icons.Rounded.PictureInPictureAlt,
-                tint = Color(0xFF7FD1E8),
-                title = stringResource(R.string.bubble_title),
-                subtitle = stringResource(R.string.bubble_subtitle),
-                checked = settings.bubbleEnabled && overlayPermissionGranted,
-                enabled = overlayPermissionGranted,
-                onCheckedChange = onBubbleEnabledChange,
-            )
-
-            if (!overlayPermissionGranted) {
-                Text(
-                    text = stringResource(R.string.overlay_permission_rationale),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Accents.Danger,
-                )
-                PrimaryButton(
-                    text = stringResource(R.string.action_grant_overlay),
-                    onClick = onGrantOverlayPermission,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
-            SettingRow(
-                icon = Icons.Rounded.Notifications,
-                tint = Color(0xFFF0C860),
-                title = stringResource(R.string.settings_notifications),
-                checked = settings.notificationsEnabled,
-                onCheckedChange = onNotificationsChange,
-            )
-            SettingRow(
-                icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                tint = Color(0xFFF477B8),
-                title = stringResource(R.string.settings_sound),
-                checked = settings.soundEnabled,
-                onCheckedChange = onSoundChange,
-            )
-            SettingRow(
-                icon = Icons.Rounded.MusicNote,
-                tint = Color(0xFF9B8CF0),
-                title = stringResource(R.string.settings_music),
-                checked = settings.musicEnabled,
-                onCheckedChange = onMusicChange,
-            )
-            SettingRow(
-                icon = Icons.Rounded.Vibration,
-                tint = Color(0xFF8FCE73),
-                title = stringResource(R.string.settings_haptics),
-                checked = settings.hapticsEnabled,
-                onCheckedChange = onHapticsChange,
-            )
-        }
-    }
-}
-
-/**
- * Naming her.
- *
- * Held locally while it is being typed and committed on the button, rather than
- * written on every keystroke: the name reaches notifications and the header, and
- * watching those redraw letter by letter is unpleasant.
- */
-@Composable
-private fun NameField(current: String, onNameChange: (String) -> Unit) {
-    var draft by rememberSaveable(current) { mutableStateOf(current) }
-    val dirty = draft.trim() != current
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { if (it.length <= PetPreferences.MAX_NAME_LENGTH) draft = it },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-            label = { Text(stringResource(R.string.name_title)) },
-            placeholder = { Text(stringResource(R.string.name_hint)) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Accents.Text,
-                unfocusedTextColor = Accents.Text,
-                focusedBorderColor = Accents.Primary,
-                unfocusedBorderColor = Surfaces.Divider,
-                focusedLabelColor = Accents.Primary,
-                unfocusedLabelColor = Accents.TextDim,
-                cursorColor = Accents.Bright,
-            ),
-        )
-        AnimatedVisibility(visible = dirty) {
-            Row {
-                Spacer(Modifier.width(10.dp))
-                PrimaryButton(
-                    text = stringResource(R.string.action_save),
-                    onClick = { onNameChange(draft) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingRow(
-    icon: ImageVector,
-    tint: Color,
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    subtitle: String? = null,
-    enabled: Boolean = true,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(tint.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(19.dp))
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = Accents.Text,
-            )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Accents.TextMuted,
-                )
-            }
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Accents.Primary,
-                uncheckedTrackColor = Surfaces.Track,
-                uncheckedBorderColor = Surfaces.Divider,
-            ),
-        )
-    }
-}
-
 /** One tap's worth of stars, at the finger. */
 private data class TapBurst(val id: Long, val center: Offset, val mood: Int, val exp: Int)
 
@@ -895,11 +844,11 @@ private fun SparkleBurst(burst: TapBurst, onDone: () -> Unit) {
     val expLabel = if (burst.exp > 0) "+${burst.exp} EXP" else null
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.titleMedium.copy(
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         color = StatColors.Mood,
     )
     val expStyle = MaterialTheme.typography.labelLarge.copy(
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         color = StatColors.Exp,
     )
 
@@ -1274,7 +1223,7 @@ private fun StoryBanner(snapshot: PetSnapshot, onAcknowledge: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (done.rewardMoney > 0) {
                     EffectChip(
-                        icon = Icons.Rounded.Paid,
+                        icon = Icons.Rounded.CurrencyYen,
                         text = stringResource(R.string.story_reward_money, done.rewardMoney),
                         tint = StatColors.Money,
                     )
@@ -1283,7 +1232,7 @@ private fun StoryBanner(snapshot: PetSnapshot, onAcknowledge: () -> Unit) {
                     EffectChip(
                         icon = Icons.Rounded.Checkroom,
                         text = stringResource(R.string.story_reward_outfit),
-                        tint = Color(0xFF9B8CF0),
+                        tint = Color(0xFFB39CE8),
                     )
                 }
             }
@@ -1379,7 +1328,7 @@ private fun AwayRecap(
 }
 
 private fun journalLook(entry: JournalEntry) = when (entry.kind) {
-    JournalKind.SHIFT_DONE -> Icons.Rounded.Paid to StatColors.Money
+    JournalKind.SHIFT_DONE -> Icons.Rounded.CurrencyYen to StatColors.Money
     JournalKind.LESSON_DONE -> Icons.Rounded.Star to StatColors.Exp
     JournalKind.FELL_SICK -> Icons.Rounded.Healing to Accents.Danger
     JournalKind.RECOVERED -> Icons.Rounded.Healing to Color(0xFF54E070)

@@ -17,13 +17,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.CurrencyYen
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SentimentVeryDissatisfied
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Work
@@ -33,12 +33,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.OccupationKind
@@ -49,6 +49,7 @@ import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.IconTile
 import com.vpet.waifu.ui.components.GainPop
+import com.vpet.waifu.ui.components.LevelBadge
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PanelCard
@@ -76,6 +77,8 @@ fun ActivitiesScreen(
     simulation: PetSimulation,
     tuning: PetTuning,
     nowMillis: Long,
+    wallet: Int,
+    walletSettled: Boolean,
     onStart: (Occupation) -> Unit,
     onCancel: () -> Unit,
     onCategoryTap: () -> Unit,
@@ -86,11 +89,11 @@ fun ActivitiesScreen(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             ScreenTitle(stringResource(R.string.tab_activities)) {
-                MoneyPill(amount = snapshot.progress.money)
+                MoneyPill(amount = wallet, settled = walletSettled)
             }
         }
 
@@ -170,8 +173,8 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
                 Box(
                     modifier = Modifier
                         .size(46.dp)
-                        .clip(CircleShape)
-                        .background(Accents.Primary.copy(alpha = 0.16f)),
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(occupationTint(occupation.id).copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -186,8 +189,9 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
                     Text(
                         text = stringResource(occupationNameRes(occupation.id)),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
                         color = Accents.Text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = stringResource(
@@ -203,8 +207,8 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
                 // it lands — the shift visibly pays as it goes.
                 Box(contentAlignment = Alignment.Center) {
                     EffectChip(
-                        icon = if (isWork) Icons.Rounded.Paid else Icons.Rounded.Star,
-                        text = "+$earned",
+                        icon = if (isWork) Icons.Rounded.CurrencyYen else Icons.Rounded.Star,
+                        text = if (isWork) "+$earned ¥" else "+$earned EXP",
                         tint = tint,
                     )
                     GainPop(
@@ -215,7 +219,7 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
                 }
             }
             Spacer(Modifier.height(14.dp))
-            StatBarTrack(fraction = session.progress(nowMillis), color = Accents.Bright, height = 7.dp)
+            StatBarTrack(fraction = session.progress(nowMillis), color = Accents.Primary, height = 7.dp)
             Spacer(Modifier.height(14.dp))
             OutlineButton(
                 text = stringResource(R.string.action_call_home),
@@ -229,10 +233,9 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
 /**
  * One job.
  *
- * The chips live on their own full-width row under the title rather than
- * beside it: three of them plus a button in a single row left barely forty
- * points for the last chip, so "−16" was clipped mid-character on a narrow
- * phone. Below the title they get the whole card and wrap if they need to.
+ * Locked cards follow the one shared pattern: the whole card is dimmed and a
+ * level badge sits in the corner — no red text, no dead button. Unlocked
+ * cards say everything in numbered chips.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -250,68 +253,82 @@ private fun OccupationCard(
     val canStart = snapshot.canStart(occupation, tuning)
     val payout = simulation.projectedPayout(snapshot, occupation)
     val isWork = occupation.kind == OccupationKind.WORK
+    val mood = occupation.moodCost.toInt()
 
-    PanelCard(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconTile(
-                    icon = if (unlocked) occupationIcon(occupation.id) else Icons.Rounded.Lock,
-                    tint = occupationTint(occupation.id),
-                    size = 54.dp,
-                    onTap = onCategoryTap,
-                    tapEnabled = patting,
-                )
-                Spacer(Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
+    Box(modifier = modifier.fillMaxWidth()) {
+        PanelCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(if (unlocked) 1f else 0.45f),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconTile(
+                        icon = occupationIcon(occupation.id),
+                        tint = occupationTint(occupation.id),
+                        size = 54.dp,
+                        onTap = onCategoryTap,
+                        tapEnabled = patting && unlocked,
+                    )
+                    Spacer(Modifier.width(14.dp))
                     Text(
                         text = stringResource(occupationNameRes(occupation.id)),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
                         color = Accents.Text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = if (unlocked) {
-                            stringResource(R.string.duration_minutes, occupation.durationMinutes)
-                        } else {
-                            stringResource(R.string.unlocks_at_level, occupation.requiredLevel)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (unlocked) Accents.TextMuted else Accents.Danger,
-                    )
+                    if (unlocked) {
+                        Spacer(Modifier.width(10.dp))
+                        PrimaryButton(
+                            text = stringResource(
+                                if (isWork) R.string.action_start_work else R.string.action_start_study,
+                            ),
+                            onClick = { onStart(occupation) },
+                            enabled = canStart,
+                            minWidth = 96.dp,
+                        )
+                    }
                 }
-                Spacer(Modifier.width(10.dp))
-                PrimaryButton(
-                    text = stringResource(R.string.action_send),
-                    onClick = { onStart(occupation) },
-                    enabled = canStart,
-                    minWidth = 96.dp,
-                )
-            }
 
-            if (unlocked) {
-                Spacer(Modifier.height(12.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    EffectChip(
-                        icon = if (isWork) Icons.Rounded.Paid else Icons.Rounded.Star,
-                        text = "+$payout",
-                        tint = if (isWork) StatColors.Money else StatColors.Exp,
-                    )
-                    EffectChip(
-                        icon = Icons.Rounded.Bolt,
-                        text = "−${occupation.energyCost.toInt()}",
-                        tint = StatColors.Energy,
-                    )
-                    EffectChip(
-                        icon = Icons.Rounded.Favorite,
-                        text = stringResource(R.string.pay_scales_with_mood),
-                        tint = StatColors.Mood,
-                    )
+                if (unlocked) {
+                    Spacer(Modifier.height(12.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        EffectChip(
+                            icon = if (isWork) Icons.Rounded.CurrencyYen else Icons.Rounded.Star,
+                            text = if (isWork) "+$payout ¥" else "+$payout EXP",
+                            tint = if (isWork) StatColors.Money else StatColors.Exp,
+                        )
+                        EffectChip(
+                            icon = Icons.Rounded.Bolt,
+                            text = "−${occupation.energyCost.toInt()}",
+                            tint = StatColors.Energy,
+                        )
+                        EffectChip(
+                            icon = Icons.Rounded.Favorite,
+                            text = if (mood >= 0) "+$mood" else "−${-mood}",
+                            tint = StatColors.Mood,
+                        )
+                        EffectChip(
+                            icon = Icons.Rounded.Schedule,
+                            text = stringResource(R.string.chip_minutes, occupation.durationMinutes),
+                            tint = Accents.TextMuted,
+                        )
+                    }
                 }
             }
+        }
+        if (!unlocked) {
+            LevelBadge(
+                level = occupation.requiredLevel,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp),
+            )
         }
     }
 }

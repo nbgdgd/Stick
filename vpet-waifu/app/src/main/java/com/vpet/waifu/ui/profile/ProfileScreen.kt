@@ -30,12 +30,20 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Route
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -93,7 +101,7 @@ fun ProfileScreen(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             ScreenTitle(petName.ifBlank { stringResource(R.string.tab_her) }) {
@@ -105,10 +113,8 @@ fun ProfileScreen(
             }
         }
 
-        item { BondCard(snapshot) }
-        item { WeeklyGoalCard(snapshot) }
-        item { FocusCard(snapshot, onChooseFocus) }
-
+        // The hierarchy: where the story stands, then the bond, then the
+        // numbers. Everything actionable-later comes after.
         item {
             SectionHeader(
                 Icons.AutoMirrored.Rounded.MenuBook,
@@ -119,6 +125,22 @@ fun ProfileScreen(
             )
         }
         item { StoryCard(snapshot) }
+
+        item { BondCard(snapshot) }
+
+        item {
+            SectionHeader(
+                Icons.Rounded.AutoAwesome,
+                stringResource(R.string.stats_title),
+                tint = androidx.compose.ui.graphics.Color(0xFF7FD1E8),
+                onTap = onCategoryTap,
+                tapEnabled = patting,
+            )
+        }
+        item { StatsCard(snapshot, nowMillis) }
+
+        item { WeeklyGoalCard(snapshot) }
+        item { FocusCard(snapshot, onChooseFocus) }
 
         item {
             SectionHeader(
@@ -131,27 +153,20 @@ fun ProfileScreen(
         }
         item { AchievementsCard(snapshot) }
 
-        item {
-            SectionHeader(
-                Icons.Rounded.Checkroom,
-                stringResource(R.string.wardrobe_title),
-                tint = androidx.compose.ui.graphics.Color(0xFF9B8CF0),
-                onTap = onCategoryTap,
-                tapEnabled = patting,
-            )
+        // The wardrobe earns its place on the page only once there is a
+        // choice to make — one default outfit is not a wardrobe.
+        if (Upgrades.OUTFITS.count { snapshot.owns(it.id) } >= 2) {
+            item {
+                SectionHeader(
+                    Icons.Rounded.Checkroom,
+                    stringResource(R.string.wardrobe_title),
+                    tint = androidx.compose.ui.graphics.Color(0xFFB39CE8),
+                    onTap = onCategoryTap,
+                    tapEnabled = patting,
+                )
+            }
+            item { WardrobeCard(snapshot, onWear) }
         }
-        item { WardrobeCard(snapshot, onWear) }
-
-        item {
-            SectionHeader(
-                Icons.Rounded.AutoAwesome,
-                stringResource(R.string.stats_title),
-                tint = androidx.compose.ui.graphics.Color(0xFF7FD1E8),
-                onTap = onCategoryTap,
-                tapEnabled = patting,
-            )
-        }
-        item { StatsCard(snapshot, nowMillis) }
     }
 }
 
@@ -269,7 +284,7 @@ private fun BondCard(snapshot: PetSnapshot) {
                 color = StatColors.Mood,
                 height = 7.dp,
             )
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(bondNameRes(snapshot.bondLevel)),
                     style = MaterialTheme.typography.bodySmall,
@@ -277,17 +292,35 @@ private fun BondCard(snapshot: PetSnapshot) {
                     color = StatColors.Mood,
                     modifier = Modifier.weight(1f),
                 )
-                Text(
+                EffectChip(
+                    icon = Icons.Rounded.Favorite,
                     text = stringResource(R.string.bond_today, snapshot.bondToday, Bond.DAILY_CAP),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Accents.TextMuted,
+                    tint = StatColors.Mood,
                 )
             }
-            Text(
-                text = stringResource(R.string.bond_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = Accents.TextDim,
-            )
+            // The sources as icons, the rule as one quiet line.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                listOf(
+                    Icons.Rounded.Restaurant,
+                    Icons.Rounded.Favorite,
+                    Icons.Rounded.CardGiftcard,
+                    Icons.Rounded.Work,
+                    Icons.Rounded.SportsEsports,
+                ).forEach { source ->
+                    Icon(
+                        imageVector = source,
+                        contentDescription = null,
+                        tint = Accents.TextMuted,
+                        modifier = Modifier.size(15.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    text = stringResource(R.string.bond_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Accents.TextDim,
+                )
+            }
         }
     }
 }
@@ -488,23 +521,61 @@ private fun StoryCard(snapshot: PetSnapshot) {
     }
 }
 
+/**
+ * Collapsed by default: the next three trophies within reach, plus the tally.
+ * The full cabinet unfolds on demand instead of wallpapering the screen.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AchievementsCard(snapshot: PetSnapshot) {
     val trophies = achievementsFor(snapshot)
+    val earnedCount = trophies.count { it.earned }
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    // Each family is listed easy-to-hard, so the first unearned entries are
+    // the nearest ones to unlocking.
+    val shown = if (expanded) trophies else trophies.filter { !it.earned }.take(3)
+
     PanelCard(modifier = Modifier.fillMaxWidth()) {
-        FlowRow(
-            modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            trophies.forEach { trophy ->
-                Box(modifier = Modifier.alpha(if (trophy.earned) 1f else 0.35f)) {
-                    EffectChip(
-                        icon = trophy.icon,
-                        text = stringResource(trophy.titleRes),
-                        tint = if (trophy.earned) trophy.tint else Accents.TextDim,
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.ach_progress, earnedCount, trophies.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Accents.TextMuted,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = if (expanded) {
+                        stringResource(R.string.ach_hide)
+                    } else {
+                        stringResource(R.string.ach_show_all, trophies.size)
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Accents.Primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { expanded = !expanded }
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                shown.forEach { trophy ->
+                    Box(modifier = Modifier.alpha(if (trophy.earned) 1f else 0.45f)) {
+                        EffectChip(
+                            icon = trophy.icon,
+                            text = stringResource(trophy.titleRes),
+                            tint = if (trophy.earned) trophy.tint else Accents.TextMuted,
+                        )
+                    }
                 }
             }
         }

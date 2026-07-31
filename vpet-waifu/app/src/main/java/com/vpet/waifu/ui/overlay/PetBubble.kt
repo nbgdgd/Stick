@@ -173,7 +173,7 @@ private fun PetPanel(
                     color = Accents.Text,
                 )
                 Text(
-                    text = "Lv ${snapshot.level} · ${snapshot.progress.money}¥",
+                    text = "Lv ${snapshot.level} · ${snapshot.progress.money} ¥",
                     style = MaterialTheme.typography.labelSmall,
                     color = Accents.TextMuted,
                 )

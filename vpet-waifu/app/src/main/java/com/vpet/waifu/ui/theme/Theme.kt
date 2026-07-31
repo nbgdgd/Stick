@@ -5,24 +5,32 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.vpet.waifu.R
 
 /** Stat colours, shared by the bars, the badges and the widget. */
 object StatColors {
-    val Hunger = Color(0xFFF5A623)
-    val Energy = Color(0xFF4FC3F7)
-    val Mood = Color(0xFFC46BE0)
-    val Money = Color(0xFFF5C542)
-    val Exp = Color(0xFF5FD08A)
+    val Hunger = Tokens.Semantic.Hunger
+    val Energy = Tokens.Semantic.Energy
+    val Mood = Tokens.Semantic.Mood
+    val Money = Tokens.Semantic.Money
+    val Exp = Tokens.Semantic.Exp
 }
 
 /** Room backdrops behind the character, day and night. */
 object StageColors {
-    val DayTop = Color(0xFFF6EEFF)
-    val DayBottom = Color(0xFFE3D6F7)
-    val NightTop = Color(0xFF2B2447)
-    val NightBottom = Color(0xFF1A1530)
-    val FloorLight = Color(0xFFD9C9F0)
-    val FloorDark = Color(0xFF272042)
+    val DayTop = Color(0xFFFFF3E7)
+    val DayBottom = Color(0xFFF2DCC6)
+    val NightTop = Color(0xFF262638)
+    val NightBottom = Color(0xFF15151F)
+    val FloorLight = Color(0xFFE3C9AE)
+    val FloorDark = Color(0xFF2C2C40)
 }
 
 /**
@@ -31,34 +39,36 @@ object StageColors {
  * Material's scheme does not have names for "the tile a shop item's icon sits
  * in" or "the outline that makes a card read as raised on near-black", so the
  * handful of shades the design leans on are named here instead of being spelled
- * out at each call site.
+ * out at each call site. Values come from [Tokens]: a neutral grey base with
+ * one raspberry accent.
  */
 object Surfaces {
-    val Screen = Color(0xFF08070C)
-    val Card = Color(0xFF16141D)
-    val CardBorder = Color(0xFF241F31)
-    val Tile = Color(0xFF1E1A28)
-    val TileBorder = Color(0xFF3B2F55)
-    val Elevated = Color(0xFF1C1926)
-    val Divider = Color(0xFF2A2437)
-    val Track = Color(0xFF2A2537)
+    val Screen = Tokens.Neutral.Bg
+    val Card = Tokens.Neutral.Surface
+    val CardBorder = Tokens.Neutral.Border
+    val Tile = Tokens.Neutral.SurfaceHigh
+    val TileBorder = Tokens.Neutral.BorderStrong
+    val Elevated = Tokens.Neutral.SurfaceHigh
+    val Divider = Tokens.Neutral.Border
+    val Track = Tokens.Neutral.Track
 }
 
 object Accents {
-    val Primary = Color(0xFFA855F7)
-    val Bright = Color(0xFFC084FC)
-    val Deep = Color(0xFF7C3AED)
-    val Danger = Color(0xFFF2557A)
-    val Text = Color(0xFFFFFFFF)
-    val TextMuted = Color(0xFF9C93B0)
-    val TextDim = Color(0xFF6E6683)
+    val Primary = Tokens.Semantic.Accent
+    val Bright = Color(0xFFF27CA0)
+    val Deep = Tokens.Semantic.AccentPressed
+    val Danger = Tokens.Semantic.Danger
+    val Text = Tokens.Neutral.Text
+    val TextMuted = Tokens.Neutral.TextSecondary
+    val TextDim = Color(0xFF8B8B96)
+    val TextDisabled = Tokens.Neutral.TextDisabled
 }
 
 private val Scheme = darkColorScheme(
     primary = Accents.Primary,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFF2A1F42),
-    onPrimaryContainer = Color(0xFFE9DDFB),
+    primaryContainer = Color(0xFF3A1220),
+    onPrimaryContainer = Color(0xFFFFD9E4),
     secondary = Accents.Bright,
     tertiary = StatColors.Energy,
     background = Surfaces.Screen,
@@ -69,8 +79,54 @@ private val Scheme = darkColorScheme(
     onSurfaceVariant = Accents.TextMuted,
     outline = Surfaces.CardBorder,
     error = Accents.Danger,
-    errorContainer = Color(0xFF3A1622),
-    onErrorContainer = Color(0xFFFFD6DF),
+    errorContainer = Color(0xFF3A1A12),
+    onErrorContainer = Color(0xFFFFDCD2),
+)
+
+/**
+ * Golos Text — one variable file, two named weights.
+ *
+ * Chosen because it is an OFL face designed Cyrillic-first (Paratype), so the
+ * Russian UI is set in a font drawn for it rather than falling back to Roboto.
+ */
+@OptIn(ExperimentalTextApi::class)
+private val Golos = FontFamily(
+    Font(
+        R.font.golos_text,
+        weight = FontWeight.Normal,
+        variationSettings = FontVariation.Settings(FontVariation.weight(400)),
+    ),
+    Font(
+        R.font.golos_text,
+        weight = FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(600)),
+    ),
+)
+
+private fun golos(size: Int, line: Int, weight: FontWeight) = TextStyle(
+    fontFamily = Golos,
+    fontWeight = weight,
+    fontSize = size.sp,
+    lineHeight = line.sp,
+)
+
+/**
+ * The whole app on three sizes and two weights (Tokens.Type): 20/15/12,
+ * Regular/SemiBold. Material styles are collapsed onto that scale so existing
+ * call sites keep working without carrying their own font sizes.
+ */
+private val GolosTypography = Typography(
+    headlineMedium = golos(20, 26, FontWeight.SemiBold),
+    headlineSmall = golos(20, 26, FontWeight.SemiBold),
+    titleLarge = golos(20, 26, FontWeight.SemiBold),
+    titleMedium = golos(15, 21, FontWeight.SemiBold),
+    titleSmall = golos(15, 21, FontWeight.SemiBold),
+    bodyLarge = golos(15, 21, FontWeight.Normal),
+    bodyMedium = golos(15, 21, FontWeight.Normal),
+    bodySmall = golos(12, 17, FontWeight.Normal),
+    labelLarge = golos(15, 20, FontWeight.SemiBold),
+    labelMedium = golos(12, 16, FontWeight.SemiBold),
+    labelSmall = golos(12, 16, FontWeight.Normal),
 )
 
 /**
@@ -84,7 +140,7 @@ private val Scheme = darkColorScheme(
 fun VPetTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = Scheme,
-        typography = Typography(),
+        typography = GolosTypography,
         content = content,
     )
 }

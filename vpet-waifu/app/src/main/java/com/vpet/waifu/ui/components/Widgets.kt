@@ -4,7 +4,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -27,7 +26,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.CurrencyYen
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,12 +48,13 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.vpet.waifu.R
 import com.vpet.waifu.domain.PetStats
 import com.vpet.waifu.domain.Progression
 import com.vpet.waifu.ui.theme.Accents
@@ -102,7 +103,7 @@ fun PanelCard(
     modifier: Modifier = Modifier,
     color: Color = Surfaces.Card,
     border: Color = Surfaces.CardBorder,
-    radius: Dp = 20.dp,
+    radius: Dp = 16.dp,
     content: @Composable () -> Unit,
 ) {
     Surface(
@@ -114,24 +115,16 @@ fun PanelCard(
     )
 }
 
-/** A screen heading: a short accent bar, then the title. */
+/** A screen heading: just the title — the type scale does the work. */
 @Composable
 fun ScreenTitle(text: String, modifier: Modifier = Modifier, trailing: @Composable () -> Unit = {}) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .size(width = 4.dp, height = 28.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(Accents.Primary),
-        )
-        Spacer(Modifier.width(12.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
             color = Accents.Text,
         )
         Spacer(Modifier.weight(1f))
@@ -139,7 +132,7 @@ fun ScreenTitle(text: String, modifier: Modifier = Modifier, trailing: @Composab
     }
 }
 
-/** An icon in a rounded tile, then the section name over a short underline. */
+/** An icon in a rounded tile beside the section name. */
 @Composable
 fun SectionHeader(
     icon: ImageVector,
@@ -172,52 +165,36 @@ private fun SectionHeaderRow(
         Box(
             modifier = Modifier
                 .size(34.dp)
-                .clip(RoundedCornerShape(11.dp))
-                .background(Surfaces.Tile)
-                .border(1.dp, Surfaces.TileBorder, RoundedCornerShape(11.dp)),
+                .clip(RoundedCornerShape(12.dp))
+                .background(tint.copy(alpha = 0.12f))
+                .border(1.dp, tint.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(10.dp))
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Accents.Text,
-            )
-            Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .size(width = 26.dp, height = 3.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    // The section's own colour, not one shared accent: the rule
-                    // in a list of eight identical purple rules told you nothing
-                    // about which section you were looking at.
-                    .background(tint),
-            )
-        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = Accents.Text,
+        )
     }
 }
 
 /**
  * The wallet: gold text inside a gold-tinted, gold-outlined pill.
  *
- * The number counts rather than jumps, which matters now that wages land every
- * minute of a shift — the pill ticking up is how the player notices she is
- * being paid while the shift is still running.
+ * [amount] arrives already animated — one count-up shared by every pill in the
+ * app (see the wallet state in VPetApp), so two visible pills can never show
+ * different digits in the same frame. The pill itself only handles the flash
+ * and the hop.
  */
 @Composable
-fun MoneyPill(amount: Int, modifier: Modifier = Modifier, bump: Int = 0) {
-    val shown by animateIntAsState(
-        targetValue = amount,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "wallet",
-    )
+fun MoneyPill(amount: Int, modifier: Modifier = Modifier, bump: Int = 0, settled: Boolean = true) {
+    val shown = amount
     // A gentle flash on the way up, so a payout is visible even mid-scroll.
     val glow by animateFloatAsState(
-        targetValue = if (shown == amount) 0.10f else 0.24f,
+        targetValue = if (settled) 0.10f else 0.24f,
         label = "wallet-glow",
     )
     // The hop, on a landing coin or on any rise in the wallet.
@@ -250,7 +227,7 @@ fun MoneyPill(amount: Int, modifier: Modifier = Modifier, bump: Int = 0) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Rounded.Paid,
+                imageVector = Icons.Rounded.CurrencyYen,
                 contentDescription = null,
                 tint = StatColors.Money,
                 modifier = Modifier.size(16.dp),
@@ -259,7 +236,6 @@ fun MoneyPill(amount: Int, modifier: Modifier = Modifier, bump: Int = 0) {
             Text(
                 text = "$shown",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
                 color = StatColors.Money,
                 maxLines = 1,
             )
@@ -296,7 +272,7 @@ fun EffectChip(
     }
 }
 
-/** The glowing rounded tile a shop item's icon sits in. */
+/** The flat rounded tile a shop item's icon sits in. */
 @Composable
 fun IconTile(
     icon: ImageVector,
@@ -325,13 +301,9 @@ private fun IconTileFace(
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(tint.copy(alpha = 0.16f), Surfaces.Tile),
-                ),
-            )
-            .border(1.dp, tint.copy(alpha = 0.35f), RoundedCornerShape(18.dp)),
+            .clip(RoundedCornerShape(12.dp))
+            .background(tint.copy(alpha = 0.12f))
+            .border(1.dp, tint.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -362,12 +334,14 @@ fun StatRow(
 
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (!compact) {
+            // The same tile grammar as IconTile and SectionHeader — one icon
+            // container style across the app instead of three.
             Box(
                 modifier = Modifier
                     .size(38.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.15f))
-                    .border(1.dp, color.copy(alpha = 0.4f), CircleShape),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(color.copy(alpha = 0.12f))
+                    .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
@@ -481,15 +455,21 @@ fun ActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val alpha = if (enabled) 1f else 0.35f
+    // Disabled is its own visual state — muted solid surfaces and grey
+    // content — not the enabled button at reduced opacity.
+    val content = if (enabled) tint else Accents.TextDisabled
     val interaction = remember { MutableInteractionSource() }
 
     Box(
         modifier = modifier
             .pressable(enabled, interaction, onClick)
-            .clip(RoundedCornerShape(18.dp))
-            .background(Surfaces.Card)
-            .border(1.dp, tint.copy(alpha = 0.35f * alpha), RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (enabled) Surfaces.Card else Surfaces.Tile)
+            .border(
+                1.dp,
+                if (enabled) tint.copy(alpha = 0.35f) else Surfaces.CardBorder,
+                RoundedCornerShape(12.dp),
+            )
             .padding(vertical = 12.dp, horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -497,14 +477,14 @@ fun ActionButton(
             Box(
                 modifier = Modifier
                     .size(34.dp)
-                    .clip(CircleShape)
-                    .background(tint.copy(alpha = 0.14f * alpha)),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(content.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = tint.copy(alpha = alpha),
+                    tint = content,
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -512,7 +492,7 @@ fun ActionButton(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                color = tint.copy(alpha = alpha),
+                color = content,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -536,7 +516,6 @@ fun PrimaryButton(
     enabled: Boolean = true,
     minWidth: Dp = 0.dp,
 ) {
-    val alpha = if (enabled) 1f else 0.4f
     val interaction = remember { MutableInteractionSource() }
 
     Box(
@@ -545,12 +524,13 @@ fun PrimaryButton(
             .pressable(enabled, interaction, onClick)
             .clip(RoundedCornerShape(50))
             .background(
-                Brush.horizontalGradient(
-                    listOf(
-                        Accents.Deep.copy(alpha = alpha),
-                        Accents.Primary.copy(alpha = alpha),
-                    ),
-                ),
+                // The one gradient the UI keeps: the main call to action.
+                // Disabled is a muted solid, not the same gradient faded out.
+                if (enabled) {
+                    Brush.horizontalGradient(listOf(Accents.Deep, Accents.Primary))
+                } else {
+                    Brush.horizontalGradient(listOf(Surfaces.Tile, Surfaces.Tile))
+                },
             )
             .padding(horizontal = 20.dp, vertical = 13.dp),
         contentAlignment = Alignment.Center,
@@ -558,8 +538,7 @@ fun PrimaryButton(
         Text(
             text = text,
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = alpha),
+            color = if (enabled) Color.White else Accents.TextDisabled,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -577,23 +556,27 @@ fun OutlineButton(
     tint: Color = Accents.Bright,
     minWidth: Dp = 0.dp,
 ) {
-    val alpha = if (enabled) 1f else 0.35f
+    val content = if (enabled) tint else Accents.TextDisabled
     val interaction = remember { MutableInteractionSource() }
 
     Box(
         modifier = modifier
             .widthIn(min = minWidth)
             .pressable(enabled, interaction, onClick)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Surfaces.Tile.copy(alpha = alpha))
-            .border(1.dp, tint.copy(alpha = 0.45f * alpha), RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(Surfaces.Tile)
+            .border(
+                1.dp,
+                if (enabled) tint.copy(alpha = 0.45f) else Surfaces.CardBorder,
+                RoundedCornerShape(12.dp),
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.titleSmall,
-            color = tint.copy(alpha = alpha),
+            color = content,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -651,10 +634,41 @@ fun GainPop(
             text = "+$gain $label",
             modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp),
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
             color = tint,
             maxLines = 1,
         )
+    }
+}
+
+/**
+ * The one way locked content is marked: the card underneath is dimmed and
+ * this badge sits in its corner. No red warnings, no dead buttons.
+ */
+@Composable
+fun LevelBadge(level: Int, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = Surfaces.Elevated,
+        shape = RoundedCornerShape(50),
+        border = BorderStroke(1.dp, Surfaces.TileBorder),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Lock,
+                contentDescription = null,
+                tint = Accents.TextMuted,
+                modifier = Modifier.size(12.dp),
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = stringResource(R.string.level_badge, level),
+                style = MaterialTheme.typography.labelMedium,
+                color = Accents.TextMuted,
+            )
+        }
     }
 }
 
@@ -720,7 +734,7 @@ fun LevelRing(exp: Int, modifier: Modifier = Modifier, size: Dp = 54.dp, bump: I
                 style = Stroke(width = stroke, cap = StrokeCap.Round),
             )
             drawArc(
-                brush = Brush.sweepGradient(listOf(Accents.Deep, Accents.Bright, Accents.Deep)),
+                color = Accents.Primary,
                 startAngle = -90f,
                 sweepAngle = 360f * fraction,
                 useCenter = false,
@@ -732,7 +746,6 @@ fun LevelRing(exp: Int, modifier: Modifier = Modifier, size: Dp = 54.dp, bump: I
         Text(
             text = "$level",
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
             color = Accents.Text,
         )
     }

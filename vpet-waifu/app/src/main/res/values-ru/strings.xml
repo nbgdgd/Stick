@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VPet Waifu</string>
+    <string name="app_name">Вайфу</string>
 
     <string name="tab_home">Дом</string>
     <string name="tab_activities">Дела</string>
@@ -70,12 +70,11 @@
     <string name="unlocks_at_level">Откроется на %1$d уровне</string>
     <string name="session_remaining">осталось %1$s</string>
     <string name="duration_minutes">смена %1$d мин</string>
-    <string name="pay_scales_with_mood">настроение</string>
-    <string name="too_tired_to_work">Она слишком вымоталась, чтобы куда-то идти. Сначала покорми или уложи спать.</string>
+    <string name="too_tired_to_work">Мало энергии — нужны еда или сон</string>
     <string name="tab_her">Она</string>
     <string name="state_sick">Приболела</string>
     <string name="item_medicine">Лекарство</string>
-    <string name="she_is_healthy">Она здорова — прибереги на чёрный день</string>
+    <string name="she_is_healthy">Доступно только во время болезни</string>
     <string name="say_sick_0">Мне что-то нехорошо…</string>
     <string name="say_sick_1">Голова тяжёлая… принесёшь мне что-нибудь?</string>
     <string name="say_sick_2">*шмыг*… кажется, я простыла.</string>
@@ -84,20 +83,20 @@
     <string name="say_request_2">Слушай, слушай — у меня малюсенькое желание!</string>
 
     <string name="sick_title">Она заболела</string>
-    <string name="sick_body">Слишком долго на пустой желудок или без сна. Пока не поправится — ни работы, ни учёбы, ни игр. Лекарство вылечит сразу, само пройдёт за сутки.</string>
+    <string name="sick_body">Работа, учёба и игры недоступны до выздоровления.</string>
     <string name="sick_buy_medicine">Лекарство · %1$d ¥</string>
 
     <string name="request_title">Она просит</string>
-    <string name="request_food">Ей сейчас очень хочется: %1$s</string>
-    <string name="request_gift">Она мечтает о подарке: %1$s</string>
-    <string name="request_play">Она хочет сыграть с тобой разок</string>
-    <string name="request_window">исполнить сейчас — очень ценно · осталось %1$s</string>
+    <string name="request_food">Просит: %1$s</string>
+    <string name="request_gift">Хочет в подарок: %1$s</string>
+    <string name="request_play">Хочет сыграть один раунд</string>
+    <string name="request_window">осталось %1$s</string>
 
     <string name="bond_title">Привязанность</string>
     <string name="bond_level_label">Привязанность %1$d</string>
     <string name="bond_progress">%1$d / %2$d</string>
     <string name="bond_today">сегодня +%1$d / %2$d</string>
-    <string name="bond_hint">Привязанность только растёт: еда, спокойные поглаживания, подарки, законченные смены и исполненные желания — всё считается, но по чуть-чуть в день. Она никогда не падает — это ваша общая история.</string>
+    <string name="bond_hint">Растёт от заботы, никогда не убывает</string>
     <string name="bond_name_0">Незнакомки</string>
     <string name="bond_name_1">Знакомые</string>
     <string name="bond_name_2">Соседки</string>
@@ -111,8 +110,8 @@
     <string name="bond_name_10">Дом</string>
 
     <string name="focus_title">Её путь</string>
-    <string name="focus_locked">На %1$d уровне она выберет путь — выбор навсегда.</string>
-    <string name="focus_pick_hint">Выбор один и навсегда. Каждый путь в чём-то лучше и в чём-то хуже.</string>
+    <string name="focus_locked">Откроется на %1$d уровне</string>
+    <string name="focus_pick_hint">Выбор необратим</string>
     <string name="focus_career">Карьера</string>
     <string name="focus_career_desc">Зарплата +15%, учёба −10%</string>
     <string name="focus_scholar">Учёная</string>
@@ -123,22 +122,22 @@
 
     <string name="story_title">Её история</string>
     <string name="story_progress">Глава %1$d из %2$d</string>
-    <string name="story_complete">История дошла до конца. Жизнь — продолжается.</string>
+    <string name="story_complete">История завершена</string>
     <string name="story_chapter_done">Глава завершена!</string>
     <string name="story_reward_money">+%1$d ¥</string>
-    <string name="story_reward_outfit">Подарок: новый наряд</string>
+    <string name="story_reward_outfit">Новый наряд</string>
     <string name="story_ch_meeting">Знакомство</string>
     <string name="story_ch_meeting_goal">Немного позаботься о ней — покорми, погладь.</string>
     <string name="story_ch_first_shift">Первая зарплата</string>
     <string name="story_ch_first_shift_goal">Проводи её через первую смену.</string>
     <string name="story_ch_diligent">Прилежная</string>
-    <string name="story_ch_diligent_goal">Закончить три занятия.</string>
+    <string name="story_ch_diligent_goal">Закончить 3 занятия</string>
     <string name="story_ch_settling_in">Обживаемся</string>
-    <string name="story_ch_settling_in_goal">Купить два улучшения для дома или дела.</string>
+    <string name="story_ch_settling_in_goal">Купить 2 улучшения</string>
     <string name="story_ch_kindred">Родные души</string>
     <string name="story_ch_kindred_goal">Привязанность 4.</string>
     <string name="story_ch_professional">Профессионал</string>
-    <string name="story_ch_professional_goal">Пятнадцать смен и 10 уровень.</string>
+    <string name="story_ch_professional_goal">15 смен · 10 уровень</string>
     <string name="story_ch_her_own_path">Её путь</string>
     <string name="story_ch_her_own_path_goal">Выбрать путь и достичь 15 уровня.</string>
     <string name="story_ch_finale">Там, где её дом</string>
@@ -172,9 +171,9 @@
     <string name="wardrobe_title">Гардероб</string>
 
     <string name="notify_sick_title">%1$s заболела</string>
-    <string name="notify_sick_body">Ей нужно лекарство — или день покоя.</string>
+    <string name="notify_sick_body">Она заболела — нужно лекарство</string>
     <string name="notify_request_title">%1$s о чём-то просит</string>
-    <string name="notify_request_body">Маленькое желание — исполнить его сейчас очень ценно.</string>
+    <string name="notify_request_body">У неё желание · время ограничено</string>
     <string name="say_morning_0">Доброе утро! Я тебя ждала.</string>
     <string name="say_morning_1">Утро! Сделаем сегодня хороший день?</string>
     <string name="say_morning_2">Проснулся! А у меня уже планы на нас~</string>
@@ -184,13 +183,13 @@
     <string name="recap_lesson">Закончила: %1$s · +%2$d опыта</string>
     <string name="recap_fell_sick">Она заболела</string>
     <string name="recap_recovered">Поправилась сама</string>
-    <string name="recap_wish_expired">Маленькое желание осталось неисполненным</string>
-    <string name="recap_event">Кое-что случилось — смотри карточку дня</string>
+    <string name="recap_wish_expired">Желание истекло</string>
+    <string name="recap_event">Новое событие дня</string>
     <string name="recap_goal">Цель недели закрыта · +%1$d ¥</string>
     <string name="recap_anniversary">%1$d дней вместе!</string>
 
     <string name="anniversary_title">%1$d дней вместе!</string>
-    <string name="anniversary_body">Маленький праздник: подарок уже в кошельке, а она весь день сияет.</string>
+    <string name="anniversary_body">Награда уже в кошельке</string>
 
     <string name="goal_title">Цель недели</string>
     <string name="goal_shifts">Отработать смен: %1$d</string>
@@ -198,24 +197,22 @@
     <string name="goal_games">Сыграть раундов: %1$d</string>
     <string name="goal_earn">Заработать %1$d ¥</string>
     <string name="goal_progress">%1$d / %2$d</string>
-    <string name="goal_reward">Награда: %1$d ¥ и +%2$d привязанности</string>
-    <string name="goal_done">Готово! Новая цель придёт на следующей неделе.</string>
-    <string name="goal_locked">Цели недели откроются на %1$d главе истории.</string>
+    <string name="goal_reward">+%1$d ¥ · привязанность +%2$d</string>
+    <string name="goal_done">Выполнено · новая цель в понедельник</string>
+    <string name="goal_locked">Откроется после %1$d главы истории</string>
 
     <string name="game_best">Рекорд: %1$d</string>
     <string name="game_new_record">Новый рекорд: %1$d!</string>
-    <string name="still_paying_it_off">Она ещё не расплатилась за прошлый</string>
+    <string name="still_paying_it_off">Эффект прошлой покупки ещё активен</string>
     <string name="section_busy">Она сейчас занята</string>
-    <string name="tip_jar_title">Копилка</string>
+    <string name="tip_jar_title">Пассивный доход</string>
     <string name="tip_jar_body">Мелочь капает, пока ты за ней смотришь дома: %1$d ¥ в минуту, но не больше %2$d ¥ в день. На смене копилка молчит — смена платит только тем, что платит смена.</string>
     <string name="exp_title">Уровень %1$d</string>
     <string name="exp_progress">%1$d / %2$d опыта</string>
-    <string name="exp_from_study">Учёба даёт опыт напрямую — она для этого и нужна.</string>
-    <string name="exp_from_work">Работа тоже немного учит: +%1$s опыта за минуту смены.</string>
     <string name="exp_next_level">%1$d опыта до %2$d уровня</string>
-    <string name="exp_maxed">Максимальный уровень. Учить больше нечему.</string>
+    <string name="exp_maxed">Максимальный уровень</string>
     <string name="not_enough_money">Дорого</string>
-    <string name="pills_warning">Таблетки дают всё сразу, а счёт приходит потом. Бери, когда понимаешь, что делаешь.</string>
+    <string name="pills_warning">Эффект мгновенный, штраф временный — указан на карточке</string>
     <string name="effect_hunger_surge">голод падает быстрее %1$s</string>
     <string name="effect_exhaustion">энергия падает быстрее %1$s</string>
     <string name="effect_haste">смена идёт ×2 быстрее %1$s</string>
@@ -223,7 +220,7 @@
     <string name="effect_focus">опыт ×1.5 %1$s</string>
     <string name="effect_second_wind">энергия тратится ×0.5 %1$s</string>
     <string name="effect_good_vibes">настроение растёт %1$s</string>
-    <string name="boost_already_running">Этот бафф ещё действует</string>
+    <string name="boost_already_running">Уже действует</string>
 
     <string name="outcome_title">%1$s — смена закончена</string>
     <string name="outcome_title_early">%1$s — ушла раньше</string>
@@ -231,8 +228,8 @@
     <string name="quality_good">Нормально</string>
     <string name="quality_poor">Так себе</string>
     <string name="quality_bad">Всё пошло не так</string>
-    <string name="outcome_hint_work">В хорошем настроении она зарабатывает намного больше. Покорми и дай отдохнуть перед следующей сменой.</string>
-    <string name="outcome_hint_study">Учёба в плохом настроении почти не усваивается. Сначала подними ей настроение.</string>
+    <string name="outcome_hint_work">Настроение снизило заработок — покорми её и дай отдохнуть</string>
+    <string name="outcome_hint_study">В плохом настроении опыта меньше</string>
 
     <string name="game_start">Начать</string>
     <string name="game_again">Ещё раз</string>
@@ -242,13 +239,13 @@
     <string name="game_catch">Ловкость</string>
     <string name="game_rhythm">Ритм</string>
     <string name="game_memory">Память</string>
-    <string name="game_rhythm_hint">Жми в тот момент, когда кольцо садится на круг. Куда жать — не важно, важно когда.</string>
-    <string name="game_memory_hint">Запомни порядок, в котором загораются кнопки, и повтори его. Три жизни.</string>
+    <string name="game_rhythm_hint">Жми, когда кольцо совпадает с кругом</string>
+    <string name="game_memory_hint">Повтори порядок подсветки · 3 жизни</string>
     <string name="game_memory_watch">Смотри…</string>
     <string name="game_memory_repeat">Твой ход</string>
     <string name="game_memory_wrong">Не та!</string>
-    <string name="game_hint">Лови всё, что выскакивает. Игра поднимает настроение, но тратит энергию.</string>
-    <string name="game_busy">Она сейчас занята.</string>
+    <string name="game_hint">Лови всё, что появляется на поле</string>
+    <string name="game_busy">Сейчас она занята</string>
 
     <string name="bubble_title">Плавающий питомец</string>
     <string name="bubble_subtitle">Держать её на экране поверх других приложений</string>
@@ -257,7 +254,7 @@
     <string name="overlay_channel_name">Плавающий питомец</string>
     <string name="overlay_channel_description">Держит питомца на экране поверх других приложений.</string>
     <string name="overlay_notification_title">Питомец на экране</string>
-    <string name="overlay_notification_text">Нажмите на неё, чтобы покормить или уложить спать.</string>
+    <string name="overlay_notification_text">Тап — покормить или уложить спать</string>
 
     <string name="widget_description">Питомец, её статы и уход в одно касание.</string>
     <string name="widget_pet_description">Питомец</string>
@@ -298,21 +295,21 @@
     <string name="event_title_letter">Письмо</string>
     <string name="event_title_inspired">Вдохновение</string>
     <string name="event_title_restless">Плохая ночь</string>
-    <string name="event_lucky_day">Сегодня всё складывается: и работа, и учёба приносят больше.</string>
-    <string name="event_cold">Она простыла. До завтра быстрее устаёт и хуже работает.</string>
-    <string name="event_letter">Конверт без обратного адреса, а внутри — деньги.</string>
-    <string name="event_inspired">Что-то щёлкнуло. Сегодня учёба усваивается гораздо лучше.</string>
-    <string name="event_restless">Она почти не спала. День начинается уставшим.</string>
+    <string name="event_lucky_day">Работа и учёба сегодня приносят больше</string>
+    <string name="event_cold">Простыла: до завтра устаёт быстрее</string>
+    <string name="event_letter">Неожиданный доход — уже в кошельке</string>
+    <string name="event_inspired">Учёба сегодня эффективнее</string>
+    <string name="event_restless">Не выспалась: энергия ниже</string>
 
     <!-- Notifications -->
     <string name="notify_channel_name">Твой питомец</string>
     <string name="notify_channel_description">Окончание смен и когда ей что-то нужно.</string>
     <string name="notify_shift_title">%1$s вернулась</string>
-    <string name="notify_shift_body">Заработала %1$d ¥. Загляни, чтобы посмотреть, как прошло.</string>
+    <string name="notify_shift_body">Смена окончена · +%1$d ¥</string>
     <string name="notify_hungry_title">%1$s голодна</string>
-    <string name="notify_hungry_body">Если её так оставить, настроение начнёт падать.</string>
+    <string name="notify_hungry_body">Она голодна</string>
     <string name="notify_tired_title">%1$s вымоталась</string>
-    <string name="notify_tired_body">Пока не поспит, никуда её отправить не выйдет.</string>
+    <string name="notify_tired_body">Она устала — нужен сон</string>
     <string name="notify_event_title">Кое-что случилось</string>
 
     <!-- Her -->
@@ -376,4 +373,22 @@
     <string name="say_content_0">Всё как надо.</string>
     <string name="say_content_1">Мне хорошо. Просто хорошо.</string>
     <string name="say_content_2">Вот такие дни — самые лучшие.</string>
+
+    <string name="passive_rate">%1$d ¥/мин</string>
+    <string name="passive_cap">лимит %1$d ¥/день</string>
+    <string name="passive_paused_busy">Во время смены не начисляется</string>
+    <string name="progress_title">Уровень и доход</string>
+    <string name="progress_info">Опыт даёт учёба; работа приносит +%1$s опыта в минуту. Пассивный доход начисляется, пока приложение открыто и она свободна; дневной лимит обновляется в полночь.</string>
+    <string name="settings_title">Настройки</string>
+    <string name="licenses_title">Лицензии</string>
+    <string name="licenses_body">Иконки: Material Icons (Apache 2.0). Шрифт: Golos Text (SIL OFL 1.1, Paratype). Звуки, музыка и арт персонажа созданы для приложения. Полный реестр — в файле ATTRIBUTIONS.md проекта.</string>
+    <string name="shop_busy_banner">Она занята до %1$s — еда недоступна</string>
+    <string name="shop_asleep_banner">Она спит — еда недоступна</string>
+    <string name="action_start_work">На смену</string>
+    <string name="action_start_study">Начать</string>
+    <string name="level_badge">%1$d ур.</string>
+    <string name="chip_minutes">%1$d мин</string>
+    <string name="ach_progress">%1$d из %2$d открыто</string>
+    <string name="ach_show_all">Все (%1$d)</string>
+    <string name="ach_hide">Свернуть</string>
 </resources>

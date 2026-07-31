@@ -222,7 +222,7 @@ internal fun RhythmBoard(
             Text(
                 text = verdict.label(),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = verdict.tint().copy(alpha = flashAlpha.value),
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
             )
@@ -231,7 +231,7 @@ internal fun RhythmBoard(
             Text(
                 text = "×$combo",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = Accents.Bright.copy(alpha = 0.85f),
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = 14.dp),
             )

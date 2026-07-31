@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.Upgrades
 
-@Database(entities = [PetStateEntity::class], version = 5, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 6, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
@@ -100,6 +100,43 @@ abstract class PetDatabase : RoomDatabase() {
                     "passiveDay INTEGER NOT NULL DEFAULT 0",
                     "passivePaidToday INTEGER NOT NULL DEFAULT 0",
                 ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+            }
+        }
+
+        /**
+         * Her inner life: bond, sickness, wishes, the story, her path, and the
+         * counters the profile is built from.
+         *
+         * Everything defaults to "nothing yet", which is true for an upgrading
+         * save — except her birthday, which is backfilled from the oldest
+         * timestamp the row carries so "days together" honours the time already
+         * spent rather than restarting it.
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "bondPoints INTEGER NOT NULL DEFAULT 0",
+                    "bondDay INTEGER NOT NULL DEFAULT 0",
+                    "bondToday INTEGER NOT NULL DEFAULT 0",
+                    "sickSince INTEGER NOT NULL DEFAULT 0",
+                    "runDownMinutes REAL NOT NULL DEFAULT 0",
+                    "requestKind TEXT",
+                    "requestItemId TEXT",
+                    "requestUntil INTEGER NOT NULL DEFAULT 0",
+                    "lastRequestSlot INTEGER NOT NULL DEFAULT 0",
+                    "storyChapter INTEGER NOT NULL DEFAULT 0",
+                    "storySeen INTEGER NOT NULL DEFAULT 0",
+                    "focus TEXT",
+                    "shiftsWorked INTEGER NOT NULL DEFAULT 0",
+                    "lessonsDone INTEGER NOT NULL DEFAULT 0",
+                    "gamesPlayed INTEGER NOT NULL DEFAULT 0",
+                    "mealsFed INTEGER NOT NULL DEFAULT 0",
+                    "giftsGiven INTEGER NOT NULL DEFAULT 0",
+                    "sicknessesNursed INTEGER NOT NULL DEFAULT 0",
+                    "totalEarned INTEGER NOT NULL DEFAULT 0",
+                    "bornAt INTEGER NOT NULL DEFAULT 0",
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+                db.execSQL("UPDATE pet_state SET bornAt = MIN(lastTickAt, lastInteractionAt)")
             }
         }
     }

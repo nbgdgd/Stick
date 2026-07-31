@@ -9,6 +9,7 @@ import com.vpet.waifu.feedback.Cue
 import com.vpet.waifu.feedback.MusicTrack
 import com.vpet.waifu.feedback.PetMusic
 import com.vpet.waifu.feedback.PetSounds
+import com.vpet.waifu.domain.Focus
 import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
@@ -126,6 +127,11 @@ class PetViewModel @Inject constructor(
     fun acknowledgeOutcome() = act(Cue.COIN) { repository.acknowledgeOutcome() }
 
     fun acknowledgeEvent() = act(Cue.TAP) { repository.acknowledgeEvent() }
+
+    /** Committing to a path is the biggest single decision in the game. */
+    fun chooseFocus(focus: Focus) = act(Cue.FANFARE) { repository.chooseFocus(focus) }
+
+    fun acknowledgeStory() = act(Cue.FANFARE) { repository.acknowledgeStory() }
 
     fun setBubbleEnabled(enabled: Boolean) = act { preferences.setBubbleEnabled(enabled) }
 

@@ -106,8 +106,12 @@ class PetWidget : GlanceAppWidget() {
             renderFrames(state, tempo, stageWidthDp, stageHeightDp, density, snapshot.outfit, workProp)
         }
         val flipper = buildFlipper(context, tempo, frames)
+        // Only the decor this cut of the room can actually show goes into the
+        // key, or buying a floor item would re-render a widget whose floor is
+        // hidden for an identical picture.
+        val decor = snapshot.owned.filter { decorVisible(it, detail) }.sorted()
         val room = ROOMS.getOrPut(
-            "${roomWidthPx}x$roomHeightPx|${palette.room.night}|${floorFraction.round3()}|$detail",
+            "${roomWidthPx}x$roomHeightPx|${palette.room.night}|${floorFraction.round3()}|$detail|${decor.joinToString(",")}",
         ) {
             PetRasterizer.roomPng(
                 widthPx = roomWidthPx,
@@ -119,6 +123,7 @@ class PetWidget : GlanceAppWidget() {
                 // character happens to sit in this size of widget.
                 floorFraction = floorFraction,
                 detail = detail,
+                decor = decor.toSet(),
             )
         }
 
@@ -310,7 +315,7 @@ private enum class FlipTempo(val layoutRes: Int, val loopSeconds: Float) {
             PetState.HAPPY, PetState.EATING,
             -> FAST
             PetState.IDLE, PetState.LOVED, PetState.HUNGRY -> NORMAL
-            PetState.TIRED, PetState.SLEEPING, PetState.STUDYING -> SLOW
+            PetState.TIRED, PetState.SLEEPING, PetState.STUDYING, PetState.SICK -> SLOW
         }
     }
 }
@@ -371,6 +376,13 @@ private fun widgetSize(context: Context, id: GlanceId): DpSize {
 }
 
 private val DEFAULT_WIDGET_SIZE = DpSize(250.dp, 180.dp)
+
+/** Whether an owned upgrade shows in this cut of the room at all. */
+private fun decorVisible(id: String, detail: RoomDetail): Boolean = when (id) {
+    "coffee_machine", "laptop", "textbooks", "studio" -> detail != RoomDetail.NONE
+    "fridge", "bed", "console", "cat" -> detail == RoomDetail.FULL
+    else -> false
+}
 
 /** Keeps float rounding out of a cache key. */
 private fun Float.round3(): Int = (this * 1000f).roundToInt()

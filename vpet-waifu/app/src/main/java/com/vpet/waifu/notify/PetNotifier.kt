@@ -34,6 +34,12 @@ enum class PetAlert(val id: Int) {
 
     /** Something happened today. */
     EVENT(2_004),
+
+    /** She fell ill — half the game is blocked until she is treated. */
+    SICK(2_005),
+
+    /** She is asking for something, and the wish has a window. */
+    REQUEST(2_006),
 }
 
 /**
@@ -94,6 +100,26 @@ class PetNotifier @Inject constructor(
                 PetAlert.EVENT,
                 context.getString(R.string.notify_event_title),
                 context.getString(eventBodyRes(event.kind.name)),
+            )
+        }
+
+        // Falling ill is the one transition that blocks half the game — it is
+        // exactly what notifications exist for.
+        if (snapshot.isSick && previous?.isSick == false) {
+            show(
+                PetAlert.SICK,
+                context.getString(R.string.notify_sick_title, name),
+                context.getString(R.string.notify_sick_body),
+            )
+        }
+
+        // A fresh wish. Compared by slot so the same request never fires twice.
+        val request = snapshot.request
+        if (request != null && previous?.request?.slot != request.slot) {
+            show(
+                PetAlert.REQUEST,
+                context.getString(R.string.notify_request_title, name),
+                context.getString(R.string.notify_request_body),
             )
         }
     }

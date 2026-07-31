@@ -8,12 +8,15 @@ import androidx.compose.material.icons.rounded.Backpack
 import androidx.compose.material.icons.rounded.Bed
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Cake
+import androidx.compose.material.icons.rounded.Chair
 import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.Checkroom
 import androidx.compose.material.icons.rounded.Coffee
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.Diamond
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Healing
 import androidx.compose.material.icons.rounded.Icecream
 import androidx.compose.material.icons.rounded.Kitchen
 import androidx.compose.material.icons.rounded.Laptop
@@ -24,6 +27,7 @@ import androidx.compose.material.icons.rounded.LunchDining
 import androidx.compose.material.icons.rounded.MarkEmailUnread
 import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.Piano
@@ -41,6 +45,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.DialogueLine
+import com.vpet.waifu.domain.Focus
+import com.vpet.waifu.domain.PetSnapshot
+import com.vpet.waifu.domain.Upgrades
 import com.vpet.waifu.domain.DialogueTopic
 import com.vpet.waifu.domain.EventKind
 import com.vpet.waifu.domain.OutcomeQuality
@@ -91,6 +98,7 @@ fun shopItemNameRes(id: String): Int = when (id) {
     "ring" -> R.string.item_ring
     "advance" -> R.string.item_advance
     "exp_pill" -> R.string.item_exp_pill
+    "medicine" -> R.string.item_medicine
     else -> R.string.item_onigiri
 }
 
@@ -106,6 +114,7 @@ fun shopItemIcon(id: String): ImageVector = when (id) {
     "headphones" -> Icons.Rounded.Headphones
     "ring" -> Icons.Rounded.Diamond
     "advance" -> Icons.Rounded.Payments
+    "medicine" -> Icons.Rounded.Healing
     "exp_pill" -> Icons.Rounded.Medication
     else -> Icons.Rounded.CardGiftcard
 }
@@ -141,6 +150,7 @@ fun shopItemTint(id: String): Color = when (id) {
     "ring" -> Color(0xFFBFD8F0)
     "advance" -> Color(0xFFDCE04A)
     "exp_pill" -> Color(0xFFC455E0)
+    "medicine" -> Color(0xFF54E070)
     else -> Color(0xFFB9A8DC)
 }
 
@@ -240,6 +250,8 @@ fun dialogueRes(line: DialogueLine): Int = when (line.topic) {
     DialogueTopic.PAYDAY -> pick(line.variant, R.string.say_payday_0, R.string.say_payday_1, R.string.say_payday_2)
     DialogueTopic.LEVEL_UP -> pick(line.variant, R.string.say_level_up_0, R.string.say_level_up_1, R.string.say_level_up_2)
     DialogueTopic.EVENT -> pick(line.variant, R.string.say_event_0, R.string.say_event_1, R.string.say_event_2)
+    DialogueTopic.SICK -> pick(line.variant, R.string.say_sick_0, R.string.say_sick_1, R.string.say_sick_2)
+    DialogueTopic.REQUEST -> pick(line.variant, R.string.say_request_0, R.string.say_request_1, R.string.say_request_2)
     DialogueTopic.CONTENT -> pick(line.variant, R.string.say_content_0, R.string.say_content_1, R.string.say_content_2)
 }
 
@@ -258,11 +270,12 @@ fun stateLabelRes(state: PetState): Int = when (state) {
     PetState.STUDYING -> R.string.state_studying
     PetState.PLAYING -> R.string.state_playing
     PetState.CELEBRATING -> R.string.state_celebrating
+    PetState.SICK -> R.string.state_sick
 }
 
 /** The ring around the bubble, so her state reads at a glance while collapsed. */
 fun accentFor(state: PetState): Color = when (state) {
-    PetState.HUNGRY, PetState.EATING -> StatColors.Hunger
+    PetState.HUNGRY, PetState.EATING, PetState.SICK -> StatColors.Hunger
     PetState.TIRED, PetState.SLEEPING -> StatColors.Energy
     PetState.WORKING -> StatColors.Money
     PetState.STUDYING -> StatColors.Exp
@@ -303,3 +316,103 @@ fun formatMinutes(totalMinutes: Int): String {
         else -> "${minutes}мин"
     }
 }
+
+// --- her inner life ------------------------------------------------------------
+
+@StringRes
+fun bondNameRes(level: Int): Int = when (level.coerceIn(0, 10)) {
+    0 -> R.string.bond_name_0
+    1 -> R.string.bond_name_1
+    2 -> R.string.bond_name_2
+    3 -> R.string.bond_name_3
+    4 -> R.string.bond_name_4
+    5 -> R.string.bond_name_5
+    6 -> R.string.bond_name_6
+    7 -> R.string.bond_name_7
+    8 -> R.string.bond_name_8
+    9 -> R.string.bond_name_9
+    else -> R.string.bond_name_10
+}
+
+@StringRes
+fun focusNameRes(focus: Focus): Int = when (focus) {
+    Focus.CAREER -> R.string.focus_career
+    Focus.SCHOLAR -> R.string.focus_scholar
+    Focus.HOMEBODY -> R.string.focus_homebody
+}
+
+@StringRes
+fun focusDescRes(focus: Focus): Int = when (focus) {
+    Focus.CAREER -> R.string.focus_career_desc
+    Focus.SCHOLAR -> R.string.focus_scholar_desc
+    Focus.HOMEBODY -> R.string.focus_homebody_desc
+}
+
+fun focusIcon(focus: Focus): ImageVector = when (focus) {
+    Focus.CAREER -> Icons.Rounded.Work
+    Focus.SCHOLAR -> Icons.Rounded.School
+    Focus.HOMEBODY -> Icons.Rounded.Chair
+}
+
+fun focusTint(focus: Focus): Color = when (focus) {
+    Focus.CAREER -> Color(0xFF6E9CF5)
+    Focus.SCHOLAR -> Color(0xFFA8D95C)
+    Focus.HOMEBODY -> Color(0xFFF2A0C8)
+}
+
+@StringRes
+fun chapterTitleRes(id: String): Int = when (id) {
+    "meeting" -> R.string.story_ch_meeting
+    "first_shift" -> R.string.story_ch_first_shift
+    "diligent" -> R.string.story_ch_diligent
+    "settling_in" -> R.string.story_ch_settling_in
+    "kindred" -> R.string.story_ch_kindred
+    "professional" -> R.string.story_ch_professional
+    "her_own_path" -> R.string.story_ch_her_own_path
+    else -> R.string.story_ch_finale
+}
+
+@StringRes
+fun chapterGoalRes(id: String): Int = when (id) {
+    "meeting" -> R.string.story_ch_meeting_goal
+    "first_shift" -> R.string.story_ch_first_shift_goal
+    "diligent" -> R.string.story_ch_diligent_goal
+    "settling_in" -> R.string.story_ch_settling_in_goal
+    "kindred" -> R.string.story_ch_kindred_goal
+    "professional" -> R.string.story_ch_professional_goal
+    "her_own_path" -> R.string.story_ch_her_own_path_goal
+    else -> R.string.story_ch_finale_goal
+}
+
+/** One trophy: what it is called, how it looks, and whether it is earned. */
+data class Achievement(
+    @StringRes val titleRes: Int,
+    val icon: ImageVector,
+    val tint: Color,
+    val earned: Boolean,
+)
+
+/**
+ * The cabinet, derived rather than stored: every trophy is a pure function of
+ * the counters the save file already carries, so nothing can ever be lost and
+ * nothing needs migrating.
+ */
+fun achievementsFor(snapshot: PetSnapshot): List<Achievement> = listOf(
+    Achievement(R.string.ach_first_shift, Icons.Rounded.Work, Color(0xFF6E9CF5), snapshot.shiftsWorked >= 1),
+    Achievement(R.string.ach_ten_shifts, Icons.Rounded.Work, Color(0xFF6E9CF5), snapshot.shiftsWorked >= 10),
+    Achievement(R.string.ach_fifty_shifts, Icons.Rounded.Work, Color(0xFFF0C445), snapshot.shiftsWorked >= 50),
+    Achievement(R.string.ach_first_lesson, Icons.Rounded.School, Color(0xFFA8D95C), snapshot.lessonsDone >= 1),
+    Achievement(R.string.ach_twenty_lessons, Icons.Rounded.School, Color(0xFFA8D95C), snapshot.lessonsDone >= 20),
+    Achievement(R.string.ach_hundred_meals, Icons.Rounded.RamenDining, Color(0xFFF2913F), snapshot.mealsFed >= 100),
+    Achievement(R.string.ach_ten_gifts, Icons.Rounded.CardGiftcard, Color(0xFFFF6E8E), snapshot.giftsGiven >= 10),
+    Achievement(R.string.ach_fifty_games, Icons.Rounded.SportsEsports, Color(0xFFF477B8), snapshot.gamesPlayed >= 50),
+    Achievement(R.string.ach_rich, Icons.Rounded.Payments, Color(0xFFF0C445), snapshot.totalEarned >= 25_000),
+    Achievement(R.string.ach_bond_5, Icons.Rounded.Favorite, Color(0xFFF86FB2), snapshot.bondLevel >= 5),
+    Achievement(R.string.ach_bond_10, Icons.Rounded.Favorite, Color(0xFFF86FB2), snapshot.bondLevel >= 10),
+    Achievement(R.string.ach_level_30, Icons.Rounded.Star, Color(0xFFF0C445), snapshot.level >= 30),
+    Achievement(
+        R.string.ach_all_upgrades, Icons.Rounded.AutoAwesome, Color(0xFF9B7DF0),
+        Upgrades.ALL.all { snapshot.owns(it.id) },
+    ),
+    Achievement(R.string.ach_nursed, Icons.Rounded.Healing, Color(0xFF54E070), snapshot.sicknessesNursed >= 1),
+)

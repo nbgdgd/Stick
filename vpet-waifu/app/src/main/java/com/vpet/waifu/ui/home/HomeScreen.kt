@@ -27,13 +27,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Checkroom
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Healing
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Savings
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -84,7 +88,12 @@ import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.domain.Dialogue
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.PetSnapshot
+import com.vpet.waifu.domain.PetRequest
 import com.vpet.waifu.domain.PetSimulation
+import com.vpet.waifu.domain.RequestKind
+import com.vpet.waifu.domain.Shop
+import com.vpet.waifu.domain.ShopItem
+import com.vpet.waifu.domain.Story
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.domain.Progression
 import com.vpet.waifu.domain.PetTuning
@@ -97,6 +106,7 @@ import com.vpet.waifu.ui.components.GainPop
 import com.vpet.waifu.ui.components.LevelRing
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.OutlineButton
+import com.vpet.waifu.ui.components.IconTile
 import com.vpet.waifu.ui.components.PanelCard
 import com.vpet.waifu.ui.components.PetStage
 import com.vpet.waifu.ui.components.PrimaryButton
@@ -107,7 +117,11 @@ import com.vpet.waifu.ui.components.StatusChip
 import com.vpet.waifu.ui.dialogueRes
 import com.vpet.waifu.ui.formatRemaining
 import com.vpet.waifu.ui.occupationIcon
+import com.vpet.waifu.ui.chapterTitleRes
 import com.vpet.waifu.ui.occupationTint
+import com.vpet.waifu.ui.shopItemIcon
+import com.vpet.waifu.ui.shopItemNameRes
+import com.vpet.waifu.ui.shopItemTint
 import com.vpet.waifu.ui.occupationNameRes
 import com.vpet.waifu.ui.stateLabelRes
 import com.vpet.waifu.ui.theme.Accents
@@ -147,6 +161,8 @@ fun HomeScreen(
     onToggleSleep: () -> Unit,
     onCancelOccupation: () -> Unit,
     onDismissEvent: () -> Unit,
+    onBuy: (ShopItem) -> Unit,
+    onAcknowledgeStory: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state = snapshot.state(nowMillis, tuning)
@@ -201,6 +217,7 @@ fun HomeScreen(
                 palette = PetPalette.forOutfit(snapshot.outfit),
                 characterScale = petScale.value,
                 workProp = workPropFor(snapshot.occupation?.id),
+                decor = snapshot.owned,
             )
             // The tap layer sits over the room but under the chips and bubble.
             Box(
@@ -264,6 +281,21 @@ fun HomeScreen(
                         .padding(top = 84.dp, end = 18.dp),
                 )
             }
+        }
+
+        // A completed chapter is the best news the screen can carry.
+        if (snapshot.storyChapter > snapshot.storySeen) {
+            StoryBanner(snapshot, onAcknowledgeStory)
+        }
+
+        // Illness outranks everything else on the board: it is the one state
+        // that blocks half the game until the player acts.
+        if (snapshot.isSick) {
+            SickCard(snapshot, onBuy)
+        }
+
+        snapshot.request?.takeIf { nowMillis < it.until }?.let { request ->
+            RequestCard(request, nowMillis)
         }
 
         snapshot.event?.takeIf { !it.acknowledged }?.let { event ->
@@ -1033,3 +1065,174 @@ private fun CoinSprite(
         }
     }
 }
+
+/**
+ * She is ill. The card explains what happened, what it blocks, and sells the
+ * cure on the spot — sending the player to hunt for the medicine through the
+ * shop while she stands there shivering would be pure friction.
+ */
+@Composable
+private fun SickCard(snapshot: PetSnapshot, onBuy: (ShopItem) -> Unit) {
+    val medicine = Shop.byId(Shop.MEDICINE_ID) ?: return
+    PanelCard(
+        modifier = Modifier.fillMaxWidth(),
+        color = Accents.Danger.copy(alpha = 0.10f),
+        border = Accents.Danger.copy(alpha = 0.5f),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.Healing,
+                    contentDescription = null,
+                    tint = Accents.Danger,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.sick_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Accents.Text,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = stringResource(R.string.sick_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Accents.TextMuted,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            PrimaryButton(
+                text = stringResource(R.string.sick_buy_medicine, medicine.price),
+                onClick = { onBuy(medicine) },
+                enabled = snapshot.progress.canAfford(medicine.price),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/** Her wish, with the thing named and the window shown. */
+@Composable
+private fun RequestCard(request: PetRequest, nowMillis: Long) {
+    val (icon, tint, line) = when (request.kind) {
+        RequestKind.FOOD -> {
+            val name = stringResource(shopItemNameRes(request.itemId ?: ""))
+            Triple(
+                shopItemIcon(request.itemId ?: ""),
+                shopItemTint(request.itemId ?: ""),
+                stringResource(R.string.request_food, name),
+            )
+        }
+        RequestKind.GIFT -> {
+            val name = stringResource(shopItemNameRes(request.itemId ?: ""))
+            Triple(
+                shopItemIcon(request.itemId ?: ""),
+                shopItemTint(request.itemId ?: ""),
+                stringResource(R.string.request_gift, name),
+            )
+        }
+        RequestKind.PLAY -> Triple(
+            Icons.Rounded.SportsEsports,
+            Color(0xFFF477B8),
+            stringResource(R.string.request_play),
+        )
+    }
+
+    PanelCard(
+        modifier = Modifier.fillMaxWidth(),
+        color = tint.copy(alpha = 0.08f),
+        border = tint.copy(alpha = 0.45f),
+    ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconTile(icon = icon, tint = tint, size = 46.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.request_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = tint,
+                )
+                Text(
+                    text = line,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Accents.Text,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = stringResource(
+                        R.string.request_window,
+                        formatRemaining(request.until - nowMillis),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Accents.TextMuted,
+                )
+            }
+        }
+    }
+}
+
+/** A chapter just completed: the title, the reward, and a proud OK. */
+@Composable
+private fun StoryBanner(snapshot: PetSnapshot, onAcknowledge: () -> Unit) {
+    // The chapter that finished is the one *before* the current pointer.
+    val done = Story.CHAPTERS.getOrNull(snapshot.storyChapter - 1) ?: return
+    PanelCard(
+        modifier = Modifier.fillMaxWidth(),
+        color = StatColors.Exp.copy(alpha = 0.10f),
+        border = StatColors.Exp.copy(alpha = 0.5f),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.AutoStories,
+                    contentDescription = null,
+                    tint = StatColors.Exp,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.story_chapter_done),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = StatColors.Exp,
+                    )
+                    Text(
+                        text = stringResource(chapterTitleRes(done.id)),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Accents.Text,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (done.rewardMoney > 0) {
+                    EffectChip(
+                        icon = Icons.Rounded.Paid,
+                        text = stringResource(R.string.story_reward_money, done.rewardMoney),
+                        tint = StatColors.Money,
+                    )
+                }
+                if (done.rewardOutfit != null) {
+                    EffectChip(
+                        icon = Icons.Rounded.Checkroom,
+                        text = stringResource(R.string.story_reward_outfit),
+                        tint = Color(0xFF9B8CF0),
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlineButton(
+                text = stringResource(R.string.action_ok),
+                onClick = onAcknowledge,
+                tint = StatColors.Exp,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+

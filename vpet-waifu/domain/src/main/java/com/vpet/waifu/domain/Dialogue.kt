@@ -33,6 +33,10 @@ enum class DialogueTopic {
     LEVEL_UP,
     /** An event landed today. */
     EVENT,
+    /** She is ill and saying so. */
+    SICK,
+    /** She is asking for something — the request card carries the specifics. */
+    REQUEST,
     /** Everything is fine and she is delighted about it. */
     CONTENT,
 }
@@ -105,10 +109,17 @@ object Dialogue {
 
         if (snapshot.event != null && !snapshot.event.acknowledged) return DialogueTopic.EVENT
 
+        // Being ill outranks everything ambient — it is the one state the
+        // player has to actually do something about.
+        if (snapshot.isSick) return DialogueTopic.SICK
+
         // Then the two things that actually need doing something about.
         if (snapshot.stats.hunger <= tuning.hungryThreshold / 2f) return DialogueTopic.STARVING
         if (snapshot.stats.hunger <= tuning.hungryThreshold) return DialogueTopic.HUNGRY
         if (snapshot.stats.energy <= tuning.tiredThreshold) return DialogueTopic.TIRED
+
+        // Her own wish, once nothing is urgent.
+        if (snapshot.request != null && nowMillis < snapshot.request.until) return DialogueTopic.REQUEST
 
         // Then noticing you.
         if (awayMinutes >= LONG_AWAY_MINUTES) return DialogueTopic.MISSED_YOU

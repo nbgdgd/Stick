@@ -66,6 +66,109 @@
     <string name="duration_minutes" tools:ignore="PluralsCandidate">%1$d min shift</string>
     <string name="pay_scales_with_mood">mood</string>
     <string name="too_tired_to_work">She is too worn out to go anywhere. Let her sleep or feed her first.</string>
+    <string name="tab_her">Her</string>
+    <string name="state_sick">Under the weather</string>
+    <string name="item_medicine">Medicine</string>
+    <string name="she_is_healthy">She is healthy — save it for a rainy day</string>
+    <string name="say_sick_0">I don\u2019t feel so good…</string>
+    <string name="say_sick_1">My head is all fuzzy… could you get me something?</string>
+    <string name="say_sick_2">*sniffle*… I think I caught a cold.</string>
+    <string name="say_request_0">Um… can I ask for a little something?</string>
+    <string name="say_request_1">I\u2019ve been thinking about one thing all day…</string>
+    <string name="say_request_2">Hey, hey — I have a tiny wish!</string>
+
+    <string name="sick_title">She is ill</string>
+    <string name="sick_body">Too long on an empty stomach or no sleep wore her down. She cannot work, study or play until she is well — medicine will fix it right away, or she will shake it off in a day.</string>
+    <string name="sick_buy_medicine">Medicine · %1$d ¥</string>
+
+    <string name="request_title">She is asking</string>
+    <string name="request_food">She would love %1$s right now</string>
+    <string name="request_gift">She is dreaming of %1$s</string>
+    <string name="request_play">She wants to play a round with you</string>
+    <string name="request_window">granting it now means a lot · %1$s left</string>
+
+    <string name="bond_title">Bond</string>
+    <string name="bond_level_label" tools:ignore="PluralsCandidate">Bond %1$d</string>
+    <string name="bond_progress">%1$d / %2$d</string>
+    <string name="bond_today">today +%1$d / %2$d</string>
+    <string name="bond_hint">Bond only ever grows: meals, considered pats, gifts, finished shifts and granted wishes all count, up to a little per day. It never goes down — it is the history you two share.</string>
+    <string name="bond_name_0">Strangers</string>
+    <string name="bond_name_1">Acquaintances</string>
+    <string name="bond_name_2">Roommates</string>
+    <string name="bond_name_3">Friends</string>
+    <string name="bond_name_4">Close friends</string>
+    <string name="bond_name_5">Dear to her</string>
+    <string name="bond_name_6">Trusted</string>
+    <string name="bond_name_7">Inseparable</string>
+    <string name="bond_name_8">Family</string>
+    <string name="bond_name_9">Soulmates</string>
+    <string name="bond_name_10">Home</string>
+
+    <string name="focus_title">Her path</string>
+    <string name="focus_locked">She will choose a path at level %1$d — a permanent choice.</string>
+    <string name="focus_pick_hint">Choose once, for good. Each path is better at one thing and worse at another.</string>
+    <string name="focus_career">Career</string>
+    <string name="focus_career_desc">Pay +15%, studying −10%</string>
+    <string name="focus_scholar">Scholar</string>
+    <string name="focus_scholar_desc">Studying +15%, pay −10%</string>
+    <string name="focus_homebody">Homebody</string>
+    <string name="focus_homebody_desc">Sleep and play come easier; pay and study −5%</string>
+    <string name="focus_chosen">Her path: %1$s</string>
+
+    <string name="story_title">Her story</string>
+    <string name="story_progress">Chapter %1$d of %2$d</string>
+    <string name="story_complete">The story is complete. Life goes on.</string>
+    <string name="story_chapter_done">Chapter complete!</string>
+    <string name="story_reward_money">+%1$d ¥</string>
+    <string name="story_reward_outfit">A gift: a new outfit</string>
+    <string name="story_ch_meeting">Getting acquainted</string>
+    <string name="story_ch_meeting_goal">Care for her a little — feed her, pat her.</string>
+    <string name="story_ch_first_shift">First wages</string>
+    <string name="story_ch_first_shift_goal">See her through her first shift.</string>
+    <string name="story_ch_diligent">Diligent</string>
+    <string name="story_ch_diligent_goal">Finish three lessons.</string>
+    <string name="story_ch_settling_in">Settling in</string>
+    <string name="story_ch_settling_in_goal">Own two home or gear upgrades.</string>
+    <string name="story_ch_kindred">Kindred spirits</string>
+    <string name="story_ch_kindred_goal">Reach bond 4.</string>
+    <string name="story_ch_professional">A professional</string>
+    <string name="story_ch_professional_goal">Fifteen shifts and level 10.</string>
+    <string name="story_ch_her_own_path">Her own path</string>
+    <string name="story_ch_her_own_path_goal">Choose a path and reach level 15.</string>
+    <string name="story_ch_finale">Where she belongs</string>
+    <string name="story_ch_finale_goal">Level 30 and bond 8.</string>
+
+    <string name="ach_title">Achievements</string>
+    <string name="ach_first_shift">First shift</string>
+    <string name="ach_ten_shifts">Ten shifts</string>
+    <string name="ach_fifty_shifts">Fifty shifts</string>
+    <string name="ach_first_lesson">First lesson</string>
+    <string name="ach_twenty_lessons">Twenty lessons</string>
+    <string name="ach_hundred_meals">A hundred meals</string>
+    <string name="ach_ten_gifts">Ten gifts</string>
+    <string name="ach_fifty_games">Fifty rounds</string>
+    <string name="ach_rich">25\u00A0000 ¥ earned</string>
+    <string name="ach_bond_5">Bond 5</string>
+    <string name="ach_bond_10">Bond 10</string>
+    <string name="ach_level_30">Level 30</string>
+    <string name="ach_all_upgrades">Everything owned</string>
+    <string name="ach_nursed">Nursed her back</string>
+
+    <string name="stats_title">Life together</string>
+    <string name="stat_days_together">Days together</string>
+    <string name="stat_total_earned">Earned in total</string>
+    <string name="stat_shifts">Shifts worked</string>
+    <string name="stat_lessons">Lessons finished</string>
+    <string name="stat_games">Rounds played</string>
+    <string name="stat_meals">Meals served</string>
+    <string name="stat_gifts">Gifts given</string>
+
+    <string name="wardrobe_title">Wardrobe</string>
+
+    <string name="notify_sick_title">%1$s is ill</string>
+    <string name="notify_sick_body">She needs medicine, or a day of rest.</string>
+    <string name="notify_request_title">%1$s is asking for something</string>
+    <string name="notify_request_body">A small wish — granting it means a lot to her.</string>
     <string name="still_paying_it_off">She is still working the last one off</string>
     <string name="section_busy">She is busy right now</string>
     <string name="tip_jar_title">Tip jar</string>

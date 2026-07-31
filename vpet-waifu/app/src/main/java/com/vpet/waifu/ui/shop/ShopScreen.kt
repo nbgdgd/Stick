@@ -339,6 +339,7 @@ private fun ShopCard(
                     PurchaseBlock.MONEY -> stringResource(R.string.not_enough_money)
                     PurchaseBlock.BUSY -> stringResource(R.string.section_busy)
                     PurchaseBlock.STILL_PAYING -> stringResource(R.string.still_paying_it_off)
+                    PurchaseBlock.NOT_SICK -> stringResource(R.string.she_is_healthy)
                     null -> null
                 }
                 if (blocker != null) {

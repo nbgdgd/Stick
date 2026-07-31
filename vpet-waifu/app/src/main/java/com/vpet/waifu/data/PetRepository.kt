@@ -3,6 +3,7 @@ package com.vpet.waifu.data
 import com.vpet.waifu.data.db.PetStateDao
 import com.vpet.waifu.data.db.toEntity
 import com.vpet.waifu.data.db.toSnapshot
+import com.vpet.waifu.domain.Focus
 import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
@@ -87,6 +88,16 @@ class PetRepository @Inject constructor(
     /** Clears the "she finished her shift" card once the player has seen it. */
     suspend fun acknowledgeOutcome(): PetSnapshot = mutate { current, _ ->
         simulation.acknowledgeOutcome(current)
+    }
+
+    /** Commits her to a path. Once, and permanently — see [com.vpet.waifu.domain.Focus]. */
+    suspend fun chooseFocus(focus: Focus): PetSnapshot = mutate { current, now ->
+        simulation.chooseFocus(current, focus, now)
+    }
+
+    /** Marks the newest story chapter as read. */
+    suspend fun acknowledgeStory(): PetSnapshot = mutate { current, _ ->
+        simulation.acknowledgeStory(current)
     }
 
     /** Current state, decay included, without waiting for the next tick. */

@@ -120,6 +120,37 @@ data class PetTuning(
     val poorStudyMultiplier: Float = 0.55f,
     val badStudyMultiplier: Float = 0.3f,
 
+    // --- her own wishes ------------------------------------------------------
+
+    /** Joy when a wish is granted while it stands… */
+    val requestGrantedMood: Float = 8f,
+    /** …and the small sadness when it quietly runs out. */
+    val requestExpiredMood: Float = 4f,
+
+    // --- sickness ------------------------------------------------------------
+
+    /**
+     * Minutes at rock bottom before she falls ill.
+     *
+     * "Rock bottom" is hunger or energy pinned at zero. The counter climbs a
+     * point a minute down there and recovers at half speed once she is cared
+     * for, so it measures *recent* neglect: two bad hours today, not a bad
+     * week last month. Ninety minutes of empty is a real lapse, not a missed
+     * lunch — that is the stake the game was missing.
+     */
+    val sickAfterRunDownMinutes: Float = 90f,
+    /** How fast the run-down counter recovers while she is looked after. */
+    val runDownRecoveryPerMinute: Float = 0.5f,
+    /** Being ill is miserable, on top of everything else. */
+    val sickMoodPerMinute: Float = 0.35f,
+    /**
+     * She shakes a cold off by herself eventually.
+     *
+     * Medicine is the intended cure; this is the floor under an abandoned
+     * save, so coming back after a hard week is a reunion, not a corpse.
+     */
+    val sickRecoveryMinutes: Long = 24 * 60,
+
     // --- effects -------------------------------------------------------------
 
     /** Multipliers applied while the matching [EffectKind] is live. */

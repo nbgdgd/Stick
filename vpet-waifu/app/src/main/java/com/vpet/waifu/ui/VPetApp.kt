@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -79,6 +80,7 @@ import com.vpet.waifu.ui.theme.Surfaces
 import com.vpet.waifu.ui.activities.ActivitiesScreen
 import com.vpet.waifu.ui.game.GameScreen
 import com.vpet.waifu.ui.home.HomeScreen
+import com.vpet.waifu.ui.profile.ProfileScreen
 import com.vpet.waifu.ui.shop.ShopScreen
 import kotlinx.coroutines.delay
 
@@ -87,6 +89,7 @@ private enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
     ACTIVITIES(R.string.tab_activities, Icons.Rounded.Work),
     SHOP(R.string.tab_shop, Icons.Rounded.Storefront),
     GAME(R.string.tab_game, Icons.Rounded.SportsEsports),
+    HER(R.string.tab_her, Icons.Rounded.Favorite),
 }
 
 /**
@@ -179,6 +182,8 @@ fun VPetApp(
                     onToggleSleep = viewModel::toggleSleep,
                     onCancelOccupation = viewModel::cancelOccupation,
                     onDismissEvent = viewModel::acknowledgeEvent,
+                    onBuy = viewModel::buy,
+                    onAcknowledgeStory = viewModel::acknowledgeStory,
                 )
                 Tab.ACTIVITIES -> ActivitiesScreen(
                     snapshot = snapshot,
@@ -204,6 +209,14 @@ fun VPetApp(
                     onFinish = viewModel::finishPlaying,
                     onScored = viewModel::scored,
                     onMiss = viewModel::missed,
+                )
+                Tab.HER -> ProfileScreen(
+                    snapshot = snapshot,
+                    petName = state.settings.petName,
+                    nowMillis = nowMillis,
+                    onChooseFocus = viewModel::chooseFocus,
+                    onWear = viewModel::wear,
+                    onCategoryTap = viewModel::categoryTap,
                 )
             }
         }

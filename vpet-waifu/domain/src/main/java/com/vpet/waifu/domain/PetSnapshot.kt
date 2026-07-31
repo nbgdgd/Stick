@@ -4,7 +4,7 @@ package com.vpet.waifu.domain
 enum class PetActivity { AWAKE, SLEEPING, WORKING, STUDYING, PLAYING }
 
 /** Why a shop item is greyed out. */
-enum class PurchaseBlock { LEVEL, MONEY, BUSY, STILL_PAYING }
+enum class PurchaseBlock { LEVEL, MONEY, BUSY, STILL_PAYING, NOT_SICK }
 
 /** A short-lived reaction that overrides the idle animation. */
 enum class Emote { EATING, LOVED, CELEBRATING }
@@ -14,7 +14,7 @@ enum class Emote { EATING, LOVED, CELEBRATING }
  * to draw; [PetState.of] is the whole state machine.
  */
 enum class PetState {
-    IDLE, HAPPY, HUNGRY, TIRED, SLEEPING, EATING, LOVED, WORKING, STUDYING, PLAYING, CELEBRATING;
+    IDLE, HAPPY, HUNGRY, TIRED, SLEEPING, EATING, LOVED, WORKING, STUDYING, PLAYING, CELEBRATING, SICK;
 
     /** Timed activities and sleep block interaction; everything else allows it. */
     val isBusy: Boolean
@@ -39,6 +39,9 @@ enum class PetState {
                     null -> Unit
                 }
             }
+            // Illness beats appetite: a sick pet looking merely peckish is how
+            // the player misses that something is actually wrong.
+            if (snapshot.isSick) return SICK
             return when {
                 snapshot.stats.hunger <= tuning.hungryThreshold -> HUNGRY
                 snapshot.stats.energy <= tuning.tiredThreshold -> TIRED
@@ -83,6 +86,33 @@ data class PetSnapshot(
     /** Which day the jar is counting, and how much of that day's allowance is spent. */
     val passiveDay: Long = 0L,
     val passivePaidToday: Int = 0,
+    /** Attachment — see [Bond]. Points, plus the day-and-total pair behind the daily cap. */
+    val bondPoints: Int = 0,
+    val bondDay: Long = 0L,
+    val bondToday: Int = 0,
+    /** When she fell ill, or 0 while healthy — see [PetSimulation] for how she falls ill. */
+    val sickSince: Long = 0L,
+    /** Recent minutes spent at rock bottom; crossing a threshold is what makes her ill. */
+    val runDownMinutes: Float = 0f,
+    /** What she is asking for right now, if anything. */
+    val request: PetRequest? = null,
+    /** The last request slot that voiced a wish, so one window never asks twice. */
+    val lastRequestSlot: Long = 0L,
+    /** How far her story has come, and the last chapter the player has seen. */
+    val storyChapter: Int = 0,
+    val storySeen: Int = 0,
+    /** The path she committed to, if she has — see [Focus]. Permanent. */
+    val focus: Focus? = null,
+    /** The life lived so far, for the profile page and the achievements. */
+    val shiftsWorked: Int = 0,
+    val lessonsDone: Int = 0,
+    val gamesPlayed: Int = 0,
+    val mealsFed: Int = 0,
+    val giftsGiven: Int = 0,
+    val sicknessesNursed: Int = 0,
+    val totalEarned: Int = 0,
+    /** The day she was adopted. */
+    val bornAt: Long = 0L,
 ) {
     val isSleeping: Boolean get() = activity == PetActivity.SLEEPING
 
@@ -103,6 +133,10 @@ data class PetSnapshot(
      */
     val acceptsPat: Boolean get() = activity != PetActivity.SLEEPING
 
+    val isSick: Boolean get() = sickSince > 0L
+
+    val bondLevel: Int get() = Bond.levelFor(bondPoints)
+
     val occupation: Occupation? get() = Occupations.byId(session?.occupationId)
 
     val level: Int get() = progress.level
@@ -117,6 +151,7 @@ data class PetSnapshot(
 
     fun canStart(occupation: Occupation, tuning: PetTuning = PetTuning()): Boolean =
         acceptsInteraction &&
+            !isSick &&
             occupation.isUnlocked(level) &&
             stats.energy >= tuning.minimumEnergyToWork
 
@@ -133,7 +168,10 @@ data class PetSnapshot(
     fun canBuy(item: ShopItem, nowMillis: Long = 0L): Boolean =
         item.isUnlocked(level) && progress.canAfford(item.price) &&
             (item.category != ShopCategory.FOOD || acceptsInteraction) &&
-            (item.effect == null || !hasEffect(item.effect, nowMillis))
+            (item.effect == null || !hasEffect(item.effect, nowMillis)) &&
+            // Medicine is for the sick; sold to the healthy it is a coin sink
+            // wearing a cross.
+            (item.id != Shop.MEDICINE_ID || isSick)
 
     /** Why [item] cannot be bought, for the shop card to explain. */
     fun blockedBy(item: ShopItem, nowMillis: Long): PurchaseBlock? = when {
@@ -141,6 +179,7 @@ data class PetSnapshot(
         !progress.canAfford(item.price) -> PurchaseBlock.MONEY
         item.category == ShopCategory.FOOD && !acceptsInteraction -> PurchaseBlock.BUSY
         item.effect != null && hasEffect(item.effect, nowMillis) -> PurchaseBlock.STILL_PAYING
+        item.id == Shop.MEDICINE_ID && !isSick -> PurchaseBlock.NOT_SICK
         else -> null
     }
 
@@ -149,9 +188,12 @@ data class PetSnapshot(
     fun canBuy(upgrade: Upgrade): Boolean =
         !owns(upgrade.id) && upgrade.isUnlocked(level) && progress.canAfford(upgrade.price)
 
-    /** Everything her permanent purchases and today's event add up to. */
+    /** Everything her purchases, today's event, her path and your history add up to. */
     fun modifiers(): UpgradeEffect =
-        Upgrades.effectOf(owned) * (event?.kind?.effect() ?: UpgradeEffect.NONE)
+        Upgrades.effectOf(owned) *
+            (event?.kind?.effect() ?: UpgradeEffect.NONE) *
+            (focus?.effect() ?: UpgradeEffect.NONE) *
+            UpgradeEffect(neglect = Bond.neglectSoftening(bondPoints))
 
     fun state(nowMillis: Long, tuning: PetTuning = PetTuning()): PetState =
         PetState.of(this, nowMillis, tuning)
@@ -162,6 +204,7 @@ data class PetSnapshot(
             lastTickAt = nowMillis,
             lastInteractionAt = nowMillis,
             passiveSince = nowMillis,
+            bornAt = nowMillis,
         )
     }
 }

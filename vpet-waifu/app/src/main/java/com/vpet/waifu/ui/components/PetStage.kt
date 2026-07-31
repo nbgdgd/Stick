@@ -39,6 +39,8 @@ fun PetStage(
     /** The tap bounce, anchored at her feet so she dips rather than shrinks. */
     characterScale: Float = 1f,
     workProp: Prop? = null,
+    /** Owned upgrade ids — the furniture her money became. */
+    decor: Set<String> = emptySet(),
 ) {
     val night = state == PetState.SLEEPING
     val top by animateColorAsState(
@@ -62,7 +64,7 @@ fun PetStage(
         contentAlignment = Alignment.BottomCenter,
     ) {
         Canvas(Modifier.fillMaxSize()) {
-            drawPetRoom(top = top, bottom = bottom, floor = floor, night = night)
+            drawPetRoom(top = top, bottom = bottom, floor = floor, night = night, decor = decor)
         }
 
         AnimatedPet(

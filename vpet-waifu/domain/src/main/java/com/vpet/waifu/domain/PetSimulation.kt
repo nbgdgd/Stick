@@ -29,8 +29,113 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     fun advanceTo(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
         val settled = settlePassive(snapshot, nowMillis)
         val owedMinutes = (nowMillis - settled.lastTickAt) / MS_PER_MINUTE
-        if (owedMinutes <= 0) return settled.withExpiredEffectsDropped(nowMillis)
-        return advanceMinutes(settled, nowMillis, owedMinutes)
+        val advanced = if (owedMinutes <= 0) {
+            settled.withExpiredEffectsDropped(nowMillis)
+        } else {
+            advanceMinutes(settled, nowMillis, owedMinutes)
+        }
+        // Her own life, on top of the clockwork: wishes voiced and expired, and
+        // chapters that complete the moment the state qualifies. Both run on
+        // every advance, so no path through the simulation can miss them.
+        return advanceStory(tendRequest(advanced, nowMillis))
+    }
+
+    /**
+     * Completes every chapter the current state already satisfies.
+     *
+     * A loop rather than a single check: one act can finish two chapters at
+     * once (the shift that reaches level 10 may close both "professional" and
+     * an earlier straggler), and stopping after the first would leave the
+     * story a step behind the life.
+     */
+    private fun advanceStory(snapshot: PetSnapshot): PetSnapshot {
+        var current = snapshot
+        while (!Story.isComplete(current.storyChapter)) {
+            val chapter = Story.CHAPTERS[current.storyChapter]
+            if (!chapter.condition(current)) break
+            current = current.copy(
+                progress = current.progress.plus(money = chapter.rewardMoney),
+                owned = chapter.rewardOutfit?.let { current.owned + it } ?: current.owned,
+                storyChapter = current.storyChapter + 1,
+                totalEarned = current.totalEarned + chapter.rewardMoney,
+            )
+        }
+        return current
+    }
+
+    /**
+     * Expires a stale wish and lets a fresh window voice a new one.
+     *
+     * Runs off the *real* clock rather than inside the minute loop on purpose:
+     * a wish spawned into the middle of an eight-hour absence would only ever
+     * be found already expired, which punishes the player for something they
+     * never saw. This way she asks while someone is actually there — including
+     * the moment they come back.
+     */
+    private fun tendRequest(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        var current = snapshot
+
+        val live = current.request
+        if (live != null && nowMillis >= live.until) {
+            // A wish nobody granted. She is a little sad about it, and that is
+            // all — bond is memory of care, not a ledger of debts.
+            current = current.copy(
+                request = null,
+                stats = current.stats.adjusted(moodBy = -tuning.requestExpiredMood),
+            )
+        }
+
+        if (current.request == null && current.activity == PetActivity.AWAKE && !current.isSick) {
+            val slot = Requests.slotOf(nowMillis)
+            val until = Requests.slotEnd(slot)
+            if (slot != current.lastRequestSlot && until - nowMillis >= Requests.MINIMUM_WINDOW_MILLIS) {
+                val wish = Requests.forSlot(slot, current.level)
+                current = if (wish != null) {
+                    current.copy(
+                        request = PetRequest(wish.first, wish.second, until, slot),
+                        lastRequestSlot = slot,
+                    )
+                } else {
+                    // A quiet window is also spent, so it is not re-hashed on
+                    // every single tick for three hours.
+                    current.copy(lastRequestSlot = slot)
+                }
+            }
+        }
+        return current
+    }
+
+    /** Grants a live wish that [test] matches: bond, joy, and the wish retires. */
+    private fun grantRequestIf(
+        snapshot: PetSnapshot,
+        nowMillis: Long,
+        test: (PetRequest) -> Boolean,
+    ): PetSnapshot {
+        val request = snapshot.request ?: return snapshot
+        if (nowMillis >= request.until || !test(request)) return snapshot
+        return snapshot.copy(
+            request = null,
+            stats = snapshot.stats.adjusted(moodBy = tuning.requestGrantedMood),
+        ).plusBond(Bond.REQUEST_GRANTED, nowMillis)
+    }
+
+    /**
+     * Banks attachment, under the daily cap.
+     *
+     * The cap is the difference between a bar and a bond: a hundred meals in
+     * one evening are worth the same twenty points as a good half hour, so the
+     * only road to the top is actually being around across many days.
+     */
+    private fun PetSnapshot.plusBond(points: Int, clock: Long): PetSnapshot {
+        if (points <= 0) return this
+        val day = Events.dayOf(clock)
+        val today = if (bondDay == day) bondToday else 0
+        val granted = points.coerceAtMost(Bond.DAILY_CAP - today).coerceAtLeast(0)
+        return copy(
+            bondPoints = bondPoints + granted,
+            bondDay = day,
+            bondToday = today + granted,
+        )
     }
 
     /**
@@ -86,6 +191,7 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         val coins = min(bank.toInt(), room)
         return snapshot.copy(
             progress = if (coins > 0) snapshot.progress.plus(money = coins) else snapshot.progress,
+            totalEarned = snapshot.totalEarned + coins,
             // Once the day is spent the remainder is dropped rather than saved:
             // a bank that keeps filling would pay the whole day out again the
             // instant the date rolled over.
@@ -171,16 +277,40 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         }
 
         var stats = snapshot.stats.adjusted(hungerBy = -hungerRate, energyBy = energyDelta)
-        stats = stats.copy(
-            mood = driftMood(
-                mood = stats.mood,
-                hunger = stats.hunger,
-                energy = stats.energy,
-                minutesSinceInteraction = minutesBetween(interactionAnchor, clock) * mods.neglect,
-            ) - activityMoodCost,
-        ).let { PetStats.coerced(it.hunger, it.energy, it.mood) }
+        // Built through `coerced`, not `copy`: the drift result minus the costs
+        // can dip below zero for a minute, and the PetStats constructor treats
+        // out-of-range as a bug rather than something to fix up quietly.
+        val mood = driftMood(
+            mood = stats.mood,
+            hunger = stats.hunger,
+            energy = stats.energy,
+            minutesSinceInteraction = minutesBetween(interactionAnchor, clock) * mods.neglect,
+        ) - activityMoodCost -
+            // Being ill is its own misery, on top of whatever caused it.
+            (if (snapshot.isSick) tuning.sickMoodPerMinute else 0f)
+        stats = PetStats.coerced(stats.hunger, stats.energy, mood)
 
-        var next = snapshot.copy(stats = stats)
+        // The road to sickness. Minutes with hunger or energy pinned at zero
+        // pile up; care burns the pile back down at half speed. Crossing the
+        // line makes her ill, and only medicine — or a full day — clears it.
+        val bottomed = stats.hunger <= PetStats.MIN || stats.energy <= PetStats.MIN
+        var runDown = if (bottomed) {
+            snapshot.runDownMinutes + 1f
+        } else {
+            (snapshot.runDownMinutes - tuning.runDownRecoveryPerMinute).coerceAtLeast(0f)
+        }
+        var sickSince = snapshot.sickSince
+        if (sickSince == 0L && runDown >= tuning.sickAfterRunDownMinutes) {
+            sickSince = clock
+            runDown = 0f
+        }
+        if (sickSince > 0L && clock - sickSince >= tuning.sickRecoveryMinutes * MS_PER_MINUTE) {
+            // She shook it off by herself — the floor under an abandoned save.
+            sickSince = 0L
+            runDown = 0f
+        }
+
+        var next = snapshot.copy(stats = stats, sickSince = sickSince, runDownMinutes = runDown)
         next = rollEvent(next, clock)
 
         // She gets up by herself once she is fully rested.
@@ -296,6 +426,7 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         return snapshot.copy(
             event = PetEvent(kind, day),
             progress = snapshot.progress.plus(money = kind.instantMoney()),
+            totalEarned = snapshot.totalEarned + kind.instantMoney(),
             stats = snapshot.stats.adjusted(energyBy = kind.instantEnergy()),
         )
     }
@@ -336,6 +467,7 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         val expDue = exp.toInt() - session.paidExp
         return snapshot.copy(
             progress = snapshot.progress.plus(money = payDue, exp = expDue),
+            totalEarned = snapshot.totalEarned + payDue,
             session = session.copy(
                 accruedPay = pay,
                 paidOut = session.paidOut + payDue,
@@ -353,8 +485,10 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         if (!current.canFeed(tuning)) return current
         return current.copy(
             stats = current.stats.adjusted(hungerBy = tuning.feedHunger, moodBy = tuning.feedMood),
+            mealsFed = current.mealsFed + 1,
             lastInteractionAt = nowMillis,
-        ).withEmote(Emote.EATING, nowMillis, tuning.eatingEmoteMillis)
+        ).plusBond(Bond.FEED, nowMillis)
+            .withEmote(Emote.EATING, nowMillis, tuning.eatingEmoteMillis)
     }
 
     /**
@@ -365,11 +499,15 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     fun pet(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
         if (!current.acceptsPat) return current
+        // Only a considered pat bonds — the same recharge that scales the mood.
+        // Mashing keeps its trickle of mood but writes no history.
+        val considered = patMultiplier(current, nowMillis) >= 0.6f
         return current.copy(
             stats = current.stats.adjusted(moodBy = patMood(current, nowMillis)),
             progress = current.progress.plus(exp = patExp(current, nowMillis)),
             lastInteractionAt = nowMillis,
-        ).withEmote(Emote.LOVED, nowMillis, tuning.lovedEmoteMillis)
+        ).let { if (considered) it.plusBond(Bond.PAT, nowMillis) else it }
+            .withEmote(Emote.LOVED, nowMillis, tuning.lovedEmoteMillis)
     }
 
     /**
@@ -483,11 +621,17 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
 
         val money = (session?.paidOut ?: 0) + remainderPay
         val exp = (session?.paidExp ?: 0) + remainderExp
+        val finished = !cancelled
+        val isWork = occupation.kind == OccupationKind.WORK
 
         return snapshot.copy(
             progress = snapshot.progress.plus(money = remainderPay, exp = remainderExp),
+            totalEarned = snapshot.totalEarned + remainderPay,
             activity = PetActivity.AWAKE,
             session = null,
+            // A finished session is shared history: it counts, and it bonds.
+            shiftsWorked = snapshot.shiftsWorked + (if (finished && isWork) 1 else 0),
+            lessonsDone = snapshot.lessonsDone + (if (finished && !isWork) 1 else 0),
             lastOutcome = ActivityOutcome(
                 occupationId = occupation.id,
                 kind = occupation.kind,
@@ -497,7 +641,9 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 cancelled = cancelled,
                 completedAt = atMillis,
             ),
-        ).withEmote(Emote.CELEBRATING, atMillis, tuning.celebrateEmoteMillis)
+        ).let {
+            if (finished) it.plusBond(if (isWork) Bond.SHIFT else Bond.LESSON, atMillis) else it
+        }.withEmote(Emote.CELEBRATING, atMillis, tuning.celebrateEmoteMillis)
     }
 
     fun qualityFor(mood: Float): OutcomeQuality = when {
@@ -528,7 +674,8 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
 
     fun startPlaying(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
-        if (!current.acceptsInteraction) return current
+        // A sick pet does not go to the arcade — rest and medicine first.
+        if (!current.acceptsInteraction || current.isSick) return current
         return current.copy(activity = PetActivity.PLAYING, lastInteractionAt = nowMillis)
     }
 
@@ -544,6 +691,7 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         // started it, and the score should still count when it comes back.
         if (score <= 0 && current.activity != PetActivity.PLAYING) return current
         val mods = current.modifiers()
+        val played = score > 0
         return current.copy(
             activity = PetActivity.AWAKE,
             stats = current.stats.adjusted(
@@ -551,8 +699,13 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 moodBy = game.moodGain(score) * mods.play,
             ),
             progress = current.progress.plus(money = game.coins(score)),
+            totalEarned = current.totalEarned + game.coins(score),
+            gamesPlayed = current.gamesPlayed + (if (played) 1 else 0),
             lastInteractionAt = nowMillis,
-        ).withEmote(Emote.CELEBRATING, nowMillis, tuning.celebrateEmoteMillis)
+        ).let { if (played) it.plusBond(Bond.GAME, nowMillis) else it }
+            // "Поиграй со мной!" — a round actually played grants the wish.
+            .let { if (played) grantRequestIf(it, nowMillis) { r -> r.kind == RequestKind.PLAY } else it }
+            .withEmote(Emote.CELEBRATING, nowMillis, tuning.celebrateEmoteMillis)
     }
 
     // --- shop ----------------------------------------------------------------
@@ -595,6 +748,10 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             current.repeatedMeals
         }
 
+        // Medicine is the one purchase that changes her state instead of her
+        // stats: it is the cure, and nursing her through it is remembered.
+        val cures = item.id == Shop.MEDICINE_ID && current.isSick
+
         return current.copy(
             stats = current.stats.adjusted(
                 hungerBy = item.hunger,
@@ -602,12 +759,49 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 moodBy = item.mood,
             ),
             progress = current.progress.plus(money = item.money - item.price, exp = item.exp),
+            totalEarned = current.totalEarned + item.money.coerceAtLeast(0),
             effects = effects,
             lastInteractionAt = nowMillis,
             lastMealId = if (item.category == ShopCategory.FOOD) item.id else current.lastMealId,
             repeatedMeals = repeated,
-        ).withEmote(emote, nowMillis, emoteMillis)
+            mealsFed = current.mealsFed + (if (item.category == ShopCategory.FOOD) 1 else 0),
+            giftsGiven = current.giftsGiven + (if (item.category == ShopCategory.GIFT) 1 else 0),
+            sickSince = if (cures) 0L else current.sickSince,
+            runDownMinutes = if (cures) 0f else current.runDownMinutes,
+            sicknessesNursed = current.sicknessesNursed + (if (cures) 1 else 0),
+        ).let {
+            when {
+                cures -> it.plusBond(Bond.NURSED, nowMillis)
+                item.category == ShopCategory.FOOD -> it.plusBond(Bond.FEED, nowMillis)
+                item.category == ShopCategory.GIFT -> it.plusBond(Bond.GIFT, nowMillis)
+                else -> it
+            }
+        }.let { bought ->
+            // "Мне бы онигири…" — the exact thing she asked for, while the wish
+            // still stands, is worth more than any unprompted treat.
+            grantRequestIf(bought, nowMillis) { r ->
+                (r.kind == RequestKind.FOOD || r.kind == RequestKind.GIFT) && r.itemId == item.id
+            }
+        }.withEmote(emote, nowMillis, emoteMillis)
     }
+
+    /**
+     * Commits her to a path — see [Focus]. Once, and for good.
+     *
+     * Refusals are silent (level too low, or a path already chosen) because the
+     * UI never offers the choice in those states; a hostile caller changing
+     * nothing is exactly right.
+     */
+    fun chooseFocus(snapshot: PetSnapshot, focus: Focus, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        if (current.focus != null || current.level < Focus.UNLOCK_LEVEL) return current
+        return current.copy(focus = focus, lastInteractionAt = nowMillis)
+            .withEmote(Emote.CELEBRATING, nowMillis, tuning.celebrateEmoteMillis)
+    }
+
+    /** Marks the story caught up to, so the chapter card stops showing. */
+    fun acknowledgeStory(snapshot: PetSnapshot): PetSnapshot =
+        snapshot.copy(storySeen = snapshot.storyChapter)
 
     /**
      * Buys something permanent.

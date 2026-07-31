@@ -14,6 +14,10 @@ import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetStats
 import com.vpet.waifu.domain.EventKind
+import com.vpet.waifu.domain.Focus
+import com.vpet.waifu.domain.PetRequest
+import com.vpet.waifu.domain.RequestKind
+import com.vpet.waifu.domain.Story
 import com.vpet.waifu.domain.PetEvent
 import com.vpet.waifu.domain.Upgrades
 
@@ -68,6 +72,32 @@ data class PetStateEntity(
     val passiveBank: Float = 0f,
     val passiveDay: Long = 0,
     val passivePaidToday: Int = 0,
+    /** Attachment, and the day-total pair behind its daily cap. */
+    val bondPoints: Int = 0,
+    val bondDay: Long = 0,
+    val bondToday: Int = 0,
+    /** Sickness: when she fell ill (0 = healthy) and the recent-neglect counter. */
+    val sickSince: Long = 0,
+    val runDownMinutes: Float = 0f,
+    /** Her live wish, flattened. */
+    val requestKind: String? = null,
+    val requestItemId: String? = null,
+    val requestUntil: Long = 0,
+    val lastRequestSlot: Long = 0,
+    /** Story progress, and the last chapter the player has seen. */
+    val storyChapter: Int = 0,
+    val storySeen: Int = 0,
+    /** The path she committed to, if any. */
+    val focus: String? = null,
+    /** The life lived so far. */
+    val shiftsWorked: Int = 0,
+    val lessonsDone: Int = 0,
+    val gamesPlayed: Int = 0,
+    val mealsFed: Int = 0,
+    val giftsGiven: Int = 0,
+    val sicknessesNursed: Int = 0,
+    val totalEarned: Int = 0,
+    val bornAt: Long = 0,
 ) {
     companion object {
         const val SINGLETON_ID = 0
@@ -117,6 +147,26 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
     passiveBank = passiveBank.coerceIn(0f, 1f),
     passiveDay = passiveDay,
     passivePaidToday = passivePaidToday.coerceAtLeast(0),
+    bondPoints = bondPoints.coerceAtLeast(0),
+    bondDay = bondDay,
+    bondToday = bondToday.coerceAtLeast(0),
+    sickSince = sickSince.coerceAtLeast(0),
+    runDownMinutes = runDownMinutes.coerceAtLeast(0f),
+    request = enumOrNull<RequestKind>(requestKind)?.let { kind ->
+        PetRequest(kind, requestItemId, requestUntil, lastRequestSlot)
+    },
+    lastRequestSlot = lastRequestSlot,
+    storyChapter = storyChapter.coerceIn(0, Story.CHAPTERS.size),
+    storySeen = storySeen.coerceIn(0, Story.CHAPTERS.size),
+    focus = Focus.byName(focus),
+    shiftsWorked = shiftsWorked.coerceAtLeast(0),
+    lessonsDone = lessonsDone.coerceAtLeast(0),
+    gamesPlayed = gamesPlayed.coerceAtLeast(0),
+    mealsFed = mealsFed.coerceAtLeast(0),
+    giftsGiven = giftsGiven.coerceAtLeast(0),
+    sicknessesNursed = sicknessesNursed.coerceAtLeast(0),
+    totalEarned = totalEarned.coerceAtLeast(0),
+    bornAt = bornAt,
 )
 
 fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
@@ -156,6 +206,26 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     passiveBank = passiveBank,
     passiveDay = passiveDay,
     passivePaidToday = passivePaidToday,
+    bondPoints = bondPoints,
+    bondDay = bondDay,
+    bondToday = bondToday,
+    sickSince = sickSince,
+    runDownMinutes = runDownMinutes,
+    requestKind = request?.kind?.name,
+    requestItemId = request?.itemId,
+    requestUntil = request?.until ?: 0,
+    lastRequestSlot = lastRequestSlot,
+    storyChapter = storyChapter,
+    storySeen = storySeen,
+    focus = focus?.name,
+    shiftsWorked = shiftsWorked,
+    lessonsDone = lessonsDone,
+    gamesPlayed = gamesPlayed,
+    mealsFed = mealsFed,
+    giftsGiven = giftsGiven,
+    sicknessesNursed = sicknessesNursed,
+    totalEarned = totalEarned,
+    bornAt = bornAt,
 )
 
 private fun decodeIds(raw: String): Set<String> =

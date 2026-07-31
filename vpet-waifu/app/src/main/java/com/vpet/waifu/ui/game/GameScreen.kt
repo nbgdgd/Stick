@@ -288,7 +288,7 @@ fun GameScreen(
             // busy" line under it on her chin.
             StartOverlay(
                 visible = !running,
-                canPlay = snapshot.acceptsInteraction,
+                canPlay = snapshot.acceptsInteraction && !snapshot.isSick,
                 played = lastScore != null,
                 onStart = {
                     seed = nowMillis

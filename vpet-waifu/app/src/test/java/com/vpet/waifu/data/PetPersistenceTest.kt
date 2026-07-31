@@ -4,6 +4,9 @@ import com.vpet.waifu.TestPet
 import com.vpet.waifu.data.db.toEntity
 import com.vpet.waifu.data.db.toSnapshot
 import com.vpet.waifu.domain.EventKind
+import com.vpet.waifu.domain.Focus
+import com.vpet.waifu.domain.PetRequest
+import com.vpet.waifu.domain.RequestKind
 import com.vpet.waifu.domain.Occupations
 import com.vpet.waifu.domain.PetEvent
 import com.vpet.waifu.domain.PetSnapshot
@@ -54,6 +57,24 @@ class PetPersistenceTest {
             passiveBank = 0.4f,
             passiveDay = 19_681,
             passivePaidToday = 640,
+            bondPoints = 137,
+            bondDay = 19_681,
+            bondToday = 12,
+            sickSince = 1_700_000_100_000L,
+            runDownMinutes = 34.5f,
+            request = PetRequest(RequestKind.FOOD, "ramen", 1_700_000_500_000L, 157_000L),
+            lastRequestSlot = 157_000L,
+            storyChapter = 3,
+            storySeen = 2,
+            focus = Focus.SCHOLAR,
+            shiftsWorked = 21,
+            lessonsDone = 8,
+            gamesPlayed = 40,
+            mealsFed = 90,
+            giftsGiven = 4,
+            sicknessesNursed = 2,
+            totalEarned = 12_345,
+            bornAt = 1_699_000_000_000L,
         )
 
         val restored = rich.toEntity().toSnapshot()
@@ -69,6 +90,26 @@ class PetPersistenceTest {
         assertEquals(rich.passiveBank, restored.passiveBank, 0.001f)
         assertEquals(rich.passiveDay, restored.passiveDay)
         assertEquals(rich.passivePaidToday, restored.passivePaidToday)
+        // Her inner life. Bond lost on restart would be the cruellest bug the
+        // app could have, so it is pinned field by field.
+        assertEquals(rich.bondPoints, restored.bondPoints)
+        assertEquals(rich.bondDay, restored.bondDay)
+        assertEquals(rich.bondToday, restored.bondToday)
+        assertEquals(rich.sickSince, restored.sickSince)
+        assertEquals(rich.runDownMinutes, restored.runDownMinutes, 0.001f)
+        assertEquals(rich.request, restored.request)
+        assertEquals(rich.lastRequestSlot, restored.lastRequestSlot)
+        assertEquals(rich.storyChapter, restored.storyChapter)
+        assertEquals(rich.storySeen, restored.storySeen)
+        assertEquals(rich.focus, restored.focus)
+        assertEquals(rich.shiftsWorked, restored.shiftsWorked)
+        assertEquals(rich.lessonsDone, restored.lessonsDone)
+        assertEquals(rich.gamesPlayed, restored.gamesPlayed)
+        assertEquals(rich.mealsFed, restored.mealsFed)
+        assertEquals(rich.giftsGiven, restored.giftsGiven)
+        assertEquals(rich.sicknessesNursed, restored.sicknessesNursed)
+        assertEquals(rich.totalEarned, restored.totalEarned)
+        assertEquals(rich.bornAt, restored.bornAt)
     }
 
     @Test

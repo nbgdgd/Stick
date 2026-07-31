@@ -81,7 +81,15 @@ object Shop {
             exp = 180, energy = -25f, mood = -15f,
             effect = EffectKind.EXHAUSTION, effectMinutes = 120,
         ),
+        // The cure. Cheap on purpose: sickness is the *consequence* of neglect,
+        // and pricing the way out of it past a neglected wallet would make the
+        // hole deeper the further in you fall. The real cost was the days of
+        // blocked work and draining mood before you noticed.
+        ShopItem(MEDICINE_ID, ShopCategory.PILL, price = 90, mood = 5f),
     )
+
+    /** The one item [com.vpet.waifu.domain.PetSimulation.buy] treats as a cure. */
+    const val MEDICINE_ID = "medicine"
 
     val ALL: List<ShopItem> = FOOD + GIFTS + PILLS
 

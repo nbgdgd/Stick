@@ -131,7 +131,37 @@ object PetPoseFactory {
             }
             PetState.PLAYING -> playing(base, seconds)
             PetState.CELEBRATING -> celebrating(base, seconds)
+            PetState.SICK -> sick(base, seconds)
         }
+    }
+
+    /**
+     * Ill: a slow feverish sway, hugged arms, and the sweat-drop that is the
+     * universal cartoon shorthand for "actually unwell, not just tired".
+     */
+    private fun sick(base: PetPose, t: Float): PetPose {
+        val sway = sin(t * 0.8f)
+        val shiver = spike((t * 0.8f / TWO_PI) % 1f, 0.5f, 0.05f)
+        return base.copy(
+            headTiltDegrees = sway * 3f + 4f,
+            headBob = base.headBob + 2f,
+            bodyLean = sway * 1.5f,
+            bodyBounce = base.bodyBounce + 1.5f + shiver * 1.5f,
+            hairSwayDegrees = sin(t * 0.8f - 0.6f) * 4f,
+            ahogeDegrees = sin(t * 0.8f) * 5f,
+            // Arms crossed over her middle, holding herself.
+            leftArmDegrees = 26f,
+            rightArmDegrees = -26f,
+            leftElbowDegrees = 118f,
+            rightElbowDegrees = -118f,
+            eyes = EyeShape.HALF_LIDDED,
+            mouth = MouthShape.WAVY,
+            lookY = 0.3f,
+            blushAlpha = 0.75f,
+            browWorry = 0.9f,
+            droop = 0.8f,
+            particles = ParticleKind.SWEAT,
+        )
     }
 
     // Breathing and blinking are shared by every state that has its eyes open.
@@ -577,6 +607,7 @@ object PetPoseFactory {
         // 11 and the bounce at 4.4 are both multiples of it.
         PetState.PLAYING -> TWO_PI / 2.2f
         PetState.CELEBRATING -> TWO_PI / 3.6f
+        PetState.SICK -> TWO_PI / 0.8f
     }
 
     /**

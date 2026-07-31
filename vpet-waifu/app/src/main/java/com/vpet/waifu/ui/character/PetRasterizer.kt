@@ -47,11 +47,12 @@ object PetRasterizer {
         cornerRadiusPx: Float = 0f,
         floorFraction: Float = 0.78f,
         detail: RoomDetail = RoomDetail.WALL,
+        decor: Set<String> = emptySet(),
     ): ByteArray = png(
         draw(widthPx, heightPx, density) {
             drawPetRoom(
                 colors.top, colors.bottom, colors.floor, colors.night,
-                cornerRadiusPx, floorFraction, detail,
+                cornerRadiusPx, floorFraction, detail, decor,
             )
         },
     )

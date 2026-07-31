@@ -7,6 +7,7 @@ import com.vpet.waifu.ui.character.PetPoseFactory
 import com.vpet.waifu.ui.character.Prop
 import com.vpet.waifu.ui.character.PetRasterizer
 import com.vpet.waifu.ui.character.RoomColors
+import com.vpet.waifu.ui.character.RoomDetail
 import com.vpet.waifu.ui.theme.StageColors
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -168,6 +169,41 @@ class WidgetFrameTest {
         val raw = 300 * 420 * 4 * frameCount
 
         assertTrue("png=$total raw=$raw", total * 10 < raw)
+    }
+
+    @Test
+    fun `owned furniture changes the room, in both cuts of it`() {
+        // Buying a fridge must be *visible* — that is the entire point of the
+        // decor system. Checked at FULL (the app's room) and WALL (the
+        // widget's), because the wall shelf is the only part a widget shows.
+        fun room(detail: RoomDetail, decor: Set<String>) = PetRasterizer.roomPng(
+            widthPx = 700, heightPx = 550, density = density,
+            colors = RoomColors(
+                StageColors.DayTop, StageColors.DayBottom, StageColors.FloorLight, night = false,
+            ),
+            detail = detail,
+            decor = decor,
+        ).contentHashCode()
+
+        val floorSet = setOf("fridge", "bed", "console", "cat")
+        val wallSet = setOf("coffee_machine", "laptop", "textbooks", "studio")
+
+        assertTrue(
+            "floor decor is invisible in the app's room",
+            room(RoomDetail.FULL, emptySet()) != room(RoomDetail.FULL, floorSet),
+        )
+        assertTrue(
+            "gear shelf is invisible in the widget's room",
+            room(RoomDetail.WALL, emptySet()) != room(RoomDetail.WALL, wallSet),
+        )
+        // And every single item moves the picture on its own, so none of the
+        // eight upgrades is quietly skipped by a typo in an id.
+        (floorSet + wallSet).forEach { id ->
+            assertTrue(
+                "$id does not appear in the room",
+                room(RoomDetail.FULL, emptySet()) != room(RoomDetail.FULL, setOf(id)),
+            )
+        }
     }
 
     @Test

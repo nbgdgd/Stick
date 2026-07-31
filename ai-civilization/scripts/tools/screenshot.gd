@@ -17,6 +17,7 @@ var frames: int = 0
 var target_day: int = 300
 var out_path: String = DEFAULT_OUT
 var zoom: float = 1.0
+var ui_scale: float = 0.0
 
 
 func _initialize() -> void:
@@ -29,6 +30,7 @@ func _initialize() -> void:
 	game = scene.instantiate()
 	game.set("randomize_seed", false)
 	game.set("world_seed", 20260730)
+	game.set("ui_scale_override", ui_scale)
 	root.add_child(game)
 
 
@@ -45,6 +47,9 @@ func _parse_args() -> void:
 			"--zoom":
 				if i + 1 < args.size():
 					zoom = float(args[i + 1])
+			"--ui-scale":
+				if i + 1 < args.size():
+					ui_scale = float(args[i + 1])
 
 
 func _process(_delta: float) -> bool:
@@ -70,6 +75,8 @@ func _process(_delta: float) -> bool:
 		return false
 
 	if frames >= WARMUP_FRAMES:
+		# Иначе на каждом снимке видно только модальное окно, а не игру.
+		game.hud.close_modals()
 		_capture()
 		return true
 	return false

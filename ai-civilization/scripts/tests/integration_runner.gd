@@ -135,6 +135,9 @@ func _test_jitter_tap() -> void:
 	var capital = game.sim.world.capital_of(game.sim.world.council_id)
 	if capital == null:
 		return
+	# Модальные окна перехватывают касания: к этому кадру уже может висеть
+	# развилка или финал, и тест проверял бы не камеру, а перекрытие панелью.
+	game.hud.close_modals()
 	var threshold: float = game.camera.tap_max_drift()
 	check(threshold > 0.0, "порог тапа нулевой")
 
@@ -163,6 +166,7 @@ func _test_real_drag_is_not_tap() -> void:
 	var capital = game.sim.world.capital_of(game.sim.world.council_id)
 	if capital == null:
 		return
+	game.hud.close_modals()
 	var threshold: float = game.camera.tap_max_drift()
 	var tapped_at := []
 	var cb := func(p: Vector2): tapped_at.append(p)

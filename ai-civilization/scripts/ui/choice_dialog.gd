@@ -13,10 +13,15 @@ var _body: VBoxContainer
 
 func _init() -> void:
 	add_theme_stylebox_override("panel", UIKit.stylebox(Color(0.07, 0.09, 0.13, 0.98), 2, 8))
-	custom_minimum_size = Vector2(460, 0)
+	custom_minimum_size = Vector2(420, 0)
 	visible = false
-	_body = UIKit.vbox(10)
-	add_child(_body)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(420, 250)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	_body = UIKit.vbox(8)
+	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_body)
 
 
 func open(pending: Dictionary) -> void:
@@ -27,13 +32,13 @@ func open(pending: Dictionary) -> void:
 
 	_body.add_child(UIKit.title("Развилка"))
 
-	var prompt := UIKit.label(String(choice.get("prompt", "")), 15, UIKit.TEXT)
+	var prompt := UIKit.label(String(choice.get("prompt", "")), UIKit.FONT_L, UIKit.TEXT)
 	prompt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.add_child(prompt)
 
 	var detail_text := String(choice.get("detail", ""))
 	if not detail_text.is_empty():
-		var detail := UIKit.label(detail_text, 12, UIKit.TEXT_DIM)
+		var detail := UIKit.label(detail_text, UIKit.FONT_S, UIKit.TEXT_DIM)
 		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_body.add_child(detail)
 
@@ -51,12 +56,12 @@ func open(pending: Dictionary) -> void:
 func _option_row(opt: Dictionary) -> Control:
 	var wrap := UIKit.vbox(2)
 	var b := UIKit.button(String(opt.get("label", "?")))
-	b.add_theme_font_size_override("font_size", 14)
+	b.add_theme_font_size_override("font_size", UIKit.FONT_M)
 	var option_id := String(opt.get("id", ""))
 	b.pressed.connect(func(): _choose(option_id))
 	wrap.add_child(b)
 
-	var desc := UIKit.label(String(opt.get("desc", "")), 11, UIKit.TEXT_DIM)
+	var desc := UIKit.label(String(opt.get("desc", "")), UIKit.FONT_S, UIKit.TEXT_DIM)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	wrap.add_child(desc)
 	return wrap

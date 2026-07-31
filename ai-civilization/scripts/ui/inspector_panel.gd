@@ -13,12 +13,12 @@ var _world: World
 
 func _init() -> void:
 	add_theme_stylebox_override("panel", UIKit.stylebox(UIKit.BG))
-	custom_minimum_size = Vector2(250, 0)
+	custom_minimum_size = Vector2(212, 0)
 	visible = false
 	# Содержимое кладётся в скролл фиксированной высоты: PanelContainer иначе
 	# растёт под контент и уезжает за нижнюю панель вмешательств.
 	_scroll = ScrollContainer.new()
-	_scroll.custom_minimum_size = Vector2(250, 300)
+	_scroll.custom_minimum_size = Vector2(212, 150)
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(_scroll)
 	_body = UIKit.vbox(4)
@@ -93,22 +93,22 @@ func refresh() -> void:
 		_meter("Обиды", s.grudge, Balance.num("loyalty/max_grudge", 40.0), UIKit.DANGER)
 
 	_body.add_child(HSeparator.new())
-	var jobs := UIKit.label(_jobs_text(s), 10, UIKit.TEXT_DIM)
+	var jobs := UIKit.label(_jobs_text(s), UIKit.FONT_XS, UIKit.TEXT_DIM)
 	jobs.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.add_child(jobs)
 
 
 func _row(name: String, value: String, color: Color = UIKit.TEXT) -> void:
 	var h := UIKit.hbox(6)
-	h.add_child(UIKit.label(name, 11, UIKit.TEXT_DIM))
+	h.add_child(UIKit.label(name, UIKit.FONT_S, UIKit.TEXT_DIM))
 	h.add_child(UIKit.spacer())
-	h.add_child(UIKit.label(value, 12, color))
+	h.add_child(UIKit.label(value, UIKit.FONT_S, color))
 	_body.add_child(h)
 
 
 func _meter(name: String, value: float, max_value: float, color: Color) -> void:
 	var h := UIKit.hbox(6)
-	h.add_child(UIKit.label(name, 11, UIKit.TEXT_DIM))
+	h.add_child(UIKit.label(name, UIKit.FONT_S, UIKit.TEXT_DIM))
 	h.add_child(UIKit.spacer())
 	h.add_child(UIKit.bar(value, max_value, color, 70))
 	_body.add_child(h)

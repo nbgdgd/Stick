@@ -15,8 +15,19 @@ const WARN := Color(1.0, 0.72, 0.28)
 const DANGER := Color(0.98, 0.42, 0.36)
 const GOOD := Color(0.45, 0.90, 0.60)
 
-## Минимальная сторона тач-цели. Меньше — на телефоне не попасть.
-const TOUCH := 44
+## Шкала размеров.
+##
+## Логическая единица приравнена к dp: Game выставляет content_scale_factor из
+## реальной плотности экрана, поэтому числа ниже читаются прямо как dp и sp.
+## До этого шрифт 13 давал на экране 461 ppi ровно 6.8sp — вдвое меньше
+## минимума для основного текста, а тач-цель 44 давала 23dp вместо 48dp.
+const TOUCH := 48
+
+const FONT_XS := 12
+const FONT_S := 14
+const FONT_M := 16
+const FONT_L := 20
+const FONT_XL := 26
 
 
 static func stylebox(bg: Color = BG, border: int = 1, radius: int = 6) -> StyleBoxFlat:
@@ -39,7 +50,7 @@ static func panel(bg: Color = BG) -> PanelContainer:
 	return p
 
 
-static func label(text: String, size: int = 13, color: Color = TEXT) -> Label:
+static func label(text: String, size: int = FONT_S, color: Color = TEXT) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", size)
@@ -48,16 +59,17 @@ static func label(text: String, size: int = 13, color: Color = TEXT) -> Label:
 
 
 static func title(text: String) -> Label:
-	var l := label(text, 15, ACCENT)
-	return l
+	return label(text, FONT_L, ACCENT)
 
 
 static func button(text: String, tip: String = "") -> Button:
 	var b := Button.new()
 	b.text = text
 	b.tooltip_text = tip
-	b.custom_minimum_size = Vector2(0, TOUCH)
-	b.add_theme_font_size_override("font_size", 13)
+	# Тач-цель обязана быть квадратной по минимуму: раньше задавалась только
+	# высота, а ширину определял текст, и короткие подписи давали узкие кнопки.
+	b.custom_minimum_size = Vector2(TOUCH, TOUCH)
+	b.add_theme_font_size_override("font_size", FONT_S)
 	b.focus_mode = Control.FOCUS_NONE
 	return b
 

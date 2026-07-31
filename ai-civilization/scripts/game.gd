@@ -11,6 +11,10 @@ const SAVE_PATH := "user://ai_civilization_save.dat"
 
 @export var world_seed: int = 0
 @export var randomize_seed: bool = true
+## Принудительный масштаб интерфейса; 0 — считать из плотности экрана.
+## Нужен инструментам: под xvfb DisplayServer сообщает 95 ppi, и без override
+## снимок экрана показывал бы настольную компоновку вместо телефонной.
+@export var ui_scale_override: float = 0.0
 
 var sim: Simulation
 var view: WorldView
@@ -24,6 +28,8 @@ var _armed_intervention: String = ""
 func _ready() -> void:
 	if randomize_seed and world_seed == 0:
 		world_seed = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF
+
+	_apply_ui_scale()
 
 	sim = Simulation.new(world_seed)
 	sim.new_game()
@@ -69,6 +75,35 @@ func _ready() -> void:
 	sim.story.act_changed.connect(_on_act_changed)
 
 	tiers.reevaluate(sim.clock.tick_count, camera.position, camera.view_scale())
+
+
+## Приравнивает логическую единицу интерфейса к dp.
+##
+## Базовый вьюпорт 1280x720 со stretch canvas_items даёт на экране 2344x1080
+## коэффициент ровно 1.5. При плотности 461 ppi это значит, что тач-цель 48
+## единиц занимала 23dp вместо 48dp, а шрифт 14 читался как 6.8sp — то есть
+## интерфейс был ровно вдвое меньше пальцевого минимума. content_scale_factor
+## добирает недостающее, и константы в UIKit начинают означать физические dp.
+##
+## Снизу ограничено единицей: на настольном экране с 96 ppi «честный» пересчёт
+## наоборот уменьшил бы интерфейс.
+func _apply_ui_scale() -> void:
+	var win := get_window()
+	if win == null:
+		return
+	var factor := ui_scale_override
+	if factor <= 0.0:
+		var base := Vector2(
+			float(ProjectSettings.get_setting("display/window/size/viewport_width", 1280)),
+			float(ProjectSettings.get_setting("display/window/size/viewport_height", 720)))
+		var base_stretch := minf(float(win.size.x) / maxf(1.0, base.x),
+			float(win.size.y) / maxf(1.0, base.y))
+		var dpi := DisplayServer.screen_get_dpi()
+		if dpi <= 0:
+			dpi = 160
+		var px_per_dp := float(dpi) / 160.0
+		factor = px_per_dp / maxf(0.01, base_stretch)
+	win.content_scale_factor = clampf(factor, 1.0, 3.0)
 
 
 func _process(delta: float) -> void:
@@ -195,6 +230,11 @@ func _on_choice_requested(pending: Dictionary) -> void:
 
 
 func _on_choice_made(checkpoint_id: String, option_id: String) -> void:
+	# Диалог прячет себя сам только при нажатии кнопки игроком. Если выбор
+	# закрывается программно, окно оставалось висеть поверх карты и
+	# перехватывало касания — после первого чекпоинта карта переставала
+	# отзываться на тапы вообще.
+	hud.choice_dialog.close()
 	sim.story.resolve_choice(checkpoint_id, option_id, sim.day())
 	hud.refresh_slow()
 	sim.clock.set_speed_index(1)

@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -272,22 +274,28 @@ fun EffectChip(
     }
 }
 
-/** The flat rounded tile a shop item's icon sits in. */
+/**
+ * The flat rounded tile a shop item's picture sits in.
+ *
+ * With [art] set the tile shows the item's drawn illustration at full colour;
+ * the [icon]+[tint] pair is the fallback for things that have no portrait.
+ */
 @Composable
 fun IconTile(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     size: Dp = 62.dp,
     tint: Color = Accents.Primary,
+    art: Painter? = null,
     onTap: (() -> Unit)? = null,
     tapEnabled: Boolean = true,
 ) {
     if (onTap != null) {
         HeartTap(onTap = onTap, modifier = modifier, enabled = tapEnabled) {
-            IconTileFace(icon, Modifier, size, tint)
+            IconTileFace(icon, Modifier, size, tint, art)
         }
     } else {
-        IconTileFace(icon, modifier, size, tint)
+        IconTileFace(icon, modifier, size, tint, art)
     }
 }
 
@@ -297,6 +305,7 @@ private fun IconTileFace(
     modifier: Modifier = Modifier,
     size: Dp = 62.dp,
     tint: Color = Accents.Primary,
+    art: Painter? = null,
 ) {
     Box(
         modifier = modifier
@@ -306,12 +315,20 @@ private fun IconTileFace(
             .border(1.dp, tint.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(size * 0.48f),
-        )
+        if (art != null) {
+            Image(
+                painter = art,
+                contentDescription = null,
+                modifier = Modifier.size(size * 0.72f),
+            )
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(size * 0.48f),
+            )
+        }
     }
 }
 

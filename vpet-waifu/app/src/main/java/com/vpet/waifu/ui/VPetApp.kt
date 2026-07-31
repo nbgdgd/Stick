@@ -16,6 +16,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -61,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,8 +72,7 @@ import com.vpet.waifu.feedback.MusicTrack
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.ui.components.EffectChip
-import com.vpet.waifu.ui.occupationIcon
-import com.vpet.waifu.ui.occupationTint
+import com.vpet.waifu.ui.occupationArtRes
 import com.vpet.waifu.ui.components.HeartLayer
 import com.vpet.waifu.ui.components.PrimaryButton
 import com.vpet.waifu.ui.components.rememberHeartTapState
@@ -404,11 +405,10 @@ private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
             PrimaryButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
         },
         icon = {
-            Icon(
-                imageVector = occupationIcon(outcome.occupationId),
+            Image(
+                painter = painterResource(occupationArtRes(outcome.occupationId)),
                 contentDescription = null,
-                tint = occupationTint(outcome.occupationId),
-                modifier = Modifier.size(40.dp).scale(pop),
+                modifier = Modifier.size(44.dp).scale(pop),
             )
         },
         title = {

@@ -1,5 +1,6 @@
 package com.vpet.waifu.ui.activities
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,6 +60,7 @@ import com.vpet.waifu.ui.components.ScreenTitle
 import com.vpet.waifu.ui.components.SectionHeader
 import com.vpet.waifu.ui.components.StatBarTrack
 import com.vpet.waifu.ui.formatRemaining
+import com.vpet.waifu.ui.occupationArtRes
 import com.vpet.waifu.ui.occupationIcon
 import com.vpet.waifu.ui.occupationTint
 import com.vpet.waifu.ui.occupationNameRes
@@ -177,11 +180,10 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
                         .background(occupationTint(occupation.id).copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = occupationIcon(occupation.id),
+                    Image(
+                        painter = painterResource(occupationArtRes(occupation.id)),
                         contentDescription = null,
-                        tint = occupationTint(occupation.id),
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(32.dp),
                     )
                 }
                 Spacer(Modifier.width(12.dp))
@@ -266,6 +268,7 @@ private fun OccupationCard(
                     IconTile(
                         icon = occupationIcon(occupation.id),
                         tint = occupationTint(occupation.id),
+                        art = painterResource(occupationArtRes(occupation.id)),
                         size = 54.dp,
                         onTap = onCategoryTap,
                         tapEnabled = patting && unlocked,

@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -71,8 +72,10 @@ import com.vpet.waifu.ui.components.ScreenTitle
 import com.vpet.waifu.ui.components.SectionHeader
 import com.vpet.waifu.ui.formatMinutes
 import com.vpet.waifu.ui.character.PetPalette
+import com.vpet.waifu.ui.shopItemArtRes
 import com.vpet.waifu.ui.shopItemIcon
 import com.vpet.waifu.ui.shopItemTint
+import com.vpet.waifu.ui.upgradeArtRes
 import com.vpet.waifu.ui.upgradeTint
 import com.vpet.waifu.ui.upgradeIcon
 import com.vpet.waifu.ui.upgradeNameRes
@@ -206,6 +209,7 @@ private fun UpgradeCard(
                 IconTile(
                     icon = upgradeIcon(upgrade.id),
                     tint = tint,
+                    art = upgradeArtRes(upgrade.id)?.let { painterResource(it) },
                     onTap = onCategoryTap,
                     tapEnabled = patting && (unlocked || owned),
                 )
@@ -389,6 +393,7 @@ private fun ShopCard(
                 IconTile(
                     icon = shopItemIcon(item.id),
                     tint = tint,
+                    art = painterResource(shopItemArtRes(item.id)),
                     onTap = onCategoryTap,
                     tapEnabled = patting && unlocked,
                 )

@@ -18,7 +18,7 @@ import com.vpet.waifu.R
 object StatColors {
     val Hunger = Tokens.Semantic.Hunger
     val Energy = Tokens.Semantic.Energy
-    val Mood = Tokens.Semantic.Mood
+    val Mood = Color(0xFFC46BE0)
     val Money = Tokens.Semantic.Money
     val Exp = Tokens.Semantic.Exp
 }
@@ -54,9 +54,9 @@ object Surfaces {
 }
 
 object Accents {
-    val Primary = Tokens.Semantic.Accent
-    val Bright = Color(0xFFF27CA0)
-    val Deep = Tokens.Semantic.AccentPressed
+    val Primary = Color(0xFFA855F7)
+    val Bright = Color(0xFFC084FC)
+    val Deep = Color(0xFF7C3AED)
     val Danger = Tokens.Semantic.Danger
     val Text = Tokens.Neutral.Text
     val TextMuted = Tokens.Neutral.TextSecondary
@@ -67,8 +67,8 @@ object Accents {
 private val Scheme = darkColorScheme(
     primary = Accents.Primary,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFF3A1220),
-    onPrimaryContainer = Color(0xFFFFD9E4),
+    primaryContainer = Color(0xFF2A1F42),
+    onPrimaryContainer = Color(0xFFE9DDFB),
     secondary = Accents.Bright,
     tertiary = StatColors.Energy,
     background = Surfaces.Screen,

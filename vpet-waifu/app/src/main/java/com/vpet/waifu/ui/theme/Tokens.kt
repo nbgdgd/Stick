@@ -42,11 +42,23 @@ object Tokens {
         val OnAccent = Color(0xFF1F1300)
     }
 
-    /** Вариант B — «Малина». Выбранный акцент приложения. */
+    /** Вариант B — «Малина». */
     object Raspberry {
         val Accent = Color(0xFFE8517E)
         val AccentPressed = Color(0xFFC73A66)
         val OnAccent = Color(0xFF2A0714)
+    }
+
+    /**
+     * Выбранный акцент приложения: фирменный фиолетовый.
+     *
+     * Малину попробовали и откатили по решению владельца — узнаваемость
+     * оригинальной палитры оказалась важнее ухода от «дефолтного» цвета.
+     */
+    object Violet {
+        val Accent = Color(0xFFA855F7)
+        val AccentPressed = Color(0xFF7C3AED)
+        val OnAccent = Color(0xFFFFFFFF)
     }
 
     /** Вариант C — «Бирюза». */
@@ -61,17 +73,16 @@ object Tokens {
      * смена варианта — замена трёх ссылок ниже.
      */
     object Semantic {
-        val Accent = Raspberry.Accent
-        val AccentPressed = Raspberry.AccentPressed
-        val OnAccent = Raspberry.OnAccent
+        val Accent = Violet.Accent
+        val AccentPressed = Violet.AccentPressed
+        val OnAccent = Violet.OnAccent
 
         val Danger = Color(0xFFFF6740)
         val Success = Color(0xFF4CB782)
 
-        // Статы согласованы с акцентом: настроение — это и есть бренд-эмоция.
         val Hunger = Color(0xFFE8934A)
         val Energy = Color(0xFF54B8E8)
-        val Mood = Raspberry.Accent
+        val Mood = Color(0xFFC46BE0)
         val Money = Color(0xFFE8C15C)
         val Exp = Color(0xFF5FC98A)
     }

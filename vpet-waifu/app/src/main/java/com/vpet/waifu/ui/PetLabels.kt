@@ -1,5 +1,6 @@
 package com.vpet.waifu.ui
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
@@ -131,6 +132,60 @@ fun shopItemIcon(id: String): ImageVector = when (id) {
     "second_wind" -> Icons.Rounded.Air
     "good_vibes" -> Icons.Rounded.MusicNote
     else -> Icons.Rounded.CardGiftcard
+}
+
+/**
+ * The drawn illustrations — every product and workplace as a little flat
+ * picture rather than a single-colour glyph. The [ImageVector] lookups above
+ * stay for the small chips where a full illustration would smear.
+ */
+@DrawableRes
+fun shopItemArtRes(id: String): Int = when (id) {
+    "onigiri" -> R.drawable.art_onigiri
+    "ramen" -> R.drawable.art_ramen
+    "cake" -> R.drawable.art_cake
+    "bento" -> R.drawable.art_bento
+    "parfait" -> R.drawable.art_parfait
+    "energy_drink" -> R.drawable.art_energy_drink
+    "flowers" -> R.drawable.art_flowers
+    "teddy" -> R.drawable.art_teddy
+    "headphones" -> R.drawable.art_headphones
+    "ring" -> R.drawable.art_ring
+    "advance" -> R.drawable.art_advance
+    "exp_pill" -> R.drawable.art_exp_pill
+    "medicine" -> R.drawable.art_medicine
+    "haste_shot" -> R.drawable.art_haste_shot
+    "overtime_pass" -> R.drawable.art_overtime_pass
+    "focus_tea" -> R.drawable.art_focus_tea
+    "second_wind" -> R.drawable.art_second_wind
+    "good_vibes" -> R.drawable.art_good_vibes
+    else -> R.drawable.art_onigiri
+}
+
+@DrawableRes
+fun occupationArtRes(id: String): Int = when (id) {
+    "cafe" -> R.drawable.art_cafe
+    "shop" -> R.drawable.art_shop
+    "office" -> R.drawable.art_office
+    "idol" -> R.drawable.art_idol
+    "school" -> R.drawable.art_school
+    "course" -> R.drawable.art_course
+    "university" -> R.drawable.art_university
+    else -> R.drawable.art_cafe
+}
+
+/** Room and gear have portraits; outfits are shown as their own swatches. */
+@DrawableRes
+fun upgradeArtRes(id: String): Int? = when (id) {
+    "fridge" -> R.drawable.art_fridge
+    "bed" -> R.drawable.art_bed
+    "console" -> R.drawable.art_console
+    "cat" -> R.drawable.art_cat
+    "coffee_machine" -> R.drawable.art_coffee_machine
+    "laptop" -> R.drawable.art_laptop
+    "textbooks" -> R.drawable.art_textbooks
+    "studio" -> R.drawable.art_studio
+    else -> null
 }
 
 /**

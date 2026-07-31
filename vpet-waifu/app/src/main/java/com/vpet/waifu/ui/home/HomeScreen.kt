@@ -9,6 +9,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -81,6 +82,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -131,6 +133,8 @@ import com.vpet.waifu.ui.occupationIcon
 import com.vpet.waifu.ui.chapterTitleRes
 import com.vpet.waifu.ui.occupationTint
 import com.vpet.waifu.ui.formatMinutes
+import com.vpet.waifu.ui.occupationArtRes
+import com.vpet.waifu.ui.shopItemArtRes
 import com.vpet.waifu.ui.shopItemIcon
 import com.vpet.waifu.ui.shopItemNameRes
 import com.vpet.waifu.ui.shopItemTint
@@ -562,11 +566,10 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
                         .background(occupationTint(occupation.id).copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = occupationIcon(occupation.id),
+                    Image(
+                        painter = painterResource(occupationArtRes(occupation.id)),
                         contentDescription = null,
-                        tint = occupationTint(occupation.id),
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(32.dp),
                     )
                 }
                 Spacer(Modifier.width(12.dp))
@@ -1092,11 +1095,10 @@ private fun SickCard(snapshot: PetSnapshot, onBuy: (ShopItem) -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Rounded.Healing,
+                Image(
+                    painter = painterResource(R.drawable.art_medicine),
                     contentDescription = null,
-                    tint = Accents.Danger,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(30.dp),
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -1125,7 +1127,7 @@ private fun SickCard(snapshot: PetSnapshot, onBuy: (ShopItem) -> Unit) {
     }
 }
 
-/** Her wish, with the thing named and the window shown. */
+/** Her wish, with the thing named, pictured, and the window shown. */
 @Composable
 private fun RequestCard(request: PetRequest, nowMillis: Long) {
     val (icon, tint, line) = when (request.kind) {
@@ -1151,6 +1153,7 @@ private fun RequestCard(request: PetRequest, nowMillis: Long) {
             stringResource(R.string.request_play),
         )
     }
+    val art = request.itemId?.let { painterResource(shopItemArtRes(it)) }
 
     PanelCard(
         modifier = Modifier.fillMaxWidth(),
@@ -1158,7 +1161,7 @@ private fun RequestCard(request: PetRequest, nowMillis: Long) {
         border = tint.copy(alpha = 0.45f),
     ) {
         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconTile(icon = icon, tint = tint, size = 46.dp)
+            IconTile(icon = icon, tint = tint, art = art, size = 46.dp)
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(

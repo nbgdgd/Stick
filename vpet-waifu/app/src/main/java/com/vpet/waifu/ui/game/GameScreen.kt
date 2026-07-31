@@ -94,7 +94,7 @@ private const val FRAME_MILLIS = 50L
 
 /** What a target looks like: an icon and the colour it glows. */
 private enum class TargetKind(val tint: Color) {
-    HEART(Color(0xFFF27CA0)),
+    HEART(Color(0xFFC084FC)),
     STAR(Color(0xFFFFC46B)),
     COOKIE(Color(0xFFE8A87C)),
     FLOWER(Color(0xFFF48FB1)),

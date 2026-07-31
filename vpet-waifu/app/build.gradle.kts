@@ -14,11 +14,28 @@ android {
         applicationId = "com.vpet.waifu"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+    }
+
+    // The store key never lives in the repo: the four RELEASE_* values arrive
+    // as -P properties (or gradle.properties on the machine that holds the
+    // keystore). Without them the release build stays unsigned, same as before.
+    val hasReleaseKey = listOf(
+        "RELEASE_STORE_FILE", "RELEASE_STORE_PASSWORD", "RELEASE_KEY_ALIAS", "RELEASE_KEY_PASSWORD",
+    ).all { project.hasProperty(it) }
+    if (hasReleaseKey) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(project.property("RELEASE_STORE_FILE") as String)
+                storePassword = project.property("RELEASE_STORE_PASSWORD") as String
+                keyAlias = project.property("RELEASE_KEY_ALIAS") as String
+                keyPassword = project.property("RELEASE_KEY_PASSWORD") as String
+            }
+        }
     }
 
     buildTypes {
@@ -29,6 +46,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (hasReleaseKey) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

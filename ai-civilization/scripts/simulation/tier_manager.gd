@@ -122,19 +122,30 @@ func _sync_battles() -> void:
 	for inv in world.invasions:
 		var p = inv.get("pos", [0.0, 0.0])
 		var pos := Vector2(float(p[0]), float(p[1]))
+		# Две линии: десант со стороны моря, оборона со стороны поселения.
+		# Толпа, бегающая вокруг точки, читалась как суета, а не как бой.
+		var target := world.settlement(int(inv.get("target", -1)))
+		var map_centre := Vector2(world.size, world.size) * 0.5 * world.tile_size
+		var axis := Vector2.RIGHT
+		if target != null and (target.pos - map_centre).length() > 1.0:
+			axis = (target.pos - map_centre).normalized()
+		var side := Vector2(-axis.y, axis.x)
+
 		for i in per_battle:
 			var u := pool.acquire()
 			if u == null:
 				return
 			var attacker := i % 2 == 0
 			var kind := Tier1Unit.Kind.SOLDIER if attacker else Tier1Unit.Kind.GUARD
-			u.configure(kind, -1, pos, pop_per_unit,
+			var rank := float(i / 2) - float(per_battle) * 0.25
+			var line_pos := pos + axis * (-42.0 if attacker else 24.0) + side * rank * 15.0
+			u.configure(kind, -1, line_pos, pop_per_unit,
 				SimRng.hash_seed(world.world_seed, i * 977 + int(inv.get("target", 0))),
 				"red" if attacker else "blue")
 			u.state = Tier1Unit.State.FIGHT
-			u.wander_radius = 60.0
-			u.target = pos + Vector2(randf_range(-40.0, 40.0), randf_range(-40.0, 40.0))
-			u.tint(Color(0.95, 0.85, 0.5) if attacker else Color(0.5, 0.85, 0.95))
+			u.wander_radius = 18.0
+			u.home_pos = line_pos
+			u.target = line_pos + side * randf_range(-8.0, 8.0)
 			_battle_units.append(u)
 
 

@@ -23,6 +23,7 @@ var hud: Hud
 var tiers: TierManager
 
 var _armed_intervention: String = ""
+var _known_invasions: int = 0
 
 
 func _ready() -> void:
@@ -119,8 +120,36 @@ func _process(delta: float) -> void:
 		tiers.reevaluate(sim.clock.tick_count, camera.position, camera.view_scale())
 		hud.set_tier_info(tiers.tier1_settlements(), tiers.active_units(), tiers.unit_budget)
 
+	if scaled > 0.0:
+		view.battle_fx.step(minf(scaled, 0.5))
+	_watch_battles()
+
 	hud.refresh_fast()
 	view.refresh()
+
+
+## Оповещение о бое.
+##
+## Десант живёт на карте считанные игровые дни, и на ускоренном времени игрок
+## просто не успевал его заметить: война была видна только строчкой в хронике.
+## При появлении нового десанта камера сама показывает место, а время падает до
+## обычного — как уведомление о сражении в стратегиях.
+##
+## Реакция сделана наблюдением за состоянием мира, а не сигналом из симуляции:
+## симуляция не должна знать ни про камеру, ни про HUD.
+func _watch_battles() -> void:
+	var count := sim.world.invasions.size()
+	if count > _known_invasions and Balance.section("combat").get("battle_alert", true):
+		var inv = sim.world.invasions[count - 1]
+		var p = inv.get("pos", [0.0, 0.0])
+		camera.focus_on(Vector2(float(p[0]), float(p[1])))
+		var target := sim.world.settlement(int(inv.get("target", -1)))
+		hud.set_hint("Десант у «%s»" % (target.name if target != null else "берега"))
+		var alert_speed := Balance.int_at("combat/battle_alert_speed_index", 1)
+		if sim.clock.speed_index > alert_speed:
+			sim.clock.set_speed_index(alert_speed)
+			hud.set_speed_index(alert_speed)
+	_known_invasions = count
 
 
 func _on_day_advanced(_day: int) -> void:
@@ -163,6 +192,8 @@ func _on_rewind(days: int) -> void:
 func _on_rewound(_day: int) -> void:
 	# История заменена целиком, привязки Tier 1 указывают на исчезнувшие id.
 	tiers.reset()
+	view.battle_fx.clear()
+	_known_invasions = sim.world.invasions.size()
 	view.rebuild_markers()
 	hud.chronicle_panel.rebuild()
 	hud.refresh_slow()

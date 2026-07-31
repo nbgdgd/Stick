@@ -18,6 +18,7 @@ var target_day: int = 300
 var out_path: String = DEFAULT_OUT
 var zoom: float = 1.0
 var ui_scale: float = 0.0
+var force_battle: bool = false
 
 
 func _initialize() -> void:
@@ -50,6 +51,8 @@ func _parse_args() -> void:
 			"--ui-scale":
 				if i + 1 < args.size():
 					ui_scale = float(args[i + 1])
+			"--battle":
+				force_battle = true
 
 
 func _process(_delta: float) -> bool:
@@ -69,6 +72,8 @@ func _process(_delta: float) -> bool:
 		if capital != null:
 			game.camera.focus_on(capital.pos)
 			game.hud.inspector.show_settlement(capital)
+		if force_battle:
+			_stage_battle()
 		game.camera.zoom = Vector2(zoom, zoom)
 		game.tiers.reevaluate(game.sim.clock.tick_count, game.camera.position, game.camera.view_scale())
 		game.sim.clock.set_speed_index(0)
@@ -80,6 +85,27 @@ func _process(_delta: float) -> bool:
 		_capture()
 		return true
 	return false
+
+
+## Принудительный десант: бой редок и случаен, а проверять его вид надо
+## по требованию. Состояние мира при этом настоящее — вызываются те же
+## функции войны, что и в симуляции.
+func _stage_battle() -> void:
+	var w = game.sim.world
+	w.act = maxi(w.act, 3)
+	WarTheater.declare_war(w, game.sim.day())
+	var humans = w.humans()
+	if humans != null:
+		humans.next_invasion_day = game.sim.day()
+	game.sim.war.step_day(game.sim.day())
+	game.tiers.reevaluate(game.sim.clock.tick_count, game.camera.position, game.camera.view_scale())
+	if not w.invasions.is_empty():
+		var p = w.invasions[0].get("pos", [0.0, 0.0])
+		game.camera.focus_on(Vector2(float(p[0]), float(p[1])))
+		game.tiers.reevaluate(game.sim.clock.tick_count, game.camera.position, game.camera.view_scale())
+	# Немного проиграть эффекты, чтобы в кадр попали трассеры и разрывы.
+	for _i in 12:
+		game.view.battle_fx.step(0.05)
 
 
 func _capture() -> void:

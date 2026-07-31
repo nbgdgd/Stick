@@ -24,6 +24,8 @@ var props: Node2D
 var markers: Dictionary = {}
 var selected_id: int = -1
 
+var battle_fx: BattleFX
+
 var _invasion_layer: Node2D
 var _terrain_material: ShaderMaterial
 
@@ -52,6 +54,11 @@ func setup(p_world: World) -> void:
 	_invasion_layer.z_index = 8
 	_invasion_layer.draw.connect(_draw_invasions)
 	add_child(_invasion_layer)
+
+	battle_fx = BattleFX.new()
+	battle_fx.name = "BattleFX"
+	add_child(battle_fx)
+	battle_fx.setup(world)
 
 	bake_terrain()
 	rebuild_markers()

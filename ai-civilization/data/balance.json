@@ -134,7 +134,10 @@
 		"capture_pop_loss": 0.45,
 		"tier1_battle_units": 24,
 		"strength_decay": 0.015,
-		"max_war_days": 220
+		"max_war_days": 220,
+		"invasion_visible_days": 5,
+		"battle_alert": true,
+		"battle_alert_speed_index": 1
 	},
 	"trade": {
 		"interval_days": 3,

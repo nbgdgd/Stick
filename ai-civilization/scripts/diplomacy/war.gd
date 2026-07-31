@@ -9,7 +9,6 @@ extends RefCounted
 ## через снепшоты) ломается, а стоимость реализации улетает непропорционально
 ## ценности фичи.
 
-const INVASION_VISIBLE_DAYS := 2
 
 var world: World
 
@@ -142,7 +141,7 @@ func _resolve_invasions(day: int) -> void:
 	var remaining: Array = []
 	for inv in world.invasions:
 		inv["days"] = int(inv["days"]) + 1
-		if int(inv["days"]) < INVASION_VISIBLE_DAYS:
+		if int(inv["days"]) < Balance.int_at("combat/invasion_visible_days", 5):
 			remaining.append(inv)
 			continue
 		var target := world.settlement(int(inv["target"]))

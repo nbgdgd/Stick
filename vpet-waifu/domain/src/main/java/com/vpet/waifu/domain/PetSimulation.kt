@@ -34,10 +34,65 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         } else {
             advanceMinutes(settled, nowMillis, owedMinutes)
         }
-        // Her own life, on top of the clockwork: wishes voiced and expired, and
-        // chapters that complete the moment the state qualifies. Both run on
-        // every advance, so no path through the simulation can miss them.
-        return advanceStory(tendRequest(advanced, nowMillis))
+        // Her own life, on top of the clockwork: wishes voiced and expired,
+        // chapters, the week's goal and the calendar. All run on every advance,
+        // so no path through the simulation can miss them.
+        return advanceStory(tendAnniversary(tendGoal(tendRequest(advanced, nowMillis), nowMillis), nowMillis))
+    }
+
+    /**
+     * The week's goal: reset it when the week rolls over, pay it when it is met.
+     *
+     * Progress is a delta against a lifetime counter captured at the week's
+     * start, so nothing needs incrementing anywhere — the shifts, lessons,
+     * games and earnings the rest of the simulation already counts *are* the
+     * progress.
+     */
+    private fun tendGoal(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        if (!WeeklyGoals.unlocked(snapshot)) return snapshot
+        val week = WeeklyGoals.weekOf(nowMillis)
+        val kind = WeeklyGoals.kindFor(week)
+
+        if (snapshot.goalWeek != week) {
+            return snapshot.copy(
+                goalWeek = week,
+                goalBaseline = WeeklyGoals.counterFor(snapshot, kind),
+                goalRewarded = false,
+            )
+        }
+        if (snapshot.goalRewarded) return snapshot
+
+        val target = WeeklyGoals.targetFor(kind, snapshot.level)
+        val done = WeeklyGoals.counterFor(snapshot, kind) - snapshot.goalBaseline
+        if (done < target) return snapshot
+
+        val reward = WeeklyGoals.rewardFor(kind, snapshot.level)
+        return snapshot.copy(
+            progress = snapshot.progress.plus(money = reward),
+            totalEarned = snapshot.totalEarned + reward,
+            goalRewarded = true,
+            journal = Journal.append(
+                snapshot.journal,
+                JournalEntry(JournalKind.GOAL_DONE, kind.name, reward, nowMillis),
+            ),
+        ).plusBond(WeeklyGoals.BOND_REWARD, nowMillis)
+    }
+
+    /** Anniversaries: the milestones of days together, each celebrated once. */
+    private fun tendAnniversary(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        val days = Anniversaries.daysTogether(snapshot.bornAt, nowMillis)
+        val due = Anniversaries.due(days, snapshot.celebratedMilestone) ?: return snapshot
+        val gift = Anniversaries.moneyGift(due)
+        return snapshot.copy(
+            stats = snapshot.stats.adjusted(moodBy = Anniversaries.MOOD_GIFT),
+            progress = snapshot.progress.plus(money = gift),
+            totalEarned = snapshot.totalEarned + gift,
+            celebratedMilestone = due,
+            journal = Journal.append(
+                snapshot.journal,
+                JournalEntry(JournalKind.ANNIVERSARY, null, due, nowMillis),
+            ),
+        ).withEmote(Emote.CELEBRATING, nowMillis, tuning.celebrateEmoteMillis)
     }
 
     /**
@@ -82,6 +137,10 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             current = current.copy(
                 request = null,
                 stats = current.stats.adjusted(moodBy = -tuning.requestExpiredMood),
+                journal = Journal.append(
+                    current.journal,
+                    JournalEntry(JournalKind.WISH_EXPIRED, live.itemId ?: live.kind.name, at = nowMillis),
+                ),
             )
         }
 
@@ -300,17 +359,25 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             (snapshot.runDownMinutes - tuning.runDownRecoveryPerMinute).coerceAtLeast(0f)
         }
         var sickSince = snapshot.sickSince
+        var journal = snapshot.journal
         if (sickSince == 0L && runDown >= tuning.sickAfterRunDownMinutes) {
             sickSince = clock
             runDown = 0f
+            journal = Journal.append(journal, JournalEntry(JournalKind.FELL_SICK, at = clock))
         }
         if (sickSince > 0L && clock - sickSince >= tuning.sickRecoveryMinutes * MS_PER_MINUTE) {
             // She shook it off by herself — the floor under an abandoned save.
             sickSince = 0L
             runDown = 0f
+            journal = Journal.append(journal, JournalEntry(JournalKind.RECOVERED, at = clock))
         }
 
-        var next = snapshot.copy(stats = stats, sickSince = sickSince, runDownMinutes = runDown)
+        var next = snapshot.copy(
+            stats = stats,
+            sickSince = sickSince,
+            runDownMinutes = runDown,
+            journal = journal,
+        )
         next = rollEvent(next, clock)
 
         // She gets up by herself once she is fully rested.
@@ -428,6 +495,10 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             progress = snapshot.progress.plus(money = kind.instantMoney()),
             totalEarned = snapshot.totalEarned + kind.instantMoney(),
             stats = snapshot.stats.adjusted(energyBy = kind.instantEnergy()),
+            journal = Journal.append(
+                snapshot.journal,
+                JournalEntry(JournalKind.EVENT, kind.name, kind.instantMoney(), clock),
+            ),
         )
     }
 
@@ -641,6 +712,15 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 cancelled = cancelled,
                 completedAt = atMillis,
             ),
+            journal = Journal.append(
+                snapshot.journal,
+                JournalEntry(
+                    kind = if (isWork) JournalKind.SHIFT_DONE else JournalKind.LESSON_DONE,
+                    detail = occupation.id,
+                    amount = if (isWork) money else exp,
+                    at = atMillis,
+                ),
+            ),
         ).let {
             if (finished) it.plusBond(if (isWork) Bond.SHIFT else Bond.LESSON, atMillis) else it
         }.withEmote(Emote.CELEBRATING, atMillis, tuning.celebrateEmoteMillis)
@@ -701,6 +781,12 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             progress = current.progress.plus(money = game.coins(score)),
             totalEarned = current.totalEarned + game.coins(score),
             gamesPlayed = current.gamesPlayed + (if (played) 1 else 0),
+            // The best round is remembered per game, and only ever climbs.
+            bestScores = if (score > (current.bestScores[game] ?: 0)) {
+                current.bestScores + (game to score)
+            } else {
+                current.bestScores
+            },
             lastInteractionAt = nowMillis,
         ).let { if (played) it.plusBond(Bond.GAME, nowMillis) else it }
             // "Поиграй со мной!" — a round actually played grants the wish.

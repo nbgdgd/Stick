@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,6 +25,8 @@ data class PetSettings(
     val musicEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
     val notificationsEnabled: Boolean = true,
+    /** The last instant the player actually looked at the app. */
+    val lastSeenAt: Long = 0L,
 )
 
 /**
@@ -45,6 +48,7 @@ class PetPreferences @Inject constructor(
             musicEnabled = it[MUSIC] ?: true,
             hapticsEnabled = it[HAPTICS] ?: true,
             notificationsEnabled = it[NOTIFICATIONS] ?: true,
+            lastSeenAt = it[LAST_SEEN_AT] ?: 0L,
         )
     }
 
@@ -75,6 +79,11 @@ class PetPreferences @Inject constructor(
         context.dataStore.edit { it[NOTIFICATIONS] = enabled }
     }
 
+    /** Stamped when the app goes to the background and when the recap is read. */
+    suspend fun setLastSeenAt(millis: Long) {
+        context.dataStore.edit { it[LAST_SEEN_AT] = millis }
+    }
+
     companion object {
         const val MAX_NAME_LENGTH = 16
 
@@ -84,5 +93,6 @@ class PetPreferences @Inject constructor(
         private val MUSIC = booleanPreferencesKey("music_enabled")
         private val HAPTICS = booleanPreferencesKey("haptics_enabled")
         private val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
+        private val LAST_SEEN_AT = longPreferencesKey("last_seen_at")
     }
 }

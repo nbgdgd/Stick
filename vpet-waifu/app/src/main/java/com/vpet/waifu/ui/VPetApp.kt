@@ -188,6 +188,7 @@ fun VPetApp(
                     onDismissEvent = viewModel::acknowledgeEvent,
                     onBuy = viewModel::buy,
                     onAcknowledgeStory = viewModel::acknowledgeStory,
+                    onSeen = viewModel::markSeen,
                 )
                 Tab.ACTIVITIES -> ActivitiesScreen(
                     snapshot = snapshot,
@@ -213,6 +214,7 @@ fun VPetApp(
                     onFinish = viewModel::finishPlaying,
                     onScored = viewModel::scored,
                     onMiss = viewModel::missed,
+                    onRecord = viewModel::recordSet,
                 )
                 Tab.HER -> ProfileScreen(
                     snapshot = snapshot,

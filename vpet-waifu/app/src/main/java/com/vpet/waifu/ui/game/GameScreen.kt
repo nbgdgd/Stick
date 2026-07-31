@@ -132,6 +132,7 @@ fun GameScreen(
     modifier: Modifier = Modifier,
     onScored: () -> Unit = {},
     onMiss: () -> Unit = {},
+    onRecord: () -> Unit = {},
 ) {
     var game by rememberSaveable { mutableStateOf(MiniGame.CATCH) }
     var running by remember { mutableStateOf(false) }
@@ -139,6 +140,10 @@ fun GameScreen(
     var secondsLeft by remember { mutableIntStateOf(game.durationSeconds) }
     var lastScore by remember { mutableStateOf<Int?>(null) }
     var lastGame by remember { mutableStateOf(game) }
+    // The best score as it stood when the round began, so beating it is
+    // detected against the *old* record, not the one this round just wrote.
+    var bestAtStart by remember { mutableIntStateOf(0) }
+    var newRecord by remember { mutableStateOf(false) }
     var seed by remember { mutableLongStateOf(0L) }
     val targets: SnapshotStateList<Target> = remember { emptyList<Target>().toMutableStateList() }
 
@@ -148,6 +153,8 @@ fun GameScreen(
         score = 0
         targets.clear()
         secondsLeft = game.durationSeconds
+        bestAtStart = snapshot.bestScores[game] ?: 0
+        newRecord = false
         onStart()
 
         val random = Random(seed)
@@ -181,6 +188,9 @@ fun GameScreen(
             targets.clear()
             lastScore = score
             lastGame = game
+            // Any positive score beating what stood when the round began.
+            newRecord = score > 0 && score > bestAtStart
+            if (newRecord) onRecord()
             onFinish(score, game)
             running = false
         }
@@ -207,6 +217,8 @@ fun GameScreen(
             secondsLeft = secondsLeft,
             lastScore = lastScore,
             lastGame = lastGame,
+            newRecord = newRecord,
+            best = snapshot.bestScores[game] ?: 0,
             onStop = { running = false },
         )
 
@@ -388,6 +400,8 @@ private fun GameHeader(
     secondsLeft: Int,
     lastScore: Int?,
     lastGame: MiniGame,
+    newRecord: Boolean,
+    best: Int,
     onStop: () -> Unit,
 ) {
     // A minimum rather than a fixed height: the idle hint runs to three lines
@@ -401,7 +415,13 @@ private fun GameHeader(
             RoundHeader(game = game, score = score, secondsLeft = secondsLeft, onStop = onStop)
         }
         AnimatedVisibility(visible = !running, enter = fadeIn(), exit = fadeOut()) {
-            IdleHeader(game = game, lastScore = lastScore, lastGame = lastGame)
+            IdleHeader(
+                game = game,
+                lastScore = lastScore,
+                lastGame = lastGame,
+                newRecord = newRecord,
+                best = best,
+            )
         }
     }
 }
@@ -500,7 +520,13 @@ private fun RoundHeader(game: MiniGame, score: Int, secondsLeft: Int, onStop: ()
 
 /** Between rounds: what the last one paid, or nothing at all before the first. */
 @Composable
-private fun IdleHeader(game: MiniGame, lastScore: Int?, lastGame: MiniGame) {
+private fun IdleHeader(
+    game: MiniGame,
+    lastScore: Int?,
+    lastGame: MiniGame,
+    newRecord: Boolean,
+    best: Int,
+) {
     PanelCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
@@ -514,20 +540,40 @@ private fun IdleHeader(game: MiniGame, lastScore: Int?, lastGame: MiniGame) {
             )
             Spacer(Modifier.width(12.dp))
             if (lastScore == null) {
-                Text(
-                    text = stringResource(game.hintRes()),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Accents.TextDim,
-                    modifier = Modifier.weight(1f),
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(game.hintRes()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Accents.TextDim,
+                    )
+                    if (best > 0) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.game_best, best),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = StatColors.Money,
+                        )
+                    }
+                }
             } else {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.game_result, lastScore),
+                        text = if (newRecord) {
+                            stringResource(R.string.game_new_record, lastScore)
+                        } else {
+                            stringResource(R.string.game_result, lastScore)
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Accents.Text,
+                        color = if (newRecord) StatColors.Money else Accents.Text,
                     )
+                    if (!newRecord && best > 0) {
+                        Text(
+                            text = stringResource(R.string.game_best, best),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Accents.TextDim,
+                        )
+                    }
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         EffectChip(

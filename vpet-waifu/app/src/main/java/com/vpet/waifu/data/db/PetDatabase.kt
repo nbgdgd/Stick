@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.Upgrades
 
-@Database(entities = [PetStateEntity::class], version = 6, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 7, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
@@ -137,6 +137,28 @@ abstract class PetDatabase : RoomDatabase() {
                     "bornAt INTEGER NOT NULL DEFAULT 0",
                 ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
                 db.execSQL("UPDATE pet_state SET bornAt = MIN(lastTickAt, lastInteractionAt)")
+            }
+        }
+
+        /**
+         * Her diary, the arcade's records, the week's goal and the calendar.
+         *
+         * All default to empty: an upgrading save simply starts remembering
+         * from here, which is the honest reading of "nothing was written down
+         * before this build existed".
+         */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "journal TEXT NOT NULL DEFAULT ''",
+                    "bestCatch INTEGER NOT NULL DEFAULT 0",
+                    "bestRhythm INTEGER NOT NULL DEFAULT 0",
+                    "bestMemory INTEGER NOT NULL DEFAULT 0",
+                    "goalWeek INTEGER NOT NULL DEFAULT 0",
+                    "goalBaseline INTEGER NOT NULL DEFAULT 0",
+                    "goalRewarded INTEGER NOT NULL DEFAULT 0",
+                    "celebratedMilestone INTEGER NOT NULL DEFAULT 0",
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN ${'$'}it") }
             }
         }
     }

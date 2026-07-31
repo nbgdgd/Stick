@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Checkroom
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Route
@@ -45,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.Bond
 import com.vpet.waifu.domain.Focus
+import com.vpet.waifu.domain.GoalKind
+import com.vpet.waifu.domain.WeeklyGoals
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.Story
 import com.vpet.waifu.domain.UpgradeKind
@@ -103,6 +106,7 @@ fun ProfileScreen(
         }
 
         item { BondCard(snapshot) }
+        item { WeeklyGoalCard(snapshot) }
         item { FocusCard(snapshot, onChooseFocus) }
 
         item {
@@ -148,6 +152,86 @@ fun ProfileScreen(
             )
         }
         item { StatsCard(snapshot, nowMillis) }
+    }
+}
+
+/**
+ * The week's goal: the repeating heartbeat that outlives the story.
+ *
+ * One card, three states — locked with the unlock condition named, in
+ * progress with a bar, and done with the promise of the next one.
+ */
+@Composable
+private fun WeeklyGoalCard(snapshot: PetSnapshot) {
+    PanelCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.Flag,
+                    contentDescription = null,
+                    tint = StatColors.Money,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringResource(R.string.goal_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Accents.Text,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            if (!WeeklyGoals.unlocked(snapshot)) {
+                Text(
+                    text = stringResource(R.string.goal_locked, WeeklyGoals.UNLOCK_CHAPTER),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Accents.TextDim,
+                )
+                return@Column
+            }
+
+            val kind = WeeklyGoals.kindFor(snapshot.goalWeek)
+            val target = WeeklyGoals.targetFor(kind, snapshot.level)
+            val done = WeeklyGoals.progress(snapshot)
+            Text(
+                text = when (kind) {
+                    GoalKind.SHIFTS -> stringResource(R.string.goal_shifts, target)
+                    GoalKind.LESSONS -> stringResource(R.string.goal_lessons, target)
+                    GoalKind.GAMES -> stringResource(R.string.goal_games, target)
+                    GoalKind.EARN -> stringResource(R.string.goal_earn, target)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Accents.Text,
+            )
+            StatBarTrack(
+                fraction = if (target <= 0) 1f else done.toFloat() / target,
+                color = StatColors.Money,
+                height = 7.dp,
+            )
+            Row {
+                Text(
+                    text = if (snapshot.goalRewarded) {
+                        stringResource(R.string.goal_done)
+                    } else {
+                        stringResource(
+                            R.string.goal_reward,
+                            WeeklyGoals.rewardFor(kind, snapshot.level),
+                            WeeklyGoals.BOND_REWARD,
+                        )
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (snapshot.goalRewarded) StatColors.Exp else Accents.TextMuted,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringResource(R.string.goal_progress, done, target),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Accents.TextMuted,
+                )
+            }
+        }
     }
 }
 

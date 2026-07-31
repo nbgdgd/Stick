@@ -47,6 +47,7 @@ object AppModule {
                 PetDatabase.MIGRATION_3_4,
                 PetDatabase.MIGRATION_4_5,
                 PetDatabase.MIGRATION_5_6,
+                PetDatabase.MIGRATION_6_7,
             )
             .build()
 

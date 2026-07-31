@@ -47,6 +47,12 @@ class MainActivity : ComponentActivity() {
             overlayPermissionGranted = OverlayPermission.isGranted(this)
         }
 
+    override fun onStop() {
+        super.onStop()
+        // Leaving is the moment the "while you were away" window opens.
+        viewModel.markSeen()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

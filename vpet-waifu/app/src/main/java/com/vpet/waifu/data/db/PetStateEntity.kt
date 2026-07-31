@@ -15,6 +15,10 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetStats
 import com.vpet.waifu.domain.EventKind
 import com.vpet.waifu.domain.Focus
+import com.vpet.waifu.domain.Journal
+import com.vpet.waifu.domain.JournalEntry
+import com.vpet.waifu.domain.JournalKind
+import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.PetRequest
 import com.vpet.waifu.domain.RequestKind
 import com.vpet.waifu.domain.Story
@@ -98,6 +102,18 @@ data class PetStateEntity(
     val sicknessesNursed: Int = 0,
     val totalEarned: Int = 0,
     val bornAt: Long = 0,
+    /** Her diary, flattened as `kind:detail:amount:at` entries joined by `|`. */
+    val journal: String = "",
+    /** Best round per mini-game. */
+    val bestCatch: Int = 0,
+    val bestRhythm: Int = 0,
+    val bestMemory: Int = 0,
+    /** The week's goal bookkeeping. */
+    val goalWeek: Long = 0,
+    val goalBaseline: Int = 0,
+    val goalRewarded: Boolean = false,
+    /** The largest day-count anniversary already celebrated. */
+    val celebratedMilestone: Int = 0,
 ) {
     companion object {
         const val SINGLETON_ID = 0
@@ -167,6 +183,16 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
     sicknessesNursed = sicknessesNursed.coerceAtLeast(0),
     totalEarned = totalEarned.coerceAtLeast(0),
     bornAt = bornAt,
+    journal = decodeJournal(journal),
+    bestScores = buildMap {
+        if (bestCatch > 0) put(MiniGame.CATCH, bestCatch)
+        if (bestRhythm > 0) put(MiniGame.RHYTHM, bestRhythm)
+        if (bestMemory > 0) put(MiniGame.MEMORY, bestMemory)
+    },
+    goalWeek = goalWeek,
+    goalBaseline = goalBaseline.coerceAtLeast(0),
+    goalRewarded = goalRewarded,
+    celebratedMilestone = celebratedMilestone.coerceAtLeast(0),
 )
 
 fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
@@ -226,7 +252,37 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     sicknessesNursed = sicknessesNursed,
     totalEarned = totalEarned,
     bornAt = bornAt,
+    journal = encodeJournal(journal),
+    bestCatch = bestScores[MiniGame.CATCH] ?: 0,
+    bestRhythm = bestScores[MiniGame.RHYTHM] ?: 0,
+    bestMemory = bestScores[MiniGame.MEMORY] ?: 0,
+    goalWeek = goalWeek,
+    goalBaseline = goalBaseline,
+    goalRewarded = goalRewarded,
+    celebratedMilestone = celebratedMilestone,
 )
+
+// The diary rides in one text column, like the effects: `kind:detail:amount:at`
+// entries joined by `|`. Details are plain ids and enum names, so the
+// separators can never appear inside a field.
+private fun encodeJournal(journal: List<JournalEntry>): String =
+    journal.joinToString("|") { "${it.kind.name}:${it.detail ?: ""}:${it.amount}:${it.at}" }
+
+private fun decodeJournal(raw: String): List<JournalEntry> =
+    raw.split('|')
+        .filter { it.isNotBlank() }
+        .mapNotNull { entry ->
+            val parts = entry.split(':')
+            if (parts.size != 4) return@mapNotNull null
+            val kind = enumOrNull<JournalKind>(parts[0]) ?: return@mapNotNull null
+            JournalEntry(
+                kind = kind,
+                detail = parts[1].ifEmpty { null },
+                amount = parts[2].toIntOrNull() ?: 0,
+                at = parts[3].toLongOrNull() ?: 0L,
+            )
+        }
+        .takeLast(Journal.MAX_ENTRIES)
 
 private fun decodeIds(raw: String): Set<String> =
     raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()

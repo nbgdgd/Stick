@@ -41,8 +41,14 @@ fun PetStage(
     workProp: Prop? = null,
     /** Owned upgrade ids — the furniture her money became. */
     decor: Set<String> = emptySet(),
+    /**
+     * Whether the room is in its night dress.
+     *
+     * Follows the player's real evening as well as her sleep, so the window
+     * shows stars at the player's midnight instead of a noon sky.
+     */
+    night: Boolean = state == PetState.SLEEPING,
 ) {
-    val night = state == PetState.SLEEPING
     val top by animateColorAsState(
         if (night) StageColors.NightTop else StageColors.DayTop,
         label = "stage-top",

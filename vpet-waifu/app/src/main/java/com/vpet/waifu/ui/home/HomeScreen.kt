@@ -1,5 +1,6 @@
 package com.vpet.waifu.ui.home
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -26,7 +27,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Cake
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Checkroom
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Favorite
@@ -88,6 +92,10 @@ import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.domain.Dialogue
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.PetSnapshot
+import com.vpet.waifu.domain.Anniversaries
+import com.vpet.waifu.domain.JournalEntry
+import com.vpet.waifu.domain.JournalKind
+import com.vpet.waifu.domain.PetActivity
 import com.vpet.waifu.domain.PetRequest
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.RequestKind
@@ -122,6 +130,8 @@ import com.vpet.waifu.ui.occupationTint
 import com.vpet.waifu.ui.shopItemIcon
 import com.vpet.waifu.ui.shopItemNameRes
 import com.vpet.waifu.ui.shopItemTint
+import com.vpet.waifu.ui.isRealMorning
+import com.vpet.waifu.ui.isRealNight
 import com.vpet.waifu.ui.occupationNameRes
 import com.vpet.waifu.ui.stateLabelRes
 import com.vpet.waifu.ui.theme.Accents
@@ -163,12 +173,18 @@ fun HomeScreen(
     onDismissEvent: () -> Unit,
     onBuy: (ShopItem) -> Unit,
     onAcknowledgeStory: () -> Unit,
+    onSeen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state = snapshot.state(nowMillis, tuning)
     val line = remember(snapshot, nowMillis / 5_000L) {
         Dialogue.lineFor(snapshot, nowMillis, tuning)
     }
+    // "Доброе утро" beats the ordinary line: the first visit of a morning is a
+    // moment, and the room knowing the real clock only matters if she does too.
+    val morningGreeting = isRealMorning(nowMillis) &&
+        nowMillis - snapshot.lastInteractionAt >= 6L * 60 * 60 * 1000 &&
+        snapshot.activity == PetActivity.AWAKE && !snapshot.isSick
 
     // The clicker: tapping her dips her on her feet, sprays a burst of stars
     // at the finger, and clicks — instantly, on the press, because a clicker
@@ -218,6 +234,7 @@ fun HomeScreen(
                 characterScale = petScale.value,
                 workProp = workPropFor(snapshot.occupation?.id),
                 decor = snapshot.owned,
+                night = state == PetState.SLEEPING || isRealNight(nowMillis),
             )
             // The tap layer sits over the room but under the chips and bubble.
             Box(
@@ -263,7 +280,11 @@ fun HomeScreen(
             // She talks — in the sky band above her head. The first cut hung
             // the bubble at her eye level and it sat straight across her face.
             SpeechBubble(
-                text = stringResource(dialogueRes(line)),
+                text = if (morningGreeting) {
+                    stringResource(pickMorning(nowMillis))
+                } else {
+                    stringResource(dialogueRes(line))
+                },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 8.dp, start = 16.dp, end = 16.dp),
@@ -281,6 +302,14 @@ fun HomeScreen(
                         .padding(top = 84.dp, end = 18.dp),
                 )
             }
+        }
+
+        // What happened while nobody was looking — shown once per return.
+        AwayRecap(snapshot, settings.lastSeenAt, nowMillis, onSeen)
+
+        // A round number of days together is a small holiday.
+        if (Anniversaries.daysTogether(snapshot.bornAt, nowMillis) in Anniversaries.MILESTONES) {
+            AnniversaryCard(Anniversaries.daysTogether(snapshot.bornAt, nowMillis))
         }
 
         // A completed chapter is the best news the screen can carry.
@@ -1232,6 +1261,150 @@ private fun StoryBanner(snapshot: PetSnapshot, onAcknowledge: () -> Unit) {
                 tint = StatColors.Exp,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+    }
+}
+
+@StringRes
+private fun pickMorning(nowMillis: Long): Int {
+    val variants = intArrayOf(R.string.say_morning_0, R.string.say_morning_1, R.string.say_morning_2)
+    return variants[((nowMillis / 60_000L) % variants.size).toInt()]
+}
+
+/**
+ * The diary since the player last looked, shown once.
+ *
+ * The window is captured on first composition and held: the ticker keeps
+ * writing entries while the card is open, and a recap that grows as you read
+ * it never lets you finish reading.
+ */
+@Composable
+private fun AwayRecap(
+    snapshot: PetSnapshot,
+    lastSeenAt: Long,
+    nowMillis: Long,
+    onSeen: () -> Unit,
+) {
+    var dismissed by remember { mutableStateOf(false) }
+    val since = remember { lastSeenAt }
+    val awayLongEnough = remember { since > 0L && nowMillis - since >= 90L * 60 * 1000 }
+    val entries = remember { snapshot.journal.filter { it.at > since }.takeLast(8).asReversed() }
+    if (dismissed || !awayLongEnough || entries.isEmpty()) return
+
+    PanelCard(
+        modifier = Modifier.fillMaxWidth(),
+        border = Accents.Primary.copy(alpha = 0.45f),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.AutoStories,
+                    contentDescription = null,
+                    tint = Accents.Bright,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringResource(R.string.recap_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Accents.Text,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            entries.forEach { entry ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 3.dp),
+                ) {
+                    val (icon, tint) = journalLook(entry)
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = tint,
+                        modifier = Modifier.size(15.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = journalLine(entry),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Accents.TextMuted,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlineButton(
+                text = stringResource(R.string.action_ok),
+                onClick = {
+                    dismissed = true
+                    onSeen()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+private fun journalLook(entry: JournalEntry) = when (entry.kind) {
+    JournalKind.SHIFT_DONE -> Icons.Rounded.Paid to StatColors.Money
+    JournalKind.LESSON_DONE -> Icons.Rounded.Star to StatColors.Exp
+    JournalKind.FELL_SICK -> Icons.Rounded.Healing to Accents.Danger
+    JournalKind.RECOVERED -> Icons.Rounded.Healing to Color(0xFF54E070)
+    JournalKind.WISH_EXPIRED -> Icons.Rounded.Favorite to Accents.TextDim
+    JournalKind.EVENT -> Icons.Rounded.AutoAwesome to Accents.Bright
+    JournalKind.GOAL_DONE -> Icons.Rounded.Check to StatColors.Money
+    JournalKind.ANNIVERSARY -> Icons.Rounded.Cake to StatColors.Mood
+}
+
+@Composable
+private fun journalLine(entry: JournalEntry): String = when (entry.kind) {
+    JournalKind.SHIFT_DONE -> stringResource(
+        R.string.recap_shift,
+        stringResource(occupationNameRes(entry.detail ?: "")),
+        entry.amount,
+    )
+    JournalKind.LESSON_DONE -> stringResource(
+        R.string.recap_lesson,
+        stringResource(occupationNameRes(entry.detail ?: "")),
+        entry.amount,
+    )
+    JournalKind.FELL_SICK -> stringResource(R.string.recap_fell_sick)
+    JournalKind.RECOVERED -> stringResource(R.string.recap_recovered)
+    JournalKind.WISH_EXPIRED -> stringResource(R.string.recap_wish_expired)
+    JournalKind.EVENT -> stringResource(R.string.recap_event)
+    JournalKind.GOAL_DONE -> stringResource(R.string.recap_goal, entry.amount)
+    JournalKind.ANNIVERSARY -> stringResource(R.string.recap_anniversary, entry.amount)
+}
+
+/** A round number of days together — a small holiday, no button needed. */
+@Composable
+private fun AnniversaryCard(days: Int) {
+    PanelCard(
+        modifier = Modifier.fillMaxWidth(),
+        color = StatColors.Mood.copy(alpha = 0.10f),
+        border = StatColors.Mood.copy(alpha = 0.5f),
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Rounded.Cake,
+                contentDescription = null,
+                tint = StatColors.Mood,
+                modifier = Modifier.size(26.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = stringResource(R.string.anniversary_title, days),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Accents.Text,
+                )
+                Text(
+                    text = stringResource(R.string.anniversary_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Accents.TextMuted,
+                )
+            }
         }
     }
 }

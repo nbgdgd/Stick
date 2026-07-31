@@ -169,6 +169,35 @@
     <string name="notify_sick_body">She needs medicine, or a day of rest.</string>
     <string name="notify_request_title">%1$s is asking for something</string>
     <string name="notify_request_body">A small wish — granting it means a lot to her.</string>
+    <string name="say_morning_0">Good morning! I was waiting for you.</string>
+    <string name="say_morning_1">Morning! Shall we make today a good one?</string>
+    <string name="say_morning_2">You\u2019re up! I already have plans for us~</string>
+
+    <string name="recap_title">While you were away</string>
+    <string name="recap_shift">Finished a shift at %1$s · +%2$d ¥</string>
+    <string name="recap_lesson">Finished %1$s · +%2$d EXP</string>
+    <string name="recap_fell_sick">She fell ill</string>
+    <string name="recap_recovered">She got better on her own</string>
+    <string name="recap_wish_expired">A little wish went ungranted</string>
+    <string name="recap_event">Something happened — see today\u2019s card</string>
+    <string name="recap_goal">Weekly goal done · +%1$d ¥</string>
+    <string name="recap_anniversary">%1$d days together!</string>
+
+    <string name="anniversary_title">%1$d days together!</string>
+    <string name="anniversary_body">A little celebration: a gift landed in the wallet and she is beaming all day.</string>
+
+    <string name="goal_title">Goal of the week</string>
+    <string name="goal_shifts">Work %1$d shifts</string>
+    <string name="goal_lessons">Finish %1$d lessons</string>
+    <string name="goal_games">Play %1$d arcade rounds</string>
+    <string name="goal_earn">Earn %1$d ¥</string>
+    <string name="goal_progress">%1$d / %2$d</string>
+    <string name="goal_reward">Reward: %1$d ¥ and +%2$d bond</string>
+    <string name="goal_done">Done! A new goal arrives next week.</string>
+    <string name="goal_locked">Weekly goals open at story chapter %1$d.</string>
+
+    <string name="game_best">Best: %1$d</string>
+    <string name="game_new_record">New record: %1$d!</string>
     <string name="still_paying_it_off">She is still working the last one off</string>
     <string name="section_busy">She is busy right now</string>
     <string name="tip_jar_title">Tip jar</string>

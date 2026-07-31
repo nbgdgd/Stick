@@ -113,6 +113,16 @@ data class PetSnapshot(
     val totalEarned: Int = 0,
     /** The day she was adopted. */
     val bornAt: Long = 0L,
+    /** Her diary — see [Journal]. */
+    val journal: List<JournalEntry> = emptyList(),
+    /** Best round per mini-game. */
+    val bestScores: Map<MiniGame, Int> = emptyMap(),
+    /** The week the current goal belongs to, and the counter value it started from. */
+    val goalWeek: Long = 0L,
+    val goalBaseline: Int = 0,
+    val goalRewarded: Boolean = false,
+    /** The largest day-count anniversary already celebrated. */
+    val celebratedMilestone: Int = 0,
 ) {
     val isSleeping: Boolean get() = activity == PetActivity.SLEEPING
 

@@ -5,6 +5,9 @@ import com.vpet.waifu.data.db.toEntity
 import com.vpet.waifu.data.db.toSnapshot
 import com.vpet.waifu.domain.EventKind
 import com.vpet.waifu.domain.Focus
+import com.vpet.waifu.domain.JournalEntry
+import com.vpet.waifu.domain.JournalKind
+import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.PetRequest
 import com.vpet.waifu.domain.RequestKind
 import com.vpet.waifu.domain.Occupations
@@ -75,6 +78,16 @@ class PetPersistenceTest {
             sicknessesNursed = 2,
             totalEarned = 12_345,
             bornAt = 1_699_000_000_000L,
+            journal = listOf(
+                JournalEntry(JournalKind.SHIFT_DONE, "cafe", 105, 1_700_000_200_000L),
+                JournalEntry(JournalKind.FELL_SICK, null, 0, 1_700_000_300_000L),
+                JournalEntry(JournalKind.ANNIVERSARY, null, 7, 1_700_000_400_000L),
+            ),
+            bestScores = mapOf(MiniGame.CATCH to 21, MiniGame.RHYTHM to 140),
+            goalWeek = 2_810L,
+            goalBaseline = 17,
+            goalRewarded = true,
+            celebratedMilestone = 30,
         )
 
         val restored = rich.toEntity().toSnapshot()
@@ -110,6 +123,12 @@ class PetPersistenceTest {
         assertEquals(rich.sicknessesNursed, restored.sicknessesNursed)
         assertEquals(rich.totalEarned, restored.totalEarned)
         assertEquals(rich.bornAt, restored.bornAt)
+        assertEquals(rich.journal, restored.journal)
+        assertEquals(rich.bestScores, restored.bestScores)
+        assertEquals(rich.goalWeek, restored.goalWeek)
+        assertEquals(rich.goalBaseline, restored.goalBaseline)
+        assertEquals(rich.goalRewarded, restored.goalRewarded)
+        assertEquals(rich.celebratedMilestone, restored.celebratedMilestone)
     }
 
     @Test

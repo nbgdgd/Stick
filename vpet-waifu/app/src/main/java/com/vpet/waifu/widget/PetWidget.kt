@@ -39,6 +39,7 @@ import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.PetRasterizer
 import com.vpet.waifu.ui.character.Prop
 import com.vpet.waifu.ui.character.workPropFor
+import com.vpet.waifu.ui.isRealNight
 import com.vpet.waifu.ui.character.RoomColors
 import com.vpet.waifu.ui.character.RoomDetail
 import com.vpet.waifu.ui.theme.StageColors
@@ -81,8 +82,13 @@ class PetWidget : GlanceAppWidget() {
         val snapshot = repositoryOf(context).peek()
         // The same state WidgetSync keys the redraw on, so the picture and the
         // decision to redraw it can never disagree.
-        val state = widgetState(snapshot, System.currentTimeMillis())
-        val palette = WidgetPalette.of(context)
+        val now = System.currentTimeMillis()
+        val state = widgetState(snapshot, now)
+        // The room's night follows the player's actual evening and her sleep,
+        // not the system theme: a widget showing noon at midnight breaks the
+        // fiction harder than any missing feature. The 15-minute heartbeat
+        // carries the flip across the boundary.
+        val palette = WidgetPalette.of(night = isRealNight(now) || state == PetState.SLEEPING)
         val size = widgetSize(context, id)
         val density = context.resources.displayMetrics.density
 
@@ -330,11 +336,7 @@ private enum class FlipTempo(val layoutRes: Int, val loopSeconds: Float) {
  */
 private data class WidgetPalette(val room: RoomColors) {
     companion object {
-        fun of(context: Context): WidgetPalette {
-            val night = context.resources.configuration.uiMode and
-                Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-            return if (night) Dark else Light
-        }
+        fun of(night: Boolean): WidgetPalette = if (night) Dark else Light
 
         private val Light = WidgetPalette(
             RoomColors(

@@ -169,6 +169,35 @@
     <string name="notify_sick_body">Ей нужно лекарство — или день покоя.</string>
     <string name="notify_request_title">%1$s о чём-то просит</string>
     <string name="notify_request_body">Маленькое желание — исполнить его сейчас очень ценно.</string>
+    <string name="say_morning_0">Доброе утро! Я тебя ждала.</string>
+    <string name="say_morning_1">Утро! Сделаем сегодня хороший день?</string>
+    <string name="say_morning_2">Проснулся! А у меня уже планы на нас~</string>
+
+    <string name="recap_title">Пока тебя не было</string>
+    <string name="recap_shift">Закончила смену: %1$s · +%2$d ¥</string>
+    <string name="recap_lesson">Закончила: %1$s · +%2$d опыта</string>
+    <string name="recap_fell_sick">Она заболела</string>
+    <string name="recap_recovered">Поправилась сама</string>
+    <string name="recap_wish_expired">Маленькое желание осталось неисполненным</string>
+    <string name="recap_event">Кое-что случилось — смотри карточку дня</string>
+    <string name="recap_goal">Цель недели закрыта · +%1$d ¥</string>
+    <string name="recap_anniversary">%1$d дней вместе!</string>
+
+    <string name="anniversary_title">%1$d дней вместе!</string>
+    <string name="anniversary_body">Маленький праздник: подарок уже в кошельке, а она весь день сияет.</string>
+
+    <string name="goal_title">Цель недели</string>
+    <string name="goal_shifts">Отработать смен: %1$d</string>
+    <string name="goal_lessons">Закончить занятий: %1$d</string>
+    <string name="goal_games">Сыграть раундов: %1$d</string>
+    <string name="goal_earn">Заработать %1$d ¥</string>
+    <string name="goal_progress">%1$d / %2$d</string>
+    <string name="goal_reward">Награда: %1$d ¥ и +%2$d привязанности</string>
+    <string name="goal_done">Готово! Новая цель придёт на следующей неделе.</string>
+    <string name="goal_locked">Цели недели откроются на %1$d главе истории.</string>
+
+    <string name="game_best">Рекорд: %1$d</string>
+    <string name="game_new_record">Новый рекорд: %1$d!</string>
     <string name="still_paying_it_off">Она ещё не расплатилась за прошлый</string>
     <string name="section_busy">Она сейчас занята</string>
     <string name="tip_jar_title">Копилка</string>

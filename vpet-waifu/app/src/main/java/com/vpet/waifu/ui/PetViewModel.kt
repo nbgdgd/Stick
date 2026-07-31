@@ -148,6 +148,12 @@ class PetViewModel @Inject constructor(
 
     fun setPetName(name: String) = act { preferences.setPetName(name) }
 
+    /** The player has caught up — the next recap starts from now. */
+    fun markSeen() = act { preferences.setLastSeenAt(System.currentTimeMillis()) }
+
+    /** A new personal best in the arcade deserves the fanfare. */
+    fun recordSet() = sounds.play(Cue.FANFARE)
+
     /**
      * Runs an action and, if it has one, makes its noise.
      *

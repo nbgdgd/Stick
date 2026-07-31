@@ -211,9 +211,10 @@ fun HomeScreen(
                         detectTapGestures { offset ->
                             onTapPet()
                             bursts += TapBurst(
-                                burstId++,
-                                offset,
-                                simulation.patMood(snapshot, nowMillis).roundToInt(),
+                                id = burstId++,
+                                center = offset,
+                                mood = simulation.patMood(snapshot, nowMillis).roundToInt(),
+                                exp = simulation.patExp(snapshot, nowMillis),
                             )
                             scope.launch {
                                 petScale.snapTo(0.955f)
@@ -778,7 +779,7 @@ private fun SettingRow(
 }
 
 /** One tap's worth of stars, at the finger. */
-private data class TapBurst(val id: Long, val center: Offset, val mood: Int)
+private data class TapBurst(val id: Long, val center: Offset, val mood: Int, val exp: Int)
 
 /**
  * What a tap on her actually looks like.
@@ -796,10 +797,16 @@ private fun SparkleBurst(burst: TapBurst, onDone: () -> Unit) {
         onDone()
     }
     val label = if (burst.mood > 0) "+${burst.mood}" else null
+    // Sitting with her while she studies is worth something on its own.
+    val expLabel = if (burst.exp > 0) "+${burst.exp} EXP" else null
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.titleMedium.copy(
         fontWeight = FontWeight.Bold,
         color = StatColors.Mood,
+    )
+    val expStyle = MaterialTheme.typography.labelLarge.copy(
+        fontWeight = FontWeight.Bold,
+        color = StatColors.Exp,
     )
 
     Canvas(Modifier.fillMaxSize()) {
@@ -830,13 +837,19 @@ private fun SparkleBurst(burst: TapBurst, onDone: () -> Unit) {
         }
 
         // The number the pat was worth.
+        val rise = 20.dp.toPx() + 44.dp.toPx() * p
         if (label != null) {
-            val laid = measurer.measure(label, style)
-            val rise = 20.dp.toPx() + 44.dp.toPx() * p
             drawText(
-                textLayoutResult = laid,
+                textLayoutResult = measurer.measure(label, style),
                 color = StatColors.Mood.copy(alpha = fade),
                 topLeft = burst.center + Offset(14.dp.toPx(), -rise),
+            )
+        }
+        if (expLabel != null) {
+            drawText(
+                textLayoutResult = measurer.measure(expLabel, expStyle),
+                color = StatColors.Exp.copy(alpha = fade),
+                topLeft = burst.center + Offset(14.dp.toPx(), -rise + 20.dp.toPx()),
             )
         }
     }

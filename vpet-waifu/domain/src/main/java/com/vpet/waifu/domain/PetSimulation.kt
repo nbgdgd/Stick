@@ -1,5 +1,6 @@
 package com.vpet.waifu.domain
 
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -213,6 +214,71 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     }
 
     /**
+     * When the picture is next due to change, if anything is due at all.
+     *
+     * The widget draws a world advanced to *now*, so what it should show drifts
+     * without anything being written down: a shift ends, she wakes up on her
+     * own, she gets hungry. Nothing was watching for those, so the only thing
+     * that ever corrected the widget was the quarter-hour heartbeat — which is
+     * how "she finished work ten minutes ago and the widget still shows her at
+     * the desk" happens.
+     *
+     * This is the earliest instant any of that lands, so the app can set an
+     * alarm for it instead of hoping the heartbeat is close enough. Approximate
+     * by design: an estimate that is a minute early costs one redraw, and the
+     * heartbeat is still there for anything this does not model.
+     */
+    fun nextVisibleChangeAt(snapshot: PetSnapshot, nowMillis: Long): Long? {
+        val mods = snapshot.modifiers()
+        val candidates = mutableListOf<Long>()
+
+        // A shift or a lesson ending is the big one — it changes her pose, her
+        // prop and her whole scene at a known instant.
+        snapshot.session?.let { candidates += it.endsAt }
+
+        val hungerRate = tuning.hungerDecayPerMinute * mods.hungerDecay *
+            (if (snapshot.isBusy) tuning.busyHungerMultiplier else 1f) *
+            (if (snapshot.hasEffect(EffectKind.HUNGER_SURGE, nowMillis)) tuning.hungerSurgeMultiplier else 1f)
+
+        if (snapshot.isSleeping) {
+            // She gets up by herself once she is full of energy.
+            val perMinute = tuning.energyRecoveryPerMinute * mods.sleepSpeed
+            candidates += nowMillis + minutesToMillis((PetStats.MAX - snapshot.stats.energy) / perMinute)
+        } else {
+            val energyRate = tuning.energyDecayPerMinute * mods.energyDecay *
+                (if (snapshot.hasEffect(EffectKind.EXHAUSTION, nowMillis)) tuning.exhaustionMultiplier else 1f)
+            if (snapshot.stats.energy > tuning.tiredThreshold && energyRate > 0f) {
+                candidates += nowMillis +
+                    minutesToMillis((snapshot.stats.energy - tuning.tiredThreshold) / energyRate)
+            }
+        }
+        if (snapshot.stats.hunger > tuning.hungryThreshold && hungerRate > 0f) {
+            candidates += nowMillis +
+                minutesToMillis((snapshot.stats.hunger - tuning.hungryThreshold) / hungerRate)
+        }
+        // Crossing the "happy" line either way swaps her idle animation — but
+        // only if she is actually heading for it. Mood walks towards a target
+        // rather than in a straight line, and booking a wake-up for a threshold
+        // on the far side of a target she will never pass is how this ends up
+        // firing a redraw every twenty-five minutes for no reason at all.
+        val mood = snapshot.stats.mood
+        val target = moodTarget(
+            snapshot.stats,
+            minutesBetween(snapshot.lastInteractionAt, nowMillis) * mods.neglect,
+        )
+        val crosses = (mood - tuning.happyThreshold) * (target - tuning.happyThreshold) < 0f
+        if (crosses && tuning.moodDriftPerMinute > 0f) {
+            candidates += nowMillis +
+                minutesToMillis(abs(mood - tuning.happyThreshold) / tuning.moodDriftPerMinute)
+        }
+
+        return candidates.filter { it > nowMillis }.minOrNull()
+    }
+
+    private fun minutesToMillis(minutes: Float): Long =
+        (minutes.coerceIn(0f, MAX_LOOKAHEAD_MINUTES) * MS_PER_MINUTE).toLong()
+
+    /**
      * The day's event, landing at most once.
      *
      * Whether a day carries one is a pure function of the day number, so it
@@ -301,8 +367,25 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         if (!current.acceptsPat) return current
         return current.copy(
             stats = current.stats.adjusted(moodBy = patMood(current, nowMillis)),
+            progress = current.progress.plus(exp = patExp(current, nowMillis)),
             lastInteractionAt = nowMillis,
         ).withEmote(Emote.LOVED, nowMillis, tuning.lovedEmoteMillis)
+    }
+
+    /**
+     * EXP for keeping her company while she studies.
+     *
+     * Only while she is at her books, and only for a pat that was actually
+     * *worth* something: the value is floored, so the 0.2 multiplier a masher
+     * gets rounds to nothing and only a considered tap — roughly one every
+     * hundred seconds — carries a point. Over a two-hour session that is at
+     * most a third again on top of what the session itself teaches, which is
+     * the right price for sitting with her rather than leaving her to it.
+     */
+    fun patExp(snapshot: PetSnapshot, nowMillis: Long): Int {
+        if (snapshot.activity != PetActivity.STUDYING) return 0
+        val multiplier = patMultiplier(snapshot, nowMillis)
+        return (tuning.patExp * multiplier * snapshot.modifiers().study).toInt()
     }
 
     /**
@@ -316,12 +399,15 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
      */
     fun patMood(snapshot: PetSnapshot, nowMillis: Long): Float {
         if (!snapshot.acceptsPat) return 0f
+        return tuning.petMood * patMultiplier(snapshot, nowMillis)
+    }
+
+    private fun patMultiplier(snapshot: PetSnapshot, nowMillis: Long): Float {
         val sinceInteraction = minutesBetween(snapshot.lastInteractionAt, nowMillis)
-        val multiplier = max(
+        return max(
             tuning.petMinimumMultiplier,
             min(1f, sinceInteraction / tuning.petFullEffectMinutes),
         )
-        return tuning.petMood * multiplier
     }
 
     /** Puts her to bed. Energy then climbs on the normal tick until she wakes up. */
@@ -582,6 +668,15 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
 
     companion object {
         const val MS_PER_MINUTE = 60_000L
+
+        /**
+         * How far ahead [nextVisibleChangeAt] will look.
+         *
+         * Beyond half a day an estimate built from current rates is fiction —
+         * something will have been fed, slept or sent to work long before then —
+         * and the quarter-hour heartbeat covers that ground anyway.
+         */
+        private const val MAX_LOOKAHEAD_MINUTES = 12f * 60f
     }
 }
 

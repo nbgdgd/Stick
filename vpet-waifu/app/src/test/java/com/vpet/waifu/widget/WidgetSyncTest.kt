@@ -35,6 +35,7 @@ class WidgetSyncTest {
     private lateinit var pet: TestPet
     private lateinit var scope: CoroutineScope
     private val refreshes = AtomicInteger(0)
+    private val wakes = java.util.concurrent.CopyOnWriteArrayList<Long>()
 
     @Before
     fun setUp() {
@@ -45,6 +46,7 @@ class WidgetSyncTest {
             refresher = { refreshes.incrementAndGet() },
             simulation = PetSimulation(),
             clock = pet.clock,
+            waker = { wakes += it },
         ).start(scope)
     }
 
@@ -105,6 +107,49 @@ class WidgetSyncTest {
     }
 
     // --- the key itself ------------------------------------------------------
+
+    // --- waking up for a change nothing wrote down ---------------------------
+
+    @Test
+    fun `a shift books a redraw for the moment it ends`() = runBlocking {
+        // An idle pet already books one — for whenever she next gets hungry —
+        // so wait that out before asking what the shift booked.
+        waitUntil { wakes.isNotEmpty() }
+        val beforeShift = wakes.size
+        val cafe = Occupations.WORK.first()
+
+        pet.repository.startOccupation(cafe)
+
+        // The complaint this answers: she clocks off and nothing writes
+        // anything down, so nothing emits, so the widget shows her at the desk
+        // until the quarter-hour heartbeat happens along.
+        waitUntil { wakes.size > beforeShift }
+        val booked = wakes.last()
+        val untilTheBell = cafe.durationMinutes * 60_000L
+        assertTrue(
+            "booked ${booked}ms out for a shift ending in ${untilTheBell}ms",
+            booked in (untilTheBell - 60_000)..untilTheBell,
+        )
+    }
+
+    @Test
+    fun `the booking is not re-made on every three-second tick`() = runBlocking {
+        waitUntil { wakes.isNotEmpty() }
+        val beforeShift = wakes.size
+        pet.repository.startOccupation(Occupations.WORK.first())
+        waitUntil { wakes.size > beforeShift }
+        val booked = wakes.size
+
+        // Five ticks with the clock barely moving: the target has not shifted,
+        // so nothing should be re-enqueued.
+        repeat(5) {
+            pet.clock.nowMillis += 3_000
+            pet.repository.tick()
+        }
+        kotlinx.coroutines.delay(300)
+
+        assertEquals(booked, wakes.size)
+    }
 
     @Test
     fun `the key distinguishes sleeping from awake`() = runBlocking {

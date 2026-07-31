@@ -7,7 +7,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.vpet.waifu.ui.theme.VPetTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -77,5 +82,45 @@ class HeartTapTest {
         compose.waitForIdle()
 
         assertEquals(0, taps)
+    }
+
+    /**
+     * The hearts must not resize the thing they come off.
+     *
+     * They did. The burst was a `fillMaxSize` canvas inside the box, so for the
+     * second it was alive the box grew to whatever space was on offer — which
+     * inside the navigation bar meant the whole screen, and the bar jumped to
+     * the top of the display with every panel shoved off the bottom. It only
+     * happened while a burst was live, which is exactly why it looked like a
+     * bug in switching tabs.
+     */
+    @Test
+    fun `a live burst does not resize its container`() {
+        compose.mainClock.autoAdvance = false
+        var size by mutableStateOf(IntSize.Zero)
+        compose.setContent {
+            VPetTheme {
+                // A tall parent, so a child that grabs the constraints would be
+                // instantly and obviously wrong.
+                Box(Modifier.size(300.dp)) {
+                    HeartTap(
+                        onTap = {},
+                        modifier = Modifier
+                            .testTag("target")
+                            .onGloballyPositioned { size = it.size },
+                    ) {
+                        Box(Modifier.size(60.dp))
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        val resting = size
+
+        compose.onNodeWithTag("target").performClick()
+        compose.mainClock.advanceTimeBy(200)
+        compose.waitForIdle()
+
+        assertEquals("the burst grew its container", resting, size)
     }
 }

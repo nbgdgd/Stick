@@ -7,7 +7,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
@@ -84,23 +83,34 @@ fun HeartTap(
     }
 }
 
-/** Draws whatever [state] has going, over everything else in the box. */
+/**
+ * Draws whatever [state] has going, over everything else in the box.
+ *
+ * `matchParentSize`, emphatically not `fillMaxSize`. A Box takes its size from
+ * its children, and a `fillMaxSize` child takes *its* size from the incoming
+ * constraints — so a heart burst inside the navigation bar sized the bar to the
+ * whole screen for the second it was alive, and the bar shot to the top of the
+ * display with everything else pushed off the bottom. `matchParentSize` is the
+ * one modifier that opts a child out of the parent's measurement entirely.
+ */
 @Composable
 fun BoxScope.HeartLayer(state: HeartTapState) {
     state.pops.forEach { pop ->
-        key(pop.id) { FloatingHearts(pop) { state.pops.remove(pop) } }
+        key(pop.id) {
+            FloatingHearts(pop, Modifier.matchParentSize()) { state.pops.remove(pop) }
+        }
     }
 }
 
 @Composable
-private fun FloatingHearts(pop: HeartPop, onDone: () -> Unit) {
+private fun FloatingHearts(pop: HeartPop, modifier: Modifier = Modifier, onDone: () -> Unit) {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         progress.animateTo(1f, tween(durationMillis = 820, easing = LinearOutSlowInEasing))
         onDone()
     }
 
-    Canvas(Modifier.fillMaxSize()) {
+    Canvas(modifier) {
         val p = progress.value
         if (p >= 1f) return@Canvas
         repeat(3) { i ->

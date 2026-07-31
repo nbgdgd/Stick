@@ -9,6 +9,8 @@ import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.widget.GlanceWidgetRefresher
 import com.vpet.waifu.widget.WidgetRefresher
+import com.vpet.waifu.widget.WidgetWaker
+import com.vpet.waifu.widget.WorkManagerWidgetWaker
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -26,6 +28,9 @@ import javax.inject.Singleton
 abstract class WidgetModule {
     @Binds
     abstract fun bindWidgetRefresher(impl: GlanceWidgetRefresher): WidgetRefresher
+
+    @Binds
+    abstract fun bindWidgetWaker(impl: WorkManagerWidgetWaker): WidgetWaker
 }
 
 @Module

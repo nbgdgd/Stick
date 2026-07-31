@@ -1,17 +1,28 @@
 package com.vpet.waifu.widget
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.data.WallClock
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Books a redraw for an instant in the future. An interface so tests can observe it. */
+fun interface WidgetWaker {
+    fun wakeIn(delayMillis: Long)
+}
 
 /**
  * Keeps the home-screen widget in step with the save file.
@@ -23,9 +34,20 @@ import javax.inject.Singleton
  * chance. Observing the repository means any write from anywhere redraws the
  * widget exactly once.
  *
- * This is only half of it. A write is not the only way the widget can go
- * stale — see [com.vpet.waifu.work.PetTickWorker], which redraws on a timer
- * because she keeps living whether or not anything is writing her down.
+ * A write is only one of three ways the picture goes stale, and only one of the
+ * three was being handled:
+ *
+ *  1. **Something changed her.** The repository emits; the key below decides
+ *     whether the change is one you could actually see.
+ *  2. **Time passed.** A shift ends, she wakes up, she gets hungry — with
+ *     nothing writing anything down, so nothing emits and nothing redraws.
+ *     [PetSimulation.nextVisibleChangeAt] says when the picture is next due to
+ *     change and a one-shot worker is booked for exactly that; the quarter-hour
+ *     heartbeat in [com.vpet.waifu.work.PetTickWorker] was far too coarse to be
+ *     the answer on its own.
+ *  3. **You went to look at it.** The instant the app is backgrounded is the
+ *     instant the widget is about to be on screen, so it is redrawn then
+ *     whether or not anything changed.
  */
 @Singleton
 class WidgetSync @Inject constructor(
@@ -33,15 +55,66 @@ class WidgetSync @Inject constructor(
     private val refresher: WidgetRefresher,
     private val simulation: PetSimulation,
     private val clock: WallClock,
+    private val waker: WidgetWaker,
 ) {
+    /**
+     * Both halves run under a supervisor.
+     *
+     * Plain sibling coroutines die together, and the two halves here have very
+     * different failure modes: following writes is a database read, while the
+     * backgrounding hook depends on the process lifecycle owner having been
+     * initialised at all. Letting the second take the first down with it would
+     * turn a missing initialiser into a widget that never updates again — the
+     * exact failure this class exists to prevent.
+     */
     fun start(scope: CoroutineScope): Job = scope.launch {
-        repository.snapshot
-            .map { stored ->
-                val now = clock.nowMillis()
-                widgetKey(simulation.advanceTo(stored, now), now)
+        supervisorScope {
+            launch { followWrites() }
+            launch { runCatching { redrawWhenBackgrounded() } }
+        }
+    }
+
+    private suspend fun followWrites() {
+        var lastKey: String? = null
+        var bookedFor = 0L
+        repository.snapshot.collect { stored ->
+            val now = clock.nowMillis()
+            val advanced = simulation.advanceTo(stored, now)
+
+            val key = widgetKey(advanced, now)
+            if (key != lastKey) {
+                lastKey = key
+                refresher.refresh()
             }
-            .distinctUntilChanged()
-            .collect { refresher.refresh() }
+
+            // Re-book only when the target has actually moved. The app writes
+            // every three seconds while it is open, and re-enqueuing a unique
+            // worker on each of those is a great deal of churn for no change.
+            val next = simulation.nextVisibleChangeAt(advanced, now) ?: return@collect
+            if (abs(next - bookedFor) > REBOOK_SLACK_MILLIS) {
+                bookedFor = next
+                waker.wakeIn(next - now)
+            }
+        }
+    }
+
+    private suspend fun redrawWhenBackgrounded() {
+        withContext(Dispatchers.Main.immediate) {
+            ProcessLifecycleOwner.get().lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                try {
+                    awaitCancellation()
+                } finally {
+                    // Leaving the app is the one moment you are guaranteed to be
+                    // looking at the home screen next.
+                    refresher.refresh()
+                }
+            }
+        }
+    }
+
+    private companion object {
+        /** Half a minute of drift is not worth re-enqueuing a worker for. */
+        const val REBOOK_SLACK_MILLIS = 30_000L
     }
 }
 

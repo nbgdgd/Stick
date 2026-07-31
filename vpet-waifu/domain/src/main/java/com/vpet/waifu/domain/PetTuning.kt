@@ -47,6 +47,14 @@ data class PetTuning(
      * strategy, large enough that the bar visibly answers every tap.
      */
     val petMinimumMultiplier: Float = 0.2f,
+    /**
+     * EXP a full-value pat is worth while she is studying.
+     *
+     * Floored on the way out, so mashing (which pins the multiplier at
+     * [petMinimumMultiplier]) earns exactly nothing and only a pat left long
+     * enough to be worth a third of full value carries a point.
+     */
+    val patExp: Float = 3f,
 
     // --- work & study --------------------------------------------------------
 

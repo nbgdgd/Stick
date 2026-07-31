@@ -158,7 +158,7 @@ abstract class PetDatabase : RoomDatabase() {
                     "goalBaseline INTEGER NOT NULL DEFAULT 0",
                     "goalRewarded INTEGER NOT NULL DEFAULT 0",
                     "celebratedMilestone INTEGER NOT NULL DEFAULT 0",
-                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN ${'$'}it") }
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
             }
         }
     }

@@ -36,12 +36,18 @@ import org.json.JSONArray
  * do that signing and fetch comments normally.
  *
  * ### How it collects
- * Two independent channels, because a device log showed DOM-only scraping
+ * Three independent channels, because a device log showed DOM-only scraping
  * returning nothing on every pass:
  *  1. **Network capture** — `fetch`/`XMLHttpRequest` are wrapped so every comment
  *     API response the page itself makes is scanned for sticker URLs. This works
  *     even when images are never painted.
- *  2. **DOM scraping** — images actually rendered in the comment list.
+ *  2. **SSR payload** — the `__UNIVERSAL_DATA_FOR_REHYDRATION__` script TikTok
+ *     embeds in the page, which carries the first comment page.
+ *  3. **DOM scraping** — images actually rendered in the comment list.
+ *
+ * Each pass also clicks the `data-e2e="view-more-*"` reply expanders (the
+ * attribute is locale-independent) — reply threads never load otherwise and
+ * that is where most stickers hide.
  *
  * The WebView is attached to the current window: detached, it has no real
  * viewport, so TikTok's lazy-loaded images never load (the earlier log was full
@@ -50,7 +56,7 @@ import org.json.JSONArray
 class WebViewCommentSource(
     private val context: Context,
     private val downloader: AssetDownloader,
-    private val maxScrolls: Int = 45,
+    private val maxScrolls: Int = 90,
     private val scrollDelayMs: Long = 1_000,
 ) : StickerSource {
 
@@ -106,10 +112,14 @@ class WebViewCommentSource(
             }
 
             var pass = 0
+            var lastProgress = 0
             lateinit var pump: Runnable
             pump = Runnable {
-                if (pass++ >= maxScrolls) {
-                    Log.i(TAG, "done after $pass passes, ${seen.size} unique stickers")
+                // Stop at the hard cap, or once the page has gone quiet: no new
+                // sticker and no reply-thread left to expand for a while.
+                val quiet = pass - lastProgress > QUIET_PASSES && pass >= MIN_PASSES
+                if (pass++ >= maxScrolls || quiet) {
+                    Log.i(TAG, "done after $pass passes, ${seen.size} unique stickers (quiet=$quiet)")
                     close()
                     return@Runnable
                 }
@@ -119,8 +129,12 @@ class WebViewCommentSource(
                     if (pass <= 3 || urls.isNotEmpty()) {
                         Log.i(TAG, "pass $pass: ${urls.size} urls (${payload.second})")
                     }
+                    // Expanding replies counts as progress: the fetch they trigger
+                    // lands a pass or two later.
+                    if (CLICKS_MADE.containsMatchIn(payload.second)) lastProgress = pass
                     urls.forEach { url ->
                         if (seen.add(assetKey(url))) {
+                            lastProgress = pass
                             trySend(StickResult.Success(toSticker(url, video)))
                         }
                     }
@@ -233,6 +247,16 @@ class WebViewCommentSource(
         const val SOURCE_ID = "tiktok-webview"
         const val VIEW_W = 1600
         const val VIEW_H = 2400
+
+        /** Give the page at least this many passes before "quiet" can stop it. */
+        const val MIN_PASSES = 20
+
+        /** Stop when this many consecutive passes produced nothing new. */
+        const val QUIET_PASSES = 15
+
+        /** Matches a non-zero clicks counter in the harvest diagnostics. */
+        val CLICKS_MADE = Regex("""clicks=[1-9]""")
+
         val ASSET_ID_REGEX = Regex("""/([0-9a-f]{32})""")
         /**
          * Desktop UA, not mobile. A device log showed the mobile page loading with
@@ -255,15 +279,19 @@ class WebViewCommentSource(
           window.__stickUrls = []; window.__stickHits = 0;
           function grab(text){
             try{
-              var re = /https:[^"\\\\ ]*?(?:awebp|\.image|\.jpeg|\.webp|\.gif)[^"\\\\ ]*/g, m;
+              // JSON bodies escape slashes/ampersands; normalise before matching
+              // so escaped URLs (SSR payload, XHR text) are not cut short.
+              text = String(text || '').replace(/\\u002F/gi, '/').replace(/\\\//g, '/');
+              var re = /https:[^"'\\\\ ]*?(?:awebp|\.image|\.jpeg|\.webp|\.gif)[^"'\\\\ ]*/g, m;
               while ((m = re.exec(text))) {
-                var u = m[0].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+                var u = m[0].replace(/\\u0026/g, '&');
                 if (u.indexOf('-avt-') !== -1) continue;
                 if (u.indexOf('tiktokcdn') === -1) continue;
                 window.__stickUrls.push(u);
               }
             } catch(e) {}
           }
+          window.__stickGrab = grab;
           var of = window.fetch;
           if (of) window.fetch = function(){
             var p = of.apply(this, arguments);
@@ -292,13 +320,31 @@ class WebViewCommentSource(
         """.trimIndent()
 
         /**
-         * Scrolls every scrollable container (the comment list is a nested
-         * scroller) and returns both the captured network URLs and any sticker
-         * images currently in the DOM, plus counters for diagnosis.
+         * One harvesting pass. In order:
+         *  1. Once: scan the SSR payload (`__UNIVERSAL_DATA_FOR_REHYDRATION__`) —
+         *     TikTok embeds the first comment page there before any fetch runs.
+         *  2. Click "View more replies" expanders. TikTok marks them with
+         *     locale-independent `data-e2e="view-more-*"` attributes; replies are
+         *     where most stickers hide and they never load without the click.
+         *  3. Scroll every scrollable container so the comment list keeps
+         *     paginating (TikTok's own signed fetches — captured by the hook).
+         *  4. Collect captured network URLs + sticker images in the DOM.
          */
         val HARVEST_JS = """
         (function() {
           try {
+            if (window.__stickGrab && !window.__stickSsrDone) {
+              window.__stickSsrDone = true;
+              var ssr = document.getElementById('__UNIVERSAL_DATA_FOR_REHYDRATION__');
+              if (ssr) window.__stickGrab(ssr.textContent || '');
+            }
+            var more = document.querySelectorAll('[data-e2e^="view-more"]');
+            var clicks = 0;
+            for (var k = 0; k < more.length && clicks < 12; k++) {
+              var b = more[k];
+              if (b.offsetParent === null) continue;
+              try { b.scrollIntoView({block:'center'}); b.click(); clicks++; } catch(e) {}
+            }
             window.scrollTo(0, document.body.scrollHeight);
             var divs = document.querySelectorAll('div');
             var scrollers = 0;
@@ -317,13 +363,15 @@ class WebViewCommentSource(
               if (!s || s.indexOf('tiktokcdn') === -1) continue;
               if (s.indexOf('-avt-') !== -1) continue;
               if (s.indexOf('tplv-tiktokx-cropcenter') !== -1) continue;
-              if (s.indexOf('awebp') !== -1 || s.indexOf('sticker') !== -1 || s.indexOf('comment') !== -1) {
+              if (s.indexOf('awebp') !== -1 || s.indexOf('sticker') !== -1 ||
+                  s.indexOf('comment') !== -1 || s.indexOf('.jpeg') !== -1 ||
+                  s.indexOf('.image') !== -1) {
                 out.push(s); domHits++;
               }
             }
             return JSON.stringify({
               urls: out,
-              info: 'imgs=' + imgs.length + ' dom=' + domHits +
+              info: 'imgs=' + imgs.length + ' dom=' + domHits + ' clicks=' + clicks +
                     ' scrollers=' + scrollers + ' apiHits=' + (window.__stickHits || 0)
             });
           } catch (e) {

@@ -1,12 +1,15 @@
 package com.vpet.waifu.ui.character
 
 import androidx.compose.ui.geometry.CornerRadius
+import kotlin.math.hypot
+import kotlin.math.atan2
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -34,28 +37,40 @@ private const val TWO_PI_F = 6.2831855f
  * portrait and the widget's bitmap.
  */
 const val ART_WIDTH = 200f
-const val ART_HEIGHT = 280f
+const val ART_HEIGHT = 300f
 
 private const val CX = 100f
 
-// Head.
-private const val HEAD_CY = 80f
-private const val HEAD_RX = 40f
-private const val HEAD_RY = 43f
+/**
+ * The ink weight every form is drawn with.
+ *
+ * A contour is what separates an anime character from a sticker, and it is
+ * the single change that does the most work here. Kept slightly heavier on
+ * the silhouette than on the interior lines, the way cel art is inked.
+ */
+private const val LINE = 2.1f
+private const val LINE_THIN = 1.5f
+
+// Head. Roughly a third narrower than the old chibi skull: the figure below
+// grew and the head shrank, which is the whole of the proportion change.
+private const val HEAD_CY = 64f
+private const val HEAD_RX = 31f
+private const val HEAD_RY = 34f
+private const val CHIN_Y = HEAD_CY + 34f
 
 // Body. The head pivots about the neck, so head motion drags the whole face.
-private const val NECK_Y = 120f
-private const val SHOULDER_Y = 140f
-private const val SHOULDER_DX = 27f
-private const val UPPER_ARM = 26f
-private const val FOREARM = 25f
-private const val TORSO_TOP = 128f
-private const val TORSO_BOTTOM = 178f
-private const val SKIRT_TOP = 170f
-private const val SKIRT_BOTTOM = 196f
-private const val LEG_TOP = 192f
-private const val LEG_BOTTOM = 240f
-private const val GROUND_Y = 252f
+private const val NECK_Y = 100f
+private const val SHOULDER_Y = 120f
+private const val SHOULDER_DX = 23f
+private const val UPPER_ARM = 29f
+private const val FOREARM = 28f
+private const val TORSO_TOP = 106f
+private const val TORSO_BOTTOM = 166f
+private const val SKIRT_TOP = 156f
+private const val SKIRT_BOTTOM = 188f
+private const val LEG_TOP = 184f
+private const val LEG_BOTTOM = 258f
+private const val GROUND_Y = 272f
 
 fun DrawScope.drawPet(pose: PetPose, palette: PetPalette = PetPalette.Default) {
     val scale = min(size.width / ART_WIDTH, size.height / ART_HEIGHT)
@@ -101,6 +116,102 @@ private fun DrawScope.drawCharacter(pose: PetPose, palette: PetPalette) {
     pose.particles?.let { drawParticles(it, pose, palette) }
 }
 
+// --- ink ------------------------------------------------------------------------
+
+/**
+ * The contour pass.
+ *
+ * Every solid form fills first and is inked immediately after, so a later
+ * form's fill covers the line of the one behind it — which is exactly how a
+ * cel is painted, and why the arms read as being in front of the torso rather
+ * than welded to it.
+ */
+private fun DrawScope.inked(
+    path: Path,
+    fill: Color,
+    palette: PetPalette,
+    width: Float = LINE,
+) {
+    drawPath(path, fill)
+    drawPath(path, palette.line, style = Stroke(width = width, join = StrokeJoin.Round, cap = StrokeCap.Round))
+}
+
+private fun DrawScope.inkedOval(
+    topLeft: Offset,
+    size: Size,
+    fill: Color,
+    palette: PetPalette,
+    width: Float = LINE,
+) {
+    drawOval(fill, topLeft, size)
+    drawOval(palette.line, topLeft, size, style = Stroke(width = width))
+}
+
+/** A limb segment: a capsule, filled and inked. */
+private fun DrawScope.inkedBar(
+    from: Offset,
+    to: Offset,
+    width: Float,
+    fill: Color,
+    palette: PetPalette,
+    line: Float = LINE,
+) {
+    val path = capsulePath(from, to, width)
+    inked(path, fill, palette, line)
+}
+
+/**
+ * The outline of a thick round-capped segment, as one closed path.
+ *
+ * Built from cubic semicircles rather than [Path.arcTo]: the arc sweep
+ * conventions differ between the fill and the stroke pass, and the result was
+ * a hand that drew itself as a spiral.
+ */
+private fun capsulePath(from: Offset, to: Offset, width: Float): Path {
+    val dx = to.x - from.x
+    val dy = to.y - from.y
+    val len = hypot(dx, dy).coerceAtLeast(0.001f)
+    val ux = dx / len
+    val uy = dy / len
+    val r = width / 2f
+    // Left-hand normal, and the circle-to-cubic constant for a quarter turn.
+    val nx = -uy * r
+    val ny = ux * r
+    val k = 0.5523f * r
+    return Path().apply {
+        moveTo(from.x + nx, from.y + ny)
+        lineTo(to.x + nx, to.y + ny)
+        cubicTo(
+            to.x + nx + ux * k, to.y + ny + uy * k,
+            to.x + ux * r + nx * 0.5523f, to.y + uy * r + ny * 0.5523f,
+            to.x + ux * r, to.y + uy * r,
+        )
+        cubicTo(
+            to.x + ux * r - nx * 0.5523f, to.y + uy * r - ny * 0.5523f,
+            to.x - nx + ux * k, to.y - ny + uy * k,
+            to.x - nx, to.y - ny,
+        )
+        lineTo(from.x - nx, from.y - ny)
+        cubicTo(
+            from.x - nx - ux * k, from.y - ny - uy * k,
+            from.x - ux * r - nx * 0.5523f, from.y - uy * r - ny * 0.5523f,
+            from.x - ux * r, from.y - uy * r,
+        )
+        cubicTo(
+            from.x - ux * r + nx * 0.5523f, from.y - uy * r + ny * 0.5523f,
+            from.x + nx - ux * k, from.y + ny - uy * k,
+            from.x + nx, from.y + ny,
+        )
+        close()
+    }
+}
+
+/** The real union of two shapes, so a limb inks as one outline, not as parts. */
+private fun union(vararg parts: Path): Path =
+    parts.reduce { acc, next -> Path().apply { op(acc, next, PathOperation.Union) } }
+
+private const val PI_F = 3.1415927f
+
 // --- silhouette --------------------------------------------------------------
 
 /**
@@ -117,70 +228,89 @@ private fun DrawScope.drawGroundShadow(pose: PetPose) {
     val ink = Color(0xFF120C1E)
     drawOval(
         color = ink.copy(alpha = 0.15f * squash),
-        topLeft = Offset(CX - 44f * squash, GROUND_Y - 2f),
-        size = Size(88f * squash, 17f * squash),
+        topLeft = Offset(CX - 40f * squash, GROUND_Y - 2f),
+        size = Size(80f * squash, 16f * squash),
     )
     drawOval(
         color = ink.copy(alpha = 0.34f * squash),
-        topLeft = Offset(CX - 27f * squash, GROUND_Y + 2f),
-        size = Size(54f * squash, 10f * squash),
+        topLeft = Offset(CX - 24f * squash, GROUND_Y + 2f),
+        size = Size(48f * squash, 9f * squash),
     )
 }
 
 // --- hair --------------------------------------------------------------------
 
+/**
+ * The fall of hair behind her.
+ *
+ * Loose and long rather than the pair of short bouncy blades she used to wear:
+ * twin tails read as a small child, and the whole point of this pass is that
+ * she should not. It reaches past the waist, narrows at the shoulders so the
+ * arms stay outside the silhouette, and ends in three soft points.
+ */
 private fun DrawScope.drawBackHair(pose: PetPose, palette: PetPalette) {
-    // Narrow enough below the head that the shoulders and arms stay outside the
-    // silhouette — a wide blob here is what makes chibi characters look armless.
-    val sway = pose.hairSwayDegrees * 0.3f
+    val sway = pose.hairSwayDegrees * 0.34f
     val fall = Path().apply {
-        moveTo(CX - 45f, HEAD_CY + 4f)
-        cubicTo(CX - 50f, 120f, CX - 40f + sway, 150f, CX - 33f + sway, 176f)
-        cubicTo(CX - 26f + sway, 186f, CX + 26f + sway, 186f, CX + 33f + sway, 176f)
-        cubicTo(CX + 40f + sway, 150f, CX + 50f, 120f, CX + 45f, HEAD_CY + 4f)
+        moveTo(CX - 31f, HEAD_CY + 2f)
+        cubicTo(CX - 38f, HEAD_CY + 46f, CX - 35f + sway, 150f, CX - 30f + sway, 194f)
+        // The hem: three points rather than a straight cut, which is what
+        // makes long hair read as strands instead of as a cape.
+        lineTo(CX - 18f + sway, 184f)
+        lineTo(CX - 6f + sway, 198f)
+        lineTo(CX + 7f + sway, 184f)
+        lineTo(CX + 19f + sway, 198f)
+        lineTo(CX + 30f + sway, 194f)
+        cubicTo(CX + 35f + sway, 150f, CX + 38f, HEAD_CY + 46f, CX + 31f, HEAD_CY + 2f)
         close()
     }
-    drawPath(fall, palette.hairShade)
-    drawOval(
-        color = palette.hairShade,
-        topLeft = Offset(CX - 46f, HEAD_CY - 47f),
-        size = Size(92f, 96f),
+    inked(fall, palette.hairShade, palette)
+
+    // The back of the skull, behind the face.
+    inkedOval(
+        topLeft = Offset(CX - HEAD_RX - 3f, HEAD_CY - HEAD_RY - 4f),
+        size = Size((HEAD_RX + 3f) * 2f, (HEAD_RY + 5f) * 2f),
+        fill = palette.hairShade,
+        palette = palette,
     )
 }
 
 /**
- * One twin tail: a tapered blade with a highlight and a ribbon tie, rotated by
- * the sway so the tails trail the head instead of moving with it.
+ * A lock falling in front of the shoulder, one on each side.
+ *
+ * This is what replaces the twin tails: the reference silhouette is loose hair
+ * framing the face, and these two locks are what stop the front from reading
+ * as a helmet.
  */
 private fun DrawScope.drawTwinTail(pose: PetPose, palette: PetPalette, mirrored: Boolean) {
     val side = if (mirrored) -1f else 1f
-    val anchor = Offset(CX + side * 38f, HEAD_CY - 16f)
-    // The far tail swings a little less, which reads as depth.
-    val sway = pose.hairSwayDegrees * (if (mirrored) 0.75f else 1f)
+    val anchor = Offset(CX + side * 30f, HEAD_CY - 8f)
+    // The far lock swings a little less, which reads as depth.
+    val sway = pose.hairSwayDegrees * (if (mirrored) 0.5f else 0.7f)
 
     withTransform({
-        rotate(sway * side, pivot = anchor)
+        rotate(sway * side * 0.5f, pivot = anchor)
         scale(side, 1f, pivot = anchor)
     }) {
-        val body = Path().apply {
-            moveTo(anchor.x - 2f, anchor.y - 8f)
-            cubicTo(anchor.x + 30f, anchor.y - 2f, anchor.x + 39f, anchor.y + 38f, anchor.x + 27f, anchor.y + 84f)
-            cubicTo(anchor.x + 23f, anchor.y + 98f, anchor.x + 13f, anchor.y + 103f, anchor.x + 6f, anchor.y + 100f)
-            cubicTo(anchor.x + 17f, anchor.y + 76f, anchor.x + 16f, anchor.y + 36f, anchor.x + 2f, anchor.y + 10f)
+        val lock = Path().apply {
+            moveTo(anchor.x - 6f, anchor.y - 6f)
+            cubicTo(anchor.x + 8f, anchor.y + 4f, anchor.x + 9f, anchor.y + 48f, anchor.x + 6f, anchor.y + 86f)
+            lineTo(anchor.x + 1f, anchor.y + 96f)
+            lineTo(anchor.x - 4f, anchor.y + 84f)
+            cubicTo(anchor.x - 3f, anchor.y + 46f, anchor.x - 4f, anchor.y + 14f, anchor.x - 8f, anchor.y + 2f)
             close()
         }
-        drawPath(body, palette.hair)
+        inked(lock, palette.hair, palette)
 
-        val highlight = Path().apply {
-            moveTo(anchor.x + 7f, anchor.y + 8f)
-            cubicTo(anchor.x + 23f, anchor.y + 20f, anchor.x + 25f, anchor.y + 50f, anchor.x + 18f, anchor.y + 76f)
-            cubicTo(anchor.x + 16f, anchor.y + 54f, anchor.x + 14f, anchor.y + 26f, anchor.x + 5f, anchor.y + 14f)
-            close()
-        }
-        drawPath(highlight, palette.hairLight.copy(alpha = 0.5f))
-
-        drawOval(palette.ribbon, Offset(anchor.x - 7f, anchor.y - 2f), Size(18f, 12f))
-        drawOval(palette.ribbon.copy(alpha = 0.6f), Offset(anchor.x - 3f, anchor.y + 1f), Size(10f, 6f))
+        // One strand line down the lock — cel art separates hair with a line,
+        // not with a gradient.
+        drawPath(
+            Path().apply {
+                moveTo(anchor.x + 3f, anchor.y + 12f)
+                cubicTo(anchor.x + 7f, anchor.y + 40f, anchor.x + 7f, anchor.y + 66f, anchor.x + 4f, anchor.y + 88f)
+            },
+            palette.hairShade,
+            style = Stroke(width = LINE_THIN, cap = StrokeCap.Round),
+        )
     }
 }
 
@@ -188,75 +318,78 @@ private fun DrawScope.drawTwinTail(pose: PetPose, palette: PetPalette, mirrored:
 
 private fun DrawScope.drawLegs(pose: PetPose, palette: PetPalette) {
     val swing = wave(pose.timeSeconds, 1.9f) * 1.1f
-    listOf(-13f to swing, 13f to -swing).forEach { (dx, dy) ->
-        // Thigh, then an over-the-knee sock, then a shoe.
-        drawRoundedBar(
-            from = Offset(CX + dx, LEG_TOP),
-            to = Offset(CX + dx + dy, LEG_BOTTOM - 16f),
-            width = 14f,
-            color = palette.skin,
-        )
-        drawRoundedBar(
-            from = Offset(CX + dx + dy * 0.7f, LEG_BOTTOM - 20f),
-            to = Offset(CX + dx + dy, LEG_BOTTOM + 4f),
-            width = 14.5f,
-            color = palette.sock,
-        )
-        drawShoe(Offset(CX + dx + dy, LEG_BOTTOM + 2f), palette)
+    listOf(-10f to swing, 10f to -swing).forEach { (dx, dy) ->
+        val hip = Offset(CX + dx, LEG_TOP)
+        val knee = Offset(CX + dx + dy * 0.6f, LEG_BOTTOM - 34f)
+        val ankle = Offset(CX + dx + dy, LEG_BOTTOM + 2f)
+
+        // One silhouette for the whole leg, inked once — the sock is painted
+        // inside it rather than being a second outlined tube over the thigh.
+        val leg = union(capsulePath(hip, knee, 15f), capsulePath(knee, ankle, 13f))
+        drawPath(leg, palette.skin)
+        drawPath(leg, palette.line, style = Stroke(width = LINE, join = StrokeJoin.Round, cap = StrokeCap.Round))
+
+        // Over-the-knee sock: clipped to the leg by being drawn from just above
+        // the knee down, at the same width.
+        // Over the knee, not under it: a sock that stops at the shin is what
+        // made the legs read as two separate sticks joined by a bead.
+        val sockTop = Offset(knee.x - dy * 0.2f, knee.y - 14f)
+        val sock = capsulePath(sockTop, ankle, 13.4f)
+        inked(sock, palette.sock, palette, LINE_THIN)
+
+        drawShoe(ankle, palette)
     }
 }
 
 /**
  * A Mary Jane seen head-on: a rounded upper on a pale sole, with a heel block
  * showing behind it.
- *
- * The flat oval this replaces had no sole and no heel, so at any size above a
- * widget's it read as a puddle of ink under the sock rather than as a shoe.
  */
 private fun DrawScope.drawShoe(at: Offset, palette: PetPalette) {
-    // Heel first: the sole is drawn over its top edge, leaving a block below.
-    drawRoundRectPath(
-        Rect(at.x - 5f, at.y + 8f, at.x + 5f, at.y + 13f),
-        radius = 1.4f,
-        color = palette.shoe,
+    inked(
+        roundRect(Rect(at.x - 4.5f, at.y + 7f, at.x + 4.5f, at.y + 12f), 1.4f),
+        palette.shoe, palette, LINE_THIN,
     )
-    drawRoundRectPath(
-        Rect(at.x - 9.5f, at.y - 1f, at.x + 9.5f, at.y + 9f),
-        radius = 4.6f,
-        color = palette.shoe,
+    inked(
+        roundRect(Rect(at.x - 7.6f, at.y - 1f, at.x + 7.6f, at.y + 8.5f), 4.2f),
+        palette.shoe, palette,
     )
-    drawRoundRectPath(
-        Rect(at.x - 8.8f, at.y + 7.5f, at.x + 8.8f, at.y + 10.5f),
-        radius = 1.5f,
-        color = Color(0xFFE8DAC4),
-    )
-    // The strap. One pale line across the instep is what separates a school
-    // shoe from a boot.
+    drawPath(roundRect(Rect(at.x - 7.8f, at.y + 7f, at.x + 7.8f, at.y + 9.8f), 1.4f), Color(0xFFE8DAC4))
     drawLine(
-        color = palette.collar.copy(alpha = 0.4f),
-        start = Offset(at.x - 7.5f, at.y + 2f),
-        end = Offset(at.x + 7.5f, at.y + 2f),
-        strokeWidth = 1.5f,
+        color = palette.line.copy(alpha = 0.55f),
+        start = Offset(at.x - 6.6f, at.y + 1.8f),
+        end = Offset(at.x + 6.6f, at.y + 1.8f),
+        strokeWidth = LINE_THIN,
         cap = StrokeCap.Round,
     )
 }
 
 private fun DrawScope.drawSkirt(pose: PetPose, palette: PetPalette) {
     val flare = 1f + abs(pose.bodyBounce) * 0.018f
+    val half = 33f * flare
+    val bottom = SKIRT_BOTTOM
     val path = Path().apply {
-        moveTo(CX - 27f, SKIRT_TOP)
-        lineTo(CX + 27f, SKIRT_TOP)
-        lineTo(CX + 40f * flare, SKIRT_BOTTOM)
-        lineTo(CX - 40f * flare, SKIRT_BOTTOM)
+        moveTo(CX - 21f, SKIRT_TOP)
+        lineTo(CX + 21f, SKIRT_TOP)
+        lineTo(CX + half, bottom - 6f)
+        // Six shallow scallops: a pleated hem reads as cloth, a zig-zag of
+        // spikes reads as a saw blade.
+        var i = 4
+        while (i >= -3) {
+            val x0 = CX + half * (i / 4f)
+            val x1 = CX + half * ((i - 1) / 4f)
+            quadraticTo((x0 + x1) / 2f, bottom + 5f, x1, bottom - 6f)
+            i--
+        }
         close()
     }
-    drawPath(path, palette.skirt)
+    inked(path, palette.skirt, palette)
     for (i in -2..2) {
         drawLine(
-            color = palette.uniformShade.copy(alpha = 0.55f),
-            start = Offset(CX + i * 12f, SKIRT_TOP + 1f),
-            end = Offset(CX + i * 18f * flare, SKIRT_BOTTOM - 1f),
-            strokeWidth = 1.8f,
+            color = palette.line.copy(alpha = 0.3f),
+            start = Offset(CX + i * 9f, SKIRT_TOP + 3f),
+            end = Offset(CX + i * 14f * flare, bottom - 7f),
+            strokeWidth = LINE_THIN,
             cap = StrokeCap.Round,
         )
     }
@@ -264,52 +397,66 @@ private fun DrawScope.drawSkirt(pose: PetPose, palette: PetPalette) {
 
 private fun DrawScope.drawTorso(pose: PetPose, palette: PetPalette) {
     val chest = pose.breath
-    // Neck first, so the collar overlaps it.
-    drawRoundedBar(Offset(CX, NECK_Y - 6f), Offset(CX, TORSO_TOP + 4f), width = 16f, color = palette.skinShade)
+    // Neck first, so the neckline overlaps it — and unlined, because a boxed
+    // rectangle of skin between chin and collar reads as a choker.
+    drawPath(capsulePath(Offset(CX, NECK_Y - 6f), Offset(CX, TORSO_TOP + 1f), 11f), palette.skin)
+    // One shading line where the jaw casts on the throat, instead of a
+    // block of darker skin that read as a beige collar.
+    drawPath(
+        capsulePath(Offset(CX, NECK_Y - 6f), Offset(CX, NECK_Y - 2f), 10f),
+        palette.skinShade.copy(alpha = 0.7f),
+    )
 
+    // A wide off-the-shoulder top: the neckline sits below the collarbone and
+    // the body narrows to the waist instead of running straight down.
     val torso = Path().apply {
-        moveTo(CX - 24f - chest, TORSO_TOP)
-        cubicTo(CX - 30f - chest, TORSO_TOP + 18f, CX - 29f, TORSO_TOP + 38f, CX - 27f, TORSO_BOTTOM)
-        lineTo(CX + 27f, TORSO_BOTTOM)
-        cubicTo(CX + 29f, TORSO_TOP + 38f, CX + 30f + chest, TORSO_TOP + 18f, CX + 24f + chest, TORSO_TOP)
+        moveTo(CX - 21f - chest, TORSO_TOP)
+        cubicTo(CX - 27f - chest, TORSO_TOP + 16f, CX - 25f, TORSO_TOP + 36f, CX - 22f, TORSO_BOTTOM)
+        lineTo(CX + 22f, TORSO_BOTTOM)
+        cubicTo(CX + 25f, TORSO_TOP + 36f, CX + 27f + chest, TORSO_TOP + 16f, CX + 21f + chest, TORSO_TOP)
+        cubicTo(CX + 12f, TORSO_TOP + 7f, CX - 12f, TORSO_TOP + 7f, CX - 21f - chest, TORSO_TOP)
         close()
     }
-    drawPath(torso, palette.uniform)
+    inked(torso, palette.uniform, palette)
 
-    // Sailor collar.
-    val collar = Path().apply {
-        moveTo(CX - 25f, TORSO_TOP - 1f)
-        cubicTo(CX - 18f, TORSO_TOP - 6f, CX + 18f, TORSO_TOP - 6f, CX + 25f, TORSO_TOP - 1f)
-        lineTo(CX + 20f, TORSO_TOP + 14f)
-        lineTo(CX, TORSO_TOP + 25f)
-        lineTo(CX - 20f, TORSO_TOP + 14f)
-        close()
-    }
-    drawPath(collar, palette.collar)
-    listOf(-1f, 1f).forEach { side ->
+    // The knit's vertical ribbing — a light interior line is what tells a
+    // sweater from a block of colour.
+    for (i in -2..2) {
         drawLine(
-            color = palette.hair.copy(alpha = 0.3f),
-            start = Offset(CX + side * 18f, TORSO_TOP + 7f),
-            end = Offset(CX, TORSO_TOP + 21f),
-            strokeWidth = 1.8f,
+            color = palette.uniformShade,
+            start = Offset(CX + i * 9f, TORSO_TOP + 12f),
+            end = Offset(CX + i * 9.5f, TORSO_BOTTOM - 3f),
+            strokeWidth = LINE_THIN,
             cap = StrokeCap.Round,
         )
     }
 
-    // Neck ribbon.
-    val knotY = TORSO_TOP + 20f
-    val ribbon = Path().apply {
-        moveTo(CX, knotY)
-        lineTo(CX - 12f, knotY - 6f)
-        lineTo(CX - 12f, knotY + 7f)
+    // The waistband, where the sweater meets the skirt. In the outfit's accent
+    // rather than the skirt's colour: four of the six outfits dress the top and
+    // the skirt in nearly the same tone, and a matching band there turned the
+    // two pieces into one shapeless dress.
+    inked(
+        roundRect(Rect(CX - 23f, TORSO_BOTTOM - 7f, CX + 23f, TORSO_BOTTOM + 2f), 2.5f),
+        palette.ribbon, palette, LINE_THIN,
+    )
+
+    // A big flat bow at the chest, the reference's one loud accent.
+    val bowY = TORSO_TOP + 22f
+    val bow = Path().apply {
+        moveTo(CX, bowY)
+        lineTo(CX - 17f, bowY - 8f)
+        lineTo(CX - 15f, bowY + 9f)
         close()
-        moveTo(CX, knotY)
-        lineTo(CX + 12f, knotY - 6f)
-        lineTo(CX + 12f, knotY + 7f)
+        moveTo(CX, bowY)
+        lineTo(CX + 17f, bowY - 8f)
+        lineTo(CX + 15f, bowY + 9f)
         close()
     }
-    drawPath(ribbon, palette.ribbon)
-    drawCircle(palette.ribbon, radius = 4f, center = Offset(CX, knotY))
+    inked(bow, palette.ribbon, palette, LINE_THIN)
+    inked(
+        roundRect(Rect(CX - 4.5f, bowY - 4.5f, CX + 4.5f, bowY + 4.5f), 2f),
+        palette.ribbon, palette, LINE_THIN,
+    )
 }
 
 // Arm joints, shared by the limb renderer and by anything she holds.
@@ -339,22 +486,50 @@ private fun DrawScope.drawArm(pose: PetPose, palette: PetPalette, left: Boolean)
     val shoulder = shoulderOf(pose, left)
     val elbow = elbowOf(pose, left)
     val angle = forearmAngle(pose, left)
+    val wrist = polar(elbow, angle, FOREARM - 7f)
+    val fingertip = polar(wrist, angle, 7f)
 
-    // Puffed sleeve in a lighter shade so the arm separates from the torso.
-    drawCircle(palette.uniformShade, radius = 9.5f, center = shoulder)
-    drawRoundedBar(shoulder, elbow, width = 14f, color = palette.uniform)
-    // The sleeve's own round cap is the elbow now: the bright collar-coloured
-    // ball that used to sit here read as a doll's ball joint from any distance.
+    // The whole limb as ONE silhouette, inked once. Stacking a separately
+    // outlined capsule per segment is what made the arms read as a doll's,
+    // with a visible seam at every joint.
+    val sleeve = capsulePath(shoulder, elbow, 13f)
+    val forearm = capsulePath(elbow, wrist, 9.5f)
+    val hand = capsulePath(wrist, fingertip, 11f)
+    val whole = union(sleeve, forearm, hand)
+    drawPath(whole, palette.skin)
+    // Fill the sleeve back over the skin, then ink the outer edge only.
+    drawPath(sleeve, palette.uniform)
+    drawPath(whole, palette.line, style = Stroke(width = LINE, join = StrokeJoin.Round, cap = StrokeCap.Round))
 
-    // The mitten is wider than the forearm, and that step is the wrist.
-    val wrist = polar(elbow, angle, FOREARM - 5.5f)
-    drawRoundedBar(elbow, wrist, width = 11f, color = palette.skin)
-    drawRoundedBar(wrist, polar(wrist, angle, 5f), width = 13f, color = palette.skin)
-    // A thumb, always on the side facing her body: without it a hand at this
-    // scale is just a dot on the end of a stick, and every prop she holds looks
-    // balanced on her wrist.
+    // The cuff line, where the sleeve ends — an interior line, not a seam.
+    val cuffN = normal(shoulder, elbow, 6.5f)
+    drawLine(
+        color = palette.line,
+        start = Offset(elbow.x + cuffN.x, elbow.y + cuffN.y),
+        end = Offset(elbow.x - cuffN.x, elbow.y - cuffN.y),
+        strokeWidth = LINE_THIN,
+        cap = StrokeCap.Round,
+    )
+
+    // A thumb line rather than a second blob: at this size the hand is 11
+    // points across, and anything drawn on top of it reads as a knot.
     val inward = if (left) 1f else -1f
-    drawRoundedBar(wrist, polar(wrist, angle + inward * 74f, 4.6f), width = 6.4f, color = palette.skin)
+    val knuckle = polar(wrist, angle, 3f)
+    drawLine(
+        color = palette.line,
+        start = knuckle,
+        end = polar(knuckle, angle + inward * 68f, 4.4f),
+        strokeWidth = LINE_THIN,
+        cap = StrokeCap.Round,
+    )
+}
+
+/** A vector of the given length at right angles to a segment. */
+private fun normal(from: Offset, to: Offset, length: Float): Offset {
+    val dx = to.x - from.x
+    val dy = to.y - from.y
+    val len = hypot(dx, dy).coerceAtLeast(0.001f)
+    return Offset(-dy / len * length, dx / len * length)
 }
 
 // --- head ----------------------------------------------------------------------
@@ -365,24 +540,16 @@ private fun DrawScope.drawHeadGroup(pose: PetPose, palette: PetPalette) {
         rotate(pose.headTiltDegrees, pivot = pivot)
         translate(0f, pose.headBob)
     }) {
-        drawOval(palette.skinShade, Offset(CX - HEAD_RX - 5f, HEAD_CY), Size(13f, 18f))
-        drawOval(palette.skinShade, Offset(CX + HEAD_RX - 8f, HEAD_CY), Size(13f, 18f))
-
         drawHeadShape(palette)
-        // The shadow the bangs cast. It has to reach well *below* the fringe's
-        // edge to be seen at all: the oval this replaces sat entirely under the
-        // hair and never rendered a pixel.
+        // The shadow the bangs cast.
         drawOval(
-            color = palette.skinShade.copy(alpha = 0.3f),
-            topLeft = Offset(CX - 36f, HEAD_CY - 26f),
-            size = Size(72f, 32f),
+            color = palette.skinShade.copy(alpha = 0.35f),
+            topLeft = Offset(CX - 28f, HEAD_CY - 22f),
+            size = Size(56f, 24f),
         )
 
         drawFace(pose, palette)
         drawFringe(pose, palette)
-        // Brows last. They used to go down with the face and were then buried
-        // under the fringe, so the worry axis seven poses set moved nothing at
-        // all; over the hair they read the way anime bangs always let them.
         drawBrows(pose, palette)
         drawAhoge(pose, palette)
     }
@@ -390,156 +557,156 @@ private fun DrawScope.drawHeadGroup(pose: PetPose, palette: PetPalette) {
 
 /**
  * The head: a skull that tapers to a chin rather than a plain oval.
- *
- * Same width and same height as the ellipse it replaces, so nothing else on the
- * face has to move — but the lower third pulls in to a soft point, which is the
- * whole difference between a face and an egg.
  */
 private fun DrawScope.drawHeadShape(palette: PetPalette) {
     val head = Path().apply {
-        moveTo(CX - HEAD_RX, HEAD_CY - 4f)
+        moveTo(CX - HEAD_RX, HEAD_CY - 3f)
         cubicTo(
-            CX - HEAD_RX, HEAD_CY - HEAD_RY * 0.78f,
-            CX - HEAD_RX * 0.62f, HEAD_CY - HEAD_RY,
+            CX - HEAD_RX, HEAD_CY - HEAD_RY * 0.8f,
+            CX - HEAD_RX * 0.6f, HEAD_CY - HEAD_RY,
             CX, HEAD_CY - HEAD_RY,
         )
         cubicTo(
-            CX + HEAD_RX * 0.62f, HEAD_CY - HEAD_RY,
-            CX + HEAD_RX, HEAD_CY - HEAD_RY * 0.78f,
-            CX + HEAD_RX, HEAD_CY - 4f,
+            CX + HEAD_RX * 0.6f, HEAD_CY - HEAD_RY,
+            CX + HEAD_RX, HEAD_CY - HEAD_RY * 0.8f,
+            CX + HEAD_RX, HEAD_CY - 3f,
         )
         cubicTo(
-            CX + HEAD_RX, HEAD_CY + 17f,
-            CX + 27f, HEAD_CY + 31f,
-            CX + 11f, HEAD_CY + 39f,
+            CX + HEAD_RX, HEAD_CY + 14f,
+            CX + 21f, HEAD_CY + 26f,
+            CX + 8f, HEAD_CY + 33f,
         )
         cubicTo(
-            CX + 5f, HEAD_CY + 43f,
-            CX - 5f, HEAD_CY + 43f,
-            CX - 11f, HEAD_CY + 39f,
+            CX + 4f, HEAD_CY + 36f,
+            CX - 4f, HEAD_CY + 36f,
+            CX - 8f, HEAD_CY + 33f,
         )
         cubicTo(
-            CX - 27f, HEAD_CY + 31f,
-            CX - HEAD_RX, HEAD_CY + 17f,
-            CX - HEAD_RX, HEAD_CY - 4f,
+            CX - 21f, HEAD_CY + 26f,
+            CX - HEAD_RX, HEAD_CY + 14f,
+            CX - HEAD_RX, HEAD_CY - 3f,
         )
         close()
     }
-    drawPath(head, palette.skin)
+    inked(head, palette.skin, palette)
 }
 
 private fun DrawScope.drawFringe(pose: PetPose, palette: PetPalette) {
     val sway = pose.hairSwayDegrees * 0.12f
 
-    // Bangs: a smooth cap with three soft points, no cusps.
-    //
-    // The lower edge sits a good ten points higher than it used to. The old
-    // teeth hung to the top of the eyes and the notches between them made two
-    // dark slanted wedges exactly where eyebrows belong — she scowled in every
-    // state, including the happy ones. Clearing the brow line is what lets a
-    // real brow be drawn there and mean something.
+    // Bangs as one swept sheet parted off centre: a long fall to the left, a
+    // shorter one to the right, and a single notch between them. The scalloped
+    // row of points this replaces read as a crown, not as hair.
     val fringe = Path().apply {
-        moveTo(CX - 41f, HEAD_CY + 2f)
-        cubicTo(CX - 45f, HEAD_CY - 30f, CX - 26f, HEAD_CY - 46f, CX, HEAD_CY - 46f)
-        cubicTo(CX + 26f, HEAD_CY - 46f, CX + 45f, HEAD_CY - 30f, CX + 41f, HEAD_CY + 2f)
-        cubicTo(CX + 40f, HEAD_CY - 11f, CX + 37f, HEAD_CY - 18f, CX + 28f + sway, HEAD_CY - 17f)
-        cubicTo(CX + 18f, HEAD_CY - 27f, CX + 8f, HEAD_CY - 27f, CX + 1f + sway, HEAD_CY - 18.5f)
-        cubicTo(CX - 8f, HEAD_CY - 27f, CX - 20f, HEAD_CY - 27f, CX - 28f + sway, HEAD_CY - 17f)
-        cubicTo(CX - 37f, HEAD_CY - 18f, CX - 40f, HEAD_CY - 11f, CX - 41f, HEAD_CY + 2f)
+        moveTo(CX - 33f, HEAD_CY + 6f)
+        cubicTo(CX - 36f, HEAD_CY - 24f, CX - 21f, HEAD_CY - 39f, CX, HEAD_CY - 39f)
+        cubicTo(CX + 21f, HEAD_CY - 39f, CX + 36f, HEAD_CY - 24f, CX + 33f, HEAD_CY + 4f)
+        // The lower edge, right to left, as one continuous sweep: the fringe
+        // is high over the right brow, dips at the parting and falls long on
+        // the left. Drawn with three joined curves and no corner anywhere —
+        // every hard vertex here reads as a bite out of her forehead.
+        cubicTo(CX + 30f, HEAD_CY - 14f, CX + 24f, HEAD_CY - 22f, CX + 12f + sway, HEAD_CY - 16f)
+        cubicTo(CX + 4f, HEAD_CY - 12f, CX + 1f, HEAD_CY - 14f, CX - 4f, HEAD_CY - 11f)
+        cubicTo(CX - 13f, HEAD_CY - 7f, CX - 22f, HEAD_CY - 6f, CX - 28f + sway, HEAD_CY - 1f)
+        cubicTo(CX - 31f, HEAD_CY + 1f, CX - 33f, HEAD_CY + 2f, CX - 33f, HEAD_CY + 6f)
         close()
     }
-    drawPath(fringe, palette.hair)
+    inked(fringe, palette.hair, palette)
 
     // Side locks that frame the cheeks and taper to a point.
     listOf(-1f, 1f).forEach { side ->
         val lock = Path().apply {
-            moveTo(CX + side * 40f, HEAD_CY - 16f)
+            moveTo(CX + side * 31f, HEAD_CY - 16f)
             cubicTo(
-                CX + side * 49f, HEAD_CY + 4f,
-                CX + side * 45f, HEAD_CY + 30f,
-                CX + side * 35f, HEAD_CY + 44f,
+                CX + side * 37f, HEAD_CY + 4f,
+                CX + side * 34f, HEAD_CY + 24f,
+                CX + side * 26f, HEAD_CY + 36f,
             )
             cubicTo(
-                CX + side * 34f, HEAD_CY + 26f,
-                CX + side * 35f, HEAD_CY + 6f,
-                CX + side * 31f, HEAD_CY - 12f,
+                CX + side * 25f, HEAD_CY + 20f,
+                CX + side * 27f, HEAD_CY + 4f,
+                CX + side * 24f, HEAD_CY - 12f,
             )
             close()
         }
-        drawPath(lock, palette.hair)
+        inked(lock, palette.hair, palette)
     }
 
-    // Glossy highlight band across the bangs.
+    // The clip: the reference's one piece of hardware, in the outfit's accent
+    // so every set of clothes brings its own.
+    inked(
+        roundRect(Rect(CX + 17f, HEAD_CY - 31f, CX + 29f, HEAD_CY - 25f), 1.6f),
+        palette.accent, palette, LINE_THIN,
+    )
+
+    // A single glossy band, flat rather than a gradient — cel hair takes light
+    // in one hard shape.
     val gloss = Path().apply {
-        moveTo(CX - 27f, HEAD_CY - 30f)
-        cubicTo(CX - 12f, HEAD_CY - 43f, CX + 12f, HEAD_CY - 43f, CX + 27f, HEAD_CY - 30f)
-        cubicTo(CX + 12f, HEAD_CY - 36f, CX - 12f, HEAD_CY - 36f, CX - 27f, HEAD_CY - 30f)
+        moveTo(CX - 15f, HEAD_CY - 28f)
+        cubicTo(CX - 7f, HEAD_CY - 34f, CX + 6f, HEAD_CY - 34f, CX + 13f, HEAD_CY - 29f)
+        cubicTo(CX + 6f, HEAD_CY - 31.5f, CX - 7f, HEAD_CY - 31.5f, CX - 15f, HEAD_CY - 28f)
         close()
     }
-    drawPath(gloss, palette.hairLight.copy(alpha = 0.55f))
+    drawPath(gloss, palette.hairLight)
 }
 
 private fun DrawScope.drawAhoge(pose: PetPose, palette: PetPalette) {
     // The signature cowlick. A single moving strand does more for "alive" than
     // anything else on the character.
-    val base = Offset(CX + 3f, HEAD_CY - 43f)
+    val base = Offset(CX + 2f, HEAD_CY - 35f)
     val bend = pose.ahogeDegrees
     val path = Path().apply {
         moveTo(base.x, base.y)
         cubicTo(
-            base.x + 5f + bend * 0.3f, base.y - 15f,
-            base.x + 18f + bend * 0.6f, base.y - 19f,
-            base.x + 20f + bend, base.y - 6f,
+            base.x + 4f + bend * 0.3f, base.y - 14f,
+            base.x + 16f + bend * 0.6f, base.y - 18f,
+            base.x + 17f + bend, base.y - 5f,
         )
     }
-    drawPath(path, palette.hair, style = Stroke(width = 4.5f, cap = StrokeCap.Round))
+    drawPath(path, palette.line, style = Stroke(width = 5.4f, cap = StrokeCap.Round))
+    drawPath(path, palette.hair, style = Stroke(width = 3f, cap = StrokeCap.Round))
 }
 
 private fun DrawScope.drawFace(pose: PetPose, palette: PetPalette) {
-    val eyeY = HEAD_CY + 8f
-    drawEye(Offset(CX - 17f, eyeY), pose, palette, mirrored = false)
-    drawEye(Offset(CX + 17f, eyeY), pose, palette, mirrored = true)
+    val eyeY = HEAD_CY + 6f
+    drawEye(Offset(CX - 13.5f, eyeY), pose, palette, mirrored = false)
+    drawEye(Offset(CX + 13.5f, eyeY), pose, palette, mirrored = true)
 
     val blush = palette.blush.copy(alpha = pose.blushAlpha)
-    drawOval(blush, Offset(CX - 39f, eyeY + 11f), Size(20f, 11f))
-    drawOval(blush, Offset(CX + 19f, eyeY + 11f), Size(20f, 11f))
+    drawOval(blush, Offset(CX - 31f, eyeY + 9f), Size(16f, 8f))
+    drawOval(blush, Offset(CX + 15f, eyeY + 9f), Size(16f, 8f))
 
-    // A nose at chibi scale is a hint, not a feature: one short soft stroke
-    // under the eye line, off centre the way a light from the upper left would
-    // put it, so the face stops being perfectly flat between eyes and mouth.
+    // A nose at this scale is a hint, not a feature.
     drawLine(
         color = palette.skinShade,
-        start = Offset(CX + 1f, eyeY + 7.5f),
-        end = Offset(CX + 3.5f, eyeY + 10.5f),
-        strokeWidth = 2.2f,
+        start = Offset(CX + 1f, eyeY + 6f),
+        end = Offset(CX + 3f, eyeY + 8.5f),
+        strokeWidth = 1.8f,
         cap = StrokeCap.Round,
     )
 
-    drawMouth(pose, palette, Offset(CX, eyeY + 20f))
+    drawMouth(pose, palette, Offset(CX, eyeY + 17f))
 }
 
 /**
  * The eyebrows, drawn over the bangs.
  *
- * Soft and short, with the inner end sitting slightly higher than the outer one
- * by default — level or inner-low brows read as a glare. The worry axis lifts
- * the inner ends further and drops the outer ones, which is the difference
- * between "worried" and "angry" and the only thing seven of the poses have to
- * say it with.
+ * Thin and angled, the way anime brows sit above the lash line: the inner end
+ * high by default, dropping and tilting with the worry axis.
  */
 private fun DrawScope.drawBrows(pose: PetPose, palette: PetPalette) {
-    val y = HEAD_CY - 12.5f
-    val innerDy = -2f - pose.browWorry * 4f
-    val outerDy = pose.browWorry * 2.5f
+    val y = HEAD_CY - 11f
+    val innerDy = -1.5f - pose.browWorry * 3.5f
+    val outerDy = pose.browWorry * 2f
     listOf(-1f, 1f).forEach { side ->
         val path = Path().apply {
-            moveTo(CX + side * 26f, y + outerDy)
-            quadraticTo(CX + side * 18f, y - 3.5f + outerDy * 0.3f, CX + side * 10f, y + innerDy)
+            moveTo(CX + side * 21f, y + outerDy)
+            quadraticTo(CX + side * 15f, y - 3f + outerDy * 0.3f, CX + side * 8f, y + innerDy)
         }
         drawPath(
             path,
-            palette.hairShade.copy(alpha = 0.8f),
-            style = Stroke(width = 2.6f, cap = StrokeCap.Round),
+            palette.hairShade,
+            style = Stroke(width = 2.4f, cap = StrokeCap.Round),
         )
     }
 }
@@ -553,18 +720,18 @@ private fun DrawScope.drawEye(
     when (pose.eyes) {
         EyeShape.HAPPY_ARC -> {
             val path = Path().apply {
-                moveTo(center.x - 12f, center.y + 3f)
-                quadraticTo(center.x, center.y - 13f, center.x + 12f, center.y + 3f)
+                moveTo(center.x - 10f, center.y + 3f)
+                quadraticTo(center.x, center.y - 11f, center.x + 10f, center.y + 3f)
             }
-            drawPath(path, palette.eyeDark, style = Stroke(width = 3.8f, cap = StrokeCap.Round))
+            drawPath(path, palette.eyeDark, style = Stroke(width = 3.4f, cap = StrokeCap.Round))
             return
         }
         EyeShape.SLEEPING -> {
             val path = Path().apply {
-                moveTo(center.x - 12f, center.y - 3f)
-                quadraticTo(center.x, center.y + 11f, center.x + 12f, center.y - 3f)
+                moveTo(center.x - 10f, center.y - 3f)
+                quadraticTo(center.x, center.y + 9f, center.x + 10f, center.y - 3f)
             }
-            drawPath(path, palette.eyeDark, style = Stroke(width = 3.8f, cap = StrokeCap.Round))
+            drawPath(path, palette.eyeDark, style = Stroke(width = 3.4f, cap = StrokeCap.Round))
             return
         }
         else -> Unit
@@ -579,63 +746,72 @@ private fun DrawScope.drawEye(
     if (openness <= 0.06f) {
         drawLine(
             color = palette.eyeDark,
-            start = Offset(center.x - 11f, center.y),
-            end = Offset(center.x + 11f, center.y),
-            strokeWidth = 3.4f,
+            start = Offset(center.x - 9f, center.y),
+            end = Offset(center.x + 9f, center.y),
+            strokeWidth = 3f,
             cap = StrokeCap.Round,
         )
         return
     }
 
     withTransform({ scale(1f, openness, pivot = center) }) {
-        drawOval(palette.white, Offset(center.x - 12f, center.y - 15f), Size(24f, 30f))
+        drawOval(palette.white, Offset(center.x - 10f, center.y - 12.5f), Size(20f, 25f))
 
-        val iris = Offset(center.x + pose.lookX * 3f, center.y + pose.lookY * 3.5f)
+        val iris = Offset(center.x + pose.lookX * 2.5f, center.y + pose.lookY * 3f)
         if (pose.eyes == EyeShape.HEART) {
-            // A heart *replaces* the iris; drawing it over one leaves a pink blob.
-            drawHeart(Offset(iris.x, iris.y + 1f), 11f, palette.ribbon)
-            drawHeart(Offset(iris.x - 2f, iris.y - 1.5f), 4.5f, palette.white.copy(alpha = 0.85f))
+            drawHeart(Offset(iris.x, iris.y + 1f), 9.5f, palette.ribbon)
+            drawHeart(Offset(iris.x - 1.8f, iris.y - 1.3f), 4f, palette.white.copy(alpha = 0.85f))
             return@withTransform
         }
-        drawCircle(palette.irisDeep, radius = 10.5f, center = iris)
-        drawCircle(palette.iris, radius = 8.8f, center = Offset(iris.x, iris.y + 1.5f))
-        drawCircle(palette.irisLight, radius = 5f, center = Offset(iris.x, iris.y + 4.5f))
-        drawCircle(palette.eyeDark, radius = 4.4f, center = iris)
+        // The iris fills far more of the eye than it used to. A small iris in a
+        // wide white is a cartoon eye; a large one that crops top and bottom is
+        // the anime one.
+        drawCircle(palette.irisDeep, radius = 9.4f, center = iris)
+        drawCircle(palette.iris, radius = 8f, center = Offset(iris.x, iris.y + 1.2f))
+        // Cel shading: one hard lower crescent, no gradient.
+        drawCircle(palette.irisLight, radius = 4.6f, center = Offset(iris.x, iris.y + 4f))
+        drawCircle(palette.eyeDark, radius = 3.8f, center = iris)
 
         when (pose.eyes) {
             EyeShape.SPARKLE -> {
-                drawStar(Offset(iris.x - 3f, iris.y - 3f), 6.5f, palette.white)
-                drawStar(Offset(iris.x + 4.5f, iris.y + 4.5f), 3.2f, palette.white)
+                drawStar(Offset(iris.x - 2.6f, iris.y - 2.6f), 5.6f, palette.white)
+                drawStar(Offset(iris.x + 3.8f, iris.y + 3.8f), 2.8f, palette.white)
             }
             else -> {
-                val hx = if (mirrored) 3.5f else -3.5f
-                drawCircle(palette.white, radius = 3.6f, center = Offset(iris.x + hx, iris.y - 4.5f))
+                val hx = if (mirrored) 3f else -3f
+                drawCircle(palette.white, radius = 3.2f, center = Offset(iris.x + hx, iris.y - 4f))
                 drawCircle(
-                    palette.white.copy(alpha = 0.75f),
-                    radius = 2f,
-                    center = Offset(iris.x - hx * 0.6f, iris.y + 5.5f),
+                    palette.white.copy(alpha = 0.8f),
+                    radius = 1.7f,
+                    center = Offset(iris.x - hx * 0.6f, iris.y + 4.8f),
                 )
             }
         }
 
-        // Upper lash, as a filled crescent rather than a uniform stroke: thick
-        // over the pupil and tapering to points at both corners. A constant
-        // width here is what makes the eye read as a scowl.
-        //
-        // The inner corner sits almost level with the outer one. It used to
-        // drop six points toward the nose, and two lashes converging downward
-        // at the bridge are the shape of an angry brow — she glared through
-        // every state on the roster, including the ones with hearts for eyes.
+        // Upper lash: a filled crescent, thick over the pupil and tapering to
+        // points at both corners, with the outer corner flicked up. A constant
+        // width here is what makes an eye read as a scowl.
         val outer = if (mirrored) 1f else -1f
-        val cornerOut = Offset(center.x + outer * 15f, center.y - 15f)
-        val cornerIn = Offset(center.x - outer * 12f, center.y - 12.5f)
+        val cornerOut = Offset(center.x + outer * 13f, center.y - 13.5f)
+        val cornerIn = Offset(center.x - outer * 10f, center.y - 10.5f)
         val lash = Path().apply {
             moveTo(cornerOut.x, cornerOut.y)
-            quadraticTo(center.x + outer * 3f, center.y - 22.5f, cornerIn.x, cornerIn.y)
-            quadraticTo(center.x + outer * 4f, center.y - 16f, cornerOut.x, cornerOut.y)
+            quadraticTo(center.x + outer * 2.5f, center.y - 19.5f, cornerIn.x, cornerIn.y)
+            quadraticTo(center.x + outer * 3.5f, center.y - 13.5f, cornerOut.x, cornerOut.y)
             close()
         }
         drawPath(lash, palette.eyeDark)
+
+        // A thin lower lid. Without it the eye has no floor and the iris looks
+        // like it is falling out of the face.
+        drawPath(
+            Path().apply {
+                moveTo(center.x - outer * 8f, center.y + 9.5f)
+                quadraticTo(center.x + outer * 2f, center.y + 12.5f, center.x + outer * 10f, center.y + 7f)
+            },
+            palette.eyeDark.copy(alpha = 0.75f),
+            style = Stroke(width = 1.6f, cap = StrokeCap.Round),
+        )
     }
 }
 
@@ -643,61 +819,65 @@ private fun DrawScope.drawMouth(pose: PetPose, palette: PetPalette, at: Offset) 
     when (pose.mouth) {
         MouthShape.SMILE -> {
             val path = Path().apply {
-                moveTo(at.x - 7f, at.y - 1f)
-                quadraticTo(at.x, at.y + 6f, at.x + 7f, at.y - 1f)
+                moveTo(at.x - 6f, at.y - 1f)
+                quadraticTo(at.x, at.y + 5f, at.x + 6f, at.y - 1f)
             }
-            drawPath(path, palette.mouth, style = Stroke(width = 2.6f, cap = StrokeCap.Round))
+            drawPath(path, palette.mouth, style = Stroke(width = 2.2f, cap = StrokeCap.Round))
         }
         MouthShape.BIG_SMILE -> {
             val path = Path().apply {
-                moveTo(at.x - 9f, at.y - 2f)
-                quadraticTo(at.x, at.y + 12f, at.x + 9f, at.y - 2f)
+                moveTo(at.x - 7.5f, at.y - 2f)
+                quadraticTo(at.x, at.y + 10f, at.x + 7.5f, at.y - 2f)
                 close()
             }
-            drawPath(path, palette.mouthInner)
-            drawOval(palette.white, Offset(at.x - 6.5f, at.y - 2f), Size(13f, 3.4f))
+            inked(path, palette.mouthInner, palette, LINE_THIN)
+            drawOval(palette.white, Offset(at.x - 5.5f, at.y - 2f), Size(11f, 2.8f))
         }
         MouthShape.CAT -> {
             val path = Path().apply {
-                // ":3" — the humps dip down and the corners lift, which is the
-                // opposite of the arcs used for a frown.
-                moveTo(at.x - 9f, at.y - 2f)
-                quadraticTo(at.x - 4.5f, at.y + 5f, at.x, at.y)
-                quadraticTo(at.x + 4.5f, at.y + 5f, at.x + 9f, at.y - 2f)
+                moveTo(at.x - 7.5f, at.y - 2f)
+                quadraticTo(at.x - 3.8f, at.y + 4f, at.x, at.y)
+                quadraticTo(at.x + 3.8f, at.y + 4f, at.x + 7.5f, at.y - 2f)
             }
             drawPath(
                 path, palette.mouth,
-                style = Stroke(width = 2.6f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                style = Stroke(width = 2.2f, cap = StrokeCap.Round, join = StrokeJoin.Round),
             )
         }
         MouthShape.WAVY -> {
             val path = Path().apply {
-                moveTo(at.x - 9f, at.y)
-                quadraticTo(at.x - 4.5f, at.y - 5f, at.x, at.y)
-                quadraticTo(at.x + 4.5f, at.y + 5f, at.x + 9f, at.y)
+                moveTo(at.x - 7.5f, at.y)
+                quadraticTo(at.x - 3.8f, at.y - 4f, at.x, at.y)
+                quadraticTo(at.x + 3.8f, at.y + 4f, at.x + 7.5f, at.y)
             }
-            drawPath(path, palette.mouth, style = Stroke(width = 2.6f, cap = StrokeCap.Round))
+            drawPath(path, palette.mouth, style = Stroke(width = 2.2f, cap = StrokeCap.Round))
         }
-        MouthShape.SMALL_O -> drawOval(palette.mouthInner, Offset(at.x - 4f, at.y - 4f), Size(8f, 10f))
+        MouthShape.SMALL_O -> inkedOval(
+            Offset(at.x - 3.4f, at.y - 3.4f), Size(6.8f, 8.5f), palette.mouthInner, palette, LINE_THIN,
+        )
         MouthShape.FLAT -> drawLine(
             palette.mouth,
-            start = Offset(at.x - 6f, at.y + 1f),
-            end = Offset(at.x + 6f, at.y + 1f),
-            strokeWidth = 2.6f,
+            start = Offset(at.x - 5f, at.y + 1f),
+            end = Offset(at.x + 5f, at.y + 1f),
+            strokeWidth = 2.2f,
             cap = StrokeCap.Round,
         )
         MouthShape.CHEWING -> {
-                // Four chews per mouthful: a multiple of the eating cycle, so the
+            // Four chews per mouthful: a multiple of the eating cycle, so the
             // jaw is closed again at the seam.
             val open = (wave(pose.timeSeconds, 15.708f) + 1f) / 2f
-            drawOval(
-                palette.mouthInner,
-                Offset(at.x - 6f, at.y - 2f - open * 2.5f),
-                Size(12f, 5f + open * 7f),
+            inkedOval(
+                Offset(at.x - 5f, at.y - 2f - open * 2f),
+                Size(10f, 4f + open * 6f),
+                palette.mouthInner, palette, LINE_THIN,
             )
         }
     }
 }
+
+/** A rounded rectangle as a path, so it can be filled and inked like anything else. */
+private fun roundRect(rect: Rect, radius: Float): Path =
+    Path().apply { addRoundRect(RoundRect(rect, CornerRadius(radius, radius))) }
 
 // --- workplaces ------------------------------------------------------------------
 
@@ -971,15 +1151,13 @@ private fun DrawScope.drawLibrary(palette: PetPalette) {
 private fun DrawScope.drawPillow(palette: PetPalette) {
     // Wide enough to read past the back hair, which is otherwise almost exactly
     // the size of the pillow and hides it completely.
-    drawRoundRectPath(
-        Rect(CX - 78f, HEAD_CY - 30f, CX + 78f, HEAD_CY + 52f),
-        radius = 34f,
-        color = palette.collar,
+    inked(
+        roundRect(Rect(CX - 58f, HEAD_CY - 26f, CX + 58f, HEAD_CY + 44f), 28f),
+        palette.collar, palette,
     )
-    drawRoundRectPath(
-        Rect(CX - 70f, HEAD_CY - 22f, CX + 70f, HEAD_CY + 44f),
-        radius = 28f,
-        color = palette.white.copy(alpha = 0.65f),
+    drawPath(
+        roundRect(Rect(CX - 51f, HEAD_CY - 19f, CX + 51f, HEAD_CY + 37f), 23f),
+        palette.white.copy(alpha = 0.6f),
     )
 }
 
@@ -1443,21 +1621,23 @@ private fun DrawScope.drawController(pose: PetPose, palette: PetPalette) {
  */
 private fun DrawScope.drawBlanket(pose: PetPose, palette: PetPalette) {
     val rise = pose.breath * 1.3f
-    val top = 186f + rise
+    val top = 198f + rise
     val blanket = Path().apply {
-        moveTo(CX - 54f, top + 20f)
-        cubicTo(CX - 56f, top + 2f, CX - 30f, top - 6f, CX, top - 6f)
-        cubicTo(CX + 30f, top - 6f, CX + 56f, top + 2f, CX + 54f, top + 20f)
-        cubicTo(CX + 60f, 232f, CX + 66f, 246f, CX + 68f, GROUND_Y + 4f)
-        lineTo(CX - 68f, GROUND_Y + 4f)
-        cubicTo(CX - 66f, 246f, CX - 60f, 232f, CX - 54f, top + 20f)
+        moveTo(CX - 42f, top + 16f)
+        cubicTo(CX - 44f, top + 2f, CX - 24f, top - 5f, CX, top - 5f)
+        cubicTo(CX + 24f, top - 5f, CX + 44f, top + 2f, CX + 42f, top + 16f)
+        cubicTo(CX + 47f, 240f, CX + 51f, 258f, CX + 53f, GROUND_Y + 4f)
+        lineTo(CX - 53f, GROUND_Y + 4f)
+        cubicTo(CX - 51f, 258f, CX - 47f, 240f, CX - 42f, top + 16f)
         close()
     }
-    drawPath(blanket, palette.iris)
+    // Bedding has its own colour. It used to borrow the iris, which was a
+    // quiet violet then and is amber now — the bed turned traffic-cone orange.
+    inked(blanket, palette.prop, palette)
     // Creases falling from the fold, so the duvet has cloth in it.
-    listOf(-34f, -12f, 14f, 36f).forEach { dx ->
+    listOf(-26f, -9f, 11f, 28f).forEach { dx ->
         drawLine(
-            color = palette.irisDeep.copy(alpha = 0.22f),
+            color = palette.propDark.copy(alpha = 0.5f),
             start = Offset(CX + dx, top + 16f),
             end = Offset(CX + dx * 1.35f, GROUND_Y + 2f),
             strokeWidth = 2f,
@@ -1466,13 +1646,13 @@ private fun DrawScope.drawBlanket(pose: PetPose, palette: PetPalette) {
     }
     // Folded-over sheet along the top edge.
     val fold = Path().apply {
-        moveTo(CX - 55f, top + 12f)
-        cubicTo(CX - 52f, top - 2f, CX - 28f, top - 8f, CX, top - 8f)
-        cubicTo(CX + 28f, top - 8f, CX + 52f, top - 2f, CX + 55f, top + 12f)
-        cubicTo(CX + 30f, top + 4f, CX - 30f, top + 4f, CX - 55f, top + 12f)
+        moveTo(CX - 43f, top + 10f)
+        cubicTo(CX - 41f, top - 2f, CX - 22f, top - 7f, CX, top - 7f)
+        cubicTo(CX + 22f, top - 7f, CX + 41f, top - 2f, CX + 43f, top + 10f)
+        cubicTo(CX + 24f, top + 3f, CX - 24f, top + 3f, CX - 43f, top + 10f)
         close()
     }
-    drawPath(fold, palette.collar)
+    inked(fold, palette.collar, palette, LINE_THIN)
 }
 
 // --- particles -------------------------------------------------------------------

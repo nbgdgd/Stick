@@ -1,29 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The themed-icon layer. The launcher throws the colours away and
-     tints the alpha, so this has to read as her from shape alone:
-     twin tails held clear of the head, ahoge, shoulders. -->
+     tints the alpha, so this has to read as her from shape alone.
+     Redrawn with the character: the long fall of hair and its pointed
+     hem, the head, the ahoge, the shoulders — the twin tails it used to
+     rely on are no longer part of her silhouette. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Hair: the whole outline, head included, with a pointed hem. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M66,35 C77,35 81.5,44 80,55.5 C79,63.5 73.5,66.5 71,62.5 C73.5,54 73,44 64.5,39 Z" />
+        android:pathData="M54,20 C36,20 25,33 25,52 C25,66 26,76 27,86 L34,79 L40,88 L47,79 L54,88 L61,79 L68,88 L74,79 L81,86 C82,76 83,66 83,52 C83,33 72,20 54,20 Z" />
+    <!-- The face, punched out of the hair so the two read apart when the
+         launcher flattens everything to one tint. -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0"
+        android:pathData="M54,26 C43,26 36,33 36,45 C36,56 42,66 54,66 C66,66 72,56 72,45 C72,33 65,26 54,26 Z" />
+    <!-- Shoulders. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M42,35 C31,35 26.5,44 28,55.5 C29,63.5 34.5,66.5 37,62.5 C34.5,54 35,44 43.5,39 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M39,48 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0 Z" />
+        android:pathData="M54,68 C42,68 32,75 30,92 L78,92 C76,75 66,68 54,68 Z" />
+    <!-- The ahoge — the one piece of her that is pure silhouette. -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.4"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M55,34 C57,28.5 62,27.5 62.5,32" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M32,92 C32,74 42,67 54,67 C66,67 76,74 76,92 Z" />
+        android:pathData="M55,21 C56,12 64,9 66,16" />
 </vector>

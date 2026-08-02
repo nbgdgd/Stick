@@ -7,29 +7,38 @@ import androidx.compose.ui.graphics.Color
  * look by passing a different palette rather than editing the renderer.
  */
 data class PetPalette(
-    val hair: Color = Color(0xFF7B5EA7),
-    val hairShade: Color = Color(0xFF5E4483),
-    val hairLight: Color = Color(0xFFA98BD6),
-    val skin: Color = Color(0xFFFFE1D0),
-    val skinShade: Color = Color(0xFFEEBFA8),
-    val uniform: Color = Color(0xFF44396E),
-    val uniformShade: Color = Color(0xFF332A57),
-    val skirt: Color = Color(0xFF3B3163),
-    val collar: Color = Color(0xFFF5EFFD),
-    val ribbon: Color = Color(0xFFE8577E),
-    val sock: Color = Color(0xFFF5EFFD),
-    val shoe: Color = Color(0xFF2B2447),
-    val eyeDark: Color = Color(0xFF2E2044),
-    val iris: Color = Color(0xFF8B5FD6),
-    val irisDeep: Color = Color(0xFF573A8F),
-    val irisLight: Color = Color(0xFFCBAEF7),
-    val mouth: Color = Color(0xFFB84A63),
+    val hair: Color = Color(0xFFD6D3DC),
+    val hairShade: Color = Color(0xFFA9A5B4),
+    val hairLight: Color = Color(0xFFF2F0F6),
+    val skin: Color = Color(0xFFFFE7D6),
+    val skinShade: Color = Color(0xFFF0C3AB),
+    val uniform: Color = Color(0xFFF7F2EA),
+    val uniformShade: Color = Color(0xFFE0D6C8),
+    val skirt: Color = Color(0xFFC0485E),
+    val collar: Color = Color(0xFFFFFDF8),
+    val ribbon: Color = Color(0xFFC0485E),
+    val sock: Color = Color(0xFFFBF8F2),
+    val shoe: Color = Color(0xFF3A3550),
+    val eyeDark: Color = Color(0xFF241E32),
+    val iris: Color = Color(0xFFF3B01F),
+    val irisDeep: Color = Color(0xFFB87708),
+    val irisLight: Color = Color(0xFFFFDF8C),
+    val mouth: Color = Color(0xFFBE4B5F),
     val mouthInner: Color = Color(0xFF8E2F46),
     val blush: Color = Color(0xFFF98FAE),
     val white: Color = Color.White,
     val prop: Color = Color(0xFF6B5CA5),
     val propDark: Color = Color(0xFF463A78),
     val accent: Color = Color(0xFFFFC46B),
+    /**
+     * The ink every form is drawn with.
+     *
+     * The single biggest reason the old character read as a sticker for
+     * toddlers: it had no line at all. Flat vector shapes with no outline is
+     * the visual language of a children's app; a dark, consistent contour is
+     * the visual language of anime.
+     */
+    val line: Color = Color(0xFF2B2438),
 ) {
     companion object {
         val Default = PetPalette()

@@ -36,6 +36,7 @@ import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.ART_HEIGHT
 import com.vpet.waifu.ui.character.SpritePacks
+import com.vpet.waifu.ui.character.pixelScale
 import com.vpet.waifu.ui.character.ART_WIDTH
 import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.PetRasterizer
@@ -136,9 +137,28 @@ class PetWidget : GlanceAppWidget() {
         // key, or buying a floor item would re-render a widget whose floor is
         // hidden for an identical picture.
         val decor = snapshot.owned.filter { decorVisible(it, detail) }.sorted()
+        // A pixel character in a smooth room reads as a sticker; the widget is
+        // where she is seen most, so it gets the same treatment as the stage.
+        val widgetPixelScale = pack?.pixelScale(stageWidthDp * density, stageHeightDp * density) ?: 0f
+        // Same threshold as the stage: below two screen pixels per source pixel
+        // there is no visible grid to match, and quantising only loses detail.
+        val pixelRoom = pack != null && pack.pixelateRoom && widgetPixelScale >= 2f
         val room = ROOMS.getOrPut(
-            "${roomWidthPx}x$roomHeightPx|${palette.room.night}|${snapshot.theme}|${floorFraction.round3()}|$detail|${decor.joinToString(",")}",
+            "${roomWidthPx}x$roomHeightPx|${palette.room.night}|${snapshot.theme}|${floorFraction.round3()}|$detail|${decor.joinToString(",")}|$pixelRoom",
         ) {
+            if (pack != null && pixelRoom) {
+                PetRasterizer.pixelRoomPng(
+                    widthPx = roomWidthPx,
+                    heightPx = roomHeightPx,
+                    colors = palette.room,
+                    pixelScale = widgetPixelScale,
+                    cornerRadiusPx = CARD_CORNER_DP * density,
+                    floorFraction = floorFraction,
+                    detail = detail,
+                    decor = decor.toSet(),
+                    theme = snapshot.theme,
+                )
+            } else {
             PetRasterizer.roomPng(
                 widthPx = roomWidthPx,
                 heightPx = roomHeightPx,
@@ -152,6 +172,7 @@ class PetWidget : GlanceAppWidget() {
                 decor = decor.toSet(),
                 theme = snapshot.theme,
             )
+            }
         }
 
         provideContent {

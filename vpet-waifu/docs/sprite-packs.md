@@ -69,9 +69,12 @@ the same thing.
   has its clothes painted into every frame, so buying one changes nothing.
   Either hide the outfit sections while a pack is selected, or draw a separate
   sheet per outfit and treat them as separate packs.
-- **Job props.** The seven jobs put a tray, a laptop, a microphone, a bag, a
-  notebook, a book stack or a lecture in her hands, positioned off the rig's
-  own hand joint. A sheet has no hand to hang anything from.
+- **Job props and workplaces.** The seven jobs put a tray, a laptop, a
+  microphone, a bag, a notebook, a book stack or a lecture in her hands,
+  positioned off the rig's own hand joint — and each draws its own set behind
+  her, the café counter, the stage truss, the classroom. All of it is part of
+  the rig. A pack works and studies in her room, and the room keeps its full
+  dressing while she does, since there is no set arriving to make space for.
 - **Resolution.** Frames are drawn with nearest-neighbour filtering, so the
   linework stays crisp rather than turning to mush — but a sheet much below
   200 px a frame will still look coarse blown up to a phone-sized stage.
@@ -81,6 +84,25 @@ the same thing.
 Frames anchor to the bottom of the stage, so her feet land on the floor
 whatever the cell size. The widget crops from the same sheet, so one file
 covers both.
+
+## The room follows the pack
+
+A sheet is a small drawing blown up, so every pixel the character is made of is
+a visible square. The room behind her is vector art rendered at the panel's
+full resolution. Those two cannot share a picture — she reads as a sticker
+pasted onto a photograph.
+
+So while a pack is selected the room is rendered into a bitmap small enough
+that one of its pixels is one of *hers*, and blown back up with
+nearest-neighbour sampling. Same window, same shelf, same cat; same chunky
+edges she has. It happens on the stage and in the widget, and it is cached on
+the theme, the hour and the furniture, so nothing is re-rendered per frame.
+
+Add `"pixelateRoom": false` to `pet.json` to turn it off — worth doing for a
+pack drawn at a high enough resolution that it does not look pixellated in the
+first place. It also switches itself off automatically when the character's own
+pixels would come out smaller than two screen pixels, because below that there
+is no visible grid to match.
 
 ## Before you publish
 

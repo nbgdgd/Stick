@@ -71,6 +71,15 @@ data class SpritePack(
     val columns: Int,
     val clips: Map<PetState, SpriteClip>,
     val idle: SpriteClip,
+    /**
+     * Whether the room behind her should be quantised to her own pixel grid.
+     *
+     * On by default, because the mismatch is the first thing anyone notices:
+     * a character made of visible square pixels standing in a smooth vector
+     * room reads as a sticker pasted onto a photograph. A pack drawn at a high
+     * enough resolution not to look pixellated can turn it off.
+     */
+    val pixelateRoom: Boolean,
 ) {
     /** The clip for a state, or the idle loop if the pack does not draw it. */
     fun clipFor(state: PetState): SpriteClip = clips[state] ?: idle
@@ -152,6 +161,7 @@ object SpritePacks {
             // A pack with no IDLE clip still has a first cell, and one frame of
             // something is a great deal better than an empty stage.
             idle = clips[PetState.IDLE] ?: SpriteClip(row = 0, from = 0, count = 1, fps = defaultFps),
+            pixelateRoom = manifest.optBoolean("pixelateRoom", true),
         )
     }
 }
@@ -202,6 +212,17 @@ fun SpritePet(
         )
     }
 }
+
+/**
+ * How many screen pixels one of the character's own pixels occupies.
+ *
+ * [width] and [height] are the box she is drawn into — not the whole stage, the
+ * box, because [SpritePet] fits the frame inside it. Everything that wants to
+ * match her pixel grid — the room behind her, above all — needs this number and
+ * nothing else.
+ */
+fun SpritePack.pixelScale(width: Float, height: Float): Float =
+    min(width / frameWidth, height / frameHeight).coerceAtLeast(1f)
 
 /** Where the character's feet land, for anything that has to line up with her. */
 fun SpritePack.feetOffset(width: Float, height: Float): Offset {

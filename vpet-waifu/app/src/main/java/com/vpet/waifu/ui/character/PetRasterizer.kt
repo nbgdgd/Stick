@@ -91,6 +91,68 @@ object PetRasterizer {
     }
 
     /**
+     * The room, quantised to a sprite character's pixel grid.
+     *
+     * Same trick as the stage: render small, blow it up with nearest-neighbour.
+     * The widget matters more than the stage here, not less — it is the one
+     * place the player sees her without opening anything, so a smooth room
+     * behind a pixel character is the version of the app most often on screen.
+     */
+    fun pixelRoomPng(
+        widthPx: Int,
+        heightPx: Int,
+        colors: RoomColors,
+        pixelScale: Float,
+        cornerRadiusPx: Float = 0f,
+        floorFraction: Float = 0.78f,
+        detail: RoomDetail = RoomDetail.WALL,
+        decor: Set<String> = emptySet(),
+        theme: String = RoomTheme.DEFAULT_ID,
+    ): ByteArray {
+        val smallWidth = (widthPx / pixelScale).roundToInt().coerceAtLeast(8)
+        val smallHeight = (heightPx / pixelScale).roundToInt().coerceAtLeast(8)
+
+        val small = draw(smallWidth, smallHeight, density = 1f) {
+            drawPetRoom(
+                top = colors.top,
+                bottom = colors.bottom,
+                floor = colors.floor,
+                night = colors.night,
+                // The corner is cut on the upscaled bitmap, not this one: a
+                // radius quantised to the small grid comes out as a staircase
+                // that does not line up with the card behind it.
+                cornerRadiusPx = 0f,
+                floorFraction = floorFraction,
+                detail = detail,
+                decor = decor,
+                theme = theme,
+            )
+        }
+
+        val target = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(target)
+        if (cornerRadiusPx > 0f) {
+            val path = android.graphics.Path().apply {
+                addRoundRect(
+                    android.graphics.RectF(0f, 0f, widthPx.toFloat(), heightPx.toFloat()),
+                    cornerRadiusPx,
+                    cornerRadiusPx,
+                    android.graphics.Path.Direction.CW,
+                )
+            }
+            canvas.clipPath(path)
+        }
+        canvas.drawBitmap(
+            small,
+            null,
+            android.graphics.Rect(0, 0, widthPx, heightPx),
+            android.graphics.Paint().apply { isFilterBitmap = false },
+        )
+        small.recycle()
+        return png(target)
+    }
+
+    /**
      * The same loop, cut out of a sprite sheet instead of drawn.
      *
      * The widget cannot host a composable, so whichever character is selected

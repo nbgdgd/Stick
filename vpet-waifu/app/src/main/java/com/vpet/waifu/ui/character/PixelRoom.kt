@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalDensity
@@ -49,6 +50,18 @@ private const val MIN_ROOM_PX = 8
  * palette; a dozen is indistinguishable from the gradient it replaced.
  */
 internal const val WALL_BANDS = 6
+
+/**
+ * The colour the room's contour is drawn towards.
+ *
+ * Not pure black and not quite the character's own ink: a room needs its line
+ * to sit behind her, and matching hers exactly brings the furniture forward
+ * enough to compete with the character standing in front of it.
+ */
+internal const val ROOM_INK = 0xFF3A3150.toInt()
+
+/** The same, for a room that is already dark. */
+internal const val ROOM_INK_NIGHT = 0xFF0C0918.toInt()
 
 /**
  * The room's colours at a given moment.
@@ -126,6 +139,7 @@ fun rememberPixelRoom(
                 decor = decor,
                 theme = theme,
                 wallBands = WALL_BANDS,
+                ink = true,
             )
         }
     }
@@ -142,6 +156,7 @@ fun renderRoomBitmap(
     decor: Set<String>,
     theme: String,
     wallBands: Int = 0,
+    ink: Boolean = false,
 ): ImageBitmap {
     val image = ImageBitmap(widthPx, heightPx)
     CanvasDrawScope().draw(
@@ -161,6 +176,25 @@ fun renderRoomBitmap(
             wallBands = wallBands,
         )
     }
+    if (!ink) return image
+
+    // The contour, over the finished pixels. Matching her grid is what makes
+    // the room's edges land on her squares; this is what makes them look like
+    // hers — she carries a heavy dark line around every form and the room, up
+    // to here, carried none.
+    val bitmap = image.asAndroidBitmap()
+    val pixels = IntArray(widthPx * heightPx)
+    bitmap.getPixels(pixels, 0, widthPx, 0, 0, widthPx, heightPx)
+    inkRoomEdges(
+        pixels = pixels,
+        width = widthPx,
+        height = heightPx,
+        // Darker after dark: a contour a shade off the daylight wall is
+        // invisible against a night one, and the night room would keep its
+        // smooth edges while every other theme got a line.
+        ink = if (paint.night) ROOM_INK_NIGHT else ROOM_INK,
+    )
+    bitmap.setPixels(pixels, 0, widthPx, 0, 0, widthPx, heightPx)
     return image
 }
 

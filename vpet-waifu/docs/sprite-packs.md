@@ -54,6 +54,7 @@ app/src/main/assets/pets/
 | `count` | how many cells the clip runs for |
 | `fps` | frames a second for this clip; falls back to `defaultFps` |
 | `loop` | `true` repeats, `false` holds the last frame |
+| `fit` | how much of its box the frame fills, 0..1 (default 0.62) |
 
 State names are the values of `com.vpet.waifu.domain.PetState`: `IDLE`,
 `HAPPY`, `HUNGRY`, `TIRED`, `SLEEPING`, `EATING`, `LOVED`, `WORKING`,
@@ -62,6 +63,16 @@ State names are the values of `com.vpet.waifu.domain.PetState`: `IDLE`,
 Only `IDLE` is required. Any state without a clip of its own falls back to it,
 so a two-row sheet is a legal pack and a nine-row one is a luxurious version of
 the same thing.
+
+## Sizing her against the room
+
+`fit` is the one number worth checking on a new pack. The vector rig is drawn
+in a 200x300 space with generous air around the character; a sheet's cell is
+usually cropped tight to her. Fitting both "to the box" does not give them the
+same size at all — a tight cell filling the box came out two and a half times
+wider than the drawn character, covering the room she is meant to be standing
+in. The default leaves her about the same air the rig has. Raise it if your
+cells carry their own margin, lower it if she still crowds the stage.
 
 ## What a pack gives up
 
@@ -105,6 +116,14 @@ unmistakably modern thing in an otherwise pixelated picture. It is done by
 drawing fewer steps of the same two colours rather than by posterising the
 finished bitmap, because posterising shifts every hue it touches and the room
 themes are something the player paid for.
+
+Every object in the room is also given a one-pixel dark contour, found by a
+pass over the finished bitmap rather than by stroking each of the two dozen
+shapes that make up the scene — one algorithm covers every object, every theme
+and any furniture added later. This is the part that actually matters: matching
+the grid puts the room's edges on the character's squares, but she carries a
+heavy dark line around every form and a room with none still reads as a
+different medium standing in the same picture.
 
 Add `"pixelateRoom": false` to `pet.json` to turn it off — worth doing for a
 pack drawn at a high enough resolution that it does not look pixellated in the

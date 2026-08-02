@@ -130,6 +130,18 @@ object PetRasterizer {
             )
         }
 
+        // The contour, before the upscale — the same pass the stage runs, so
+        // the widget's room is the same material as the app's.
+        val px = IntArray(smallWidth * smallHeight)
+        small.getPixels(px, 0, smallWidth, 0, 0, smallWidth, smallHeight)
+        inkRoomEdges(
+            pixels = px,
+            width = smallWidth,
+            height = smallHeight,
+            ink = if (colors.night) ROOM_INK_NIGHT else ROOM_INK,
+        )
+        small.setPixels(px, 0, smallWidth, 0, 0, smallWidth, smallHeight)
+
         val target = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(target)
         if (cornerRadiusPx > 0f) {
@@ -169,10 +181,9 @@ object PetRasterizer {
     ): List<ByteArray> {
         val clip = pack.clipFor(state)
         val source = pack.sheet.asAndroidBitmap()
-        val scale = min(
-            widthPx.toFloat() / pack.frameWidth,
-            heightPx.toFloat() / pack.frameHeight,
-        )
+        // The same scale the stage draws her at, margin included, or she is a
+        // different size in the widget than in the app.
+        val scale = pack.pixelScale(widthPx.toFloat(), heightPx.toFloat())
         val w = (pack.frameWidth * scale).roundToInt().coerceAtLeast(1)
         val h = (pack.frameHeight * scale).roundToInt().coerceAtLeast(1)
 

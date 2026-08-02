@@ -80,6 +80,19 @@ data class SpritePack(
      * enough resolution not to look pixellated can turn it off.
      */
     val pixelateRoom: Boolean,
+    /**
+     * How much of its box the frame is allowed to fill, 0..1.
+     *
+     * The vector rig is drawn in a 200x300 space with generous air around the
+     * character; a sheet's cell is cropped tight to her. Fitting both "to the
+     * box" therefore does not give them the same size at all — it gave the
+     * sheet a character two and a half times wider than the drawn one, filling
+     * the stage and hiding the room she is supposed to be standing in.
+     *
+     * The default leaves the same kind of air the rig has. A pack whose cells
+     * carry their own margin should raise it.
+     */
+    val fit: Float,
 ) {
     /** The clip for a state, or the idle loop if the pack does not draw it. */
     fun clipFor(state: PetState): SpriteClip = clips[state] ?: idle
@@ -109,6 +122,15 @@ data class SpritePack(
 object SpritePacks {
 
     private const val ROOT = "pets"
+
+    /**
+     * How much of its box a tightly cropped frame should fill by default.
+     *
+     * Measured against the drawn character rather than guessed: she stands
+     * about a fifth of the stage wide and half of it tall, and a tight cell
+     * scaled to fill the box came out at 56% and 79%.
+     */
+    private const val DEFAULT_FIT = 0.62f
     private val cache = mutableMapOf<String, SpritePack?>()
 
     /** The ids of every pack the app can offer, cheapest possible call. */
@@ -162,6 +184,7 @@ object SpritePacks {
             // something is a great deal better than an empty stage.
             idle = clips[PetState.IDLE] ?: SpriteClip(row = 0, from = 0, count = 1, fps = defaultFps),
             pixelateRoom = manifest.optBoolean("pixelateRoom", true),
+            fit = manifest.optDouble("fit", DEFAULT_FIT.toDouble()).toFloat().coerceIn(0.1f, 1f),
         )
     }
 }
@@ -191,8 +214,9 @@ fun SpritePet(
         val row = index / pack.columns
 
         // Fit the frame to the box without distorting it, the way the rig's own
-        // ART_WIDTH/ART_HEIGHT letterboxing does.
-        val scale = min(size.width / pack.frameWidth, size.height / pack.frameHeight)
+        // ART_WIDTH/ART_HEIGHT letterboxing does — less the pack's own margin,
+        // so a tightly cropped cell does not swallow the room behind her.
+        val scale = pack.pixelScale(size.width, size.height)
         val w = (pack.frameWidth * scale).roundToInt()
         val h = (pack.frameHeight * scale).roundToInt()
 
@@ -222,7 +246,7 @@ fun SpritePet(
  * nothing else.
  */
 fun SpritePack.pixelScale(width: Float, height: Float): Float =
-    min(width / frameWidth, height / frameHeight).coerceAtLeast(1f)
+    (min(width / frameWidth, height / frameHeight) * fit).coerceAtLeast(1f)
 
 /** Where the character's feet land, for anything that has to line up with her. */
 fun SpritePack.feetOffset(width: Float, height: Float): Offset {

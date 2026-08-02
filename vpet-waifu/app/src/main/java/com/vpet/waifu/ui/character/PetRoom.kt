@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import kotlin.math.abs
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -832,4 +833,80 @@ private fun heartPath(center: Offset, r: Float): Path = Path().apply {
         center.x, center.y + r * 0.95f,
     )
     close()
+}
+
+/**
+ * Draws a one-pixel contour around everything in a rendered room.
+ *
+ * Quantising the room to a sprite's grid makes its edges land on her pixels,
+ * and that is necessary — but it is not what makes her look like pixel art.
+ * She has a heavy dark line around every form; the room has none, so the two
+ * still read as different media standing in the same picture. This is the same
+ * fix the drawn character needed, applied to the room.
+ *
+ * Done as a pass over the finished pixels rather than by stroking each of the
+ * two dozen shapes in [drawPetRoom]: one algorithm covers every object, every
+ * theme and every piece of furniture bought later, including ones not written
+ * yet. On a room bitmap of a few hundred pixels a side it is well under a
+ * millisecond, and it runs only when the cached bitmap is rebuilt.
+ *
+ * [threshold] is what keeps the banded wall out of it. Steps of the wall's own
+ * shading differ by a handful of levels; a shelf against that wall differs by
+ * scores. Inking every boundary would draw a line across the wall at each band
+ * and turn the shading into a set of shelves.
+ *
+ * Operates on a plain [IntArray] of ARGB so the JVM art preview can run the
+ * identical code against a BufferedImage.
+ */
+fun inkRoomEdges(
+    pixels: IntArray,
+    width: Int,
+    height: Int,
+    ink: Int,
+    threshold: Int = 34,
+    strength: Float = 0.72f,
+) {
+    if (width < 3 || height < 3) return
+    // Read from a copy: inking in place would let a fresh line count as an edge
+    // for the pixel next to it and the contour would bleed outwards.
+    val source = pixels.copyOf()
+
+    fun differs(a: Int, b: Int): Boolean {
+        // A boundary with something transparent is always an edge — that is the
+        // silhouette of the room's own furniture against the wall behind it.
+        val aa = (a ushr 24) and 0xFF
+        val ba = (b ushr 24) and 0xFF
+        if (aa == 0 || ba == 0) return aa != ba
+        val dr = (((a ushr 16) and 0xFF) - ((b ushr 16) and 0xFF))
+        val dg = (((a ushr 8) and 0xFF) - ((b ushr 8) and 0xFF))
+        val db = ((a and 0xFF) - (b and 0xFF))
+        return maxOf(abs(dr), abs(dg), abs(db)) >= threshold
+    }
+
+    val inkR = (ink ushr 16) and 0xFF
+    val inkG = (ink ushr 8) and 0xFF
+    val inkB = ink and 0xFF
+
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            val i = y * width + x
+            val here = source[i]
+            if ((here ushr 24) and 0xFF == 0) continue
+
+            // Only the right and lower neighbours, so a boundary gets one line
+            // rather than two — checking all four inks both sides of every edge
+            // and doubles the weight of the contour.
+            val edge = (x + 1 < width && differs(here, source[i + 1])) ||
+                (y + 1 < height && differs(here, source[i + width]))
+            if (!edge) continue
+
+            val r = ((here ushr 16) and 0xFF)
+            val g = ((here ushr 8) and 0xFF)
+            val b = (here and 0xFF)
+            pixels[i] = (here and 0xFF000000.toInt()) or
+                (((r + (inkR - r) * strength).toInt().coerceIn(0, 255)) shl 16) or
+                (((g + (inkG - g) * strength).toInt().coerceIn(0, 255)) shl 8) or
+                ((b + (inkB - b) * strength).toInt().coerceIn(0, 255))
+        }
+    }
 }

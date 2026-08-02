@@ -37,6 +37,8 @@ class PixelRoomTest {
         clips = emptyMap(),
         idle = SpriteClip(row = 0, from = 0, count = 1, fps = 1f),
         pixelateRoom = true,
+        // 1.0 keeps the arithmetic in these tests about the grid, not the margin.
+        fit = 1f,
     )
 
     @Test

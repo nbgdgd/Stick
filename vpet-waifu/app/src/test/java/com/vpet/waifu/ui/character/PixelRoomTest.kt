@@ -98,6 +98,49 @@ class PixelRoomTest {
     }
 
     @Test
+    fun `banding the wall cuts its shades down without moving them`() {
+        fun render(bands: Int) = renderRoomBitmap(
+            widthPx = 200,
+            heightPx = 150,
+            density = Density(1f, 1f),
+            layoutDirection = LayoutDirection.Ltr,
+            paint = RoomPaint(
+                top = Color(0xFFEDE4FA),
+                bottom = Color(0xFFD9CCF2),
+                floor = Color(0xFFCFC2E8),
+                night = false,
+            ),
+            // No furniture: the wall is what is under test, and a shelf would
+            // contribute colours of its own to the count.
+            detail = RoomDetail.NONE,
+            decor = emptySet(),
+            theme = RoomTheme.DEFAULT_ID,
+            wallBands = bands,
+        )
+
+        fun shadesOf(image: androidx.compose.ui.graphics.ImageBitmap): Set<Int> {
+            val pixels = IntArray(image.width * image.height)
+            image.readPixels(pixels)
+            // The top half is wall in every configuration.
+            return pixels.take(image.width * image.height / 2).toHashSet()
+        }
+
+        val gradient = shadesOf(render(0))
+        val banded = shadesOf(render(6))
+
+        assertTrue(
+            "banding did not reduce the wall's shades: ${banded.size} vs ${gradient.size}",
+            banded.size < gradient.size,
+        )
+        // The endpoints are the theme's own colours, and a player paid for
+        // them: stepping the shading must not shift a single one.
+        assertTrue(
+            "banding invented shades outside the gradient it replaced",
+            banded.all { it in gradient || it == 0xFFEDE4FA.toInt() || it == 0xFFD9CCF2.toInt() },
+        )
+    }
+
+    @Test
     fun `the room is drawn, not left blank`() {
         // A resolution-independent scene rendered into a tiny bitmap is exactly
         // the kind of thing that silently comes out empty — if drawPetRoom ever

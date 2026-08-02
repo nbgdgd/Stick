@@ -126,6 +126,7 @@ object PetRasterizer {
                 detail = detail,
                 decor = decor,
                 theme = theme,
+                wallBands = WALL_BANDS,
             )
         }
 

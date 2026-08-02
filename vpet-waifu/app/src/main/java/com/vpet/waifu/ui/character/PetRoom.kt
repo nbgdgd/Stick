@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -224,10 +225,37 @@ fun DrawScope.drawPetRoom(
      * over; anything unknown falls back to the room she starts with.
      */
     theme: String = RoomTheme.DEFAULT_ID,
+    /**
+     * How many flat steps the wall's shading is cut into, or 0 for a gradient.
+     *
+     * Quantising the room to a sprite's pixel grid makes its edges chunky, but
+     * a smooth vertical gradient survives the trip perfectly happily — a
+     * 250-row bitmap has 250 rows to spend on it — and the wall stays the one
+     * unmistakably modern thing in an otherwise pixelated picture. Banding it
+     * is what actually finishes the effect.
+     *
+     * Done here rather than by posterising the finished bitmap because that
+     * shifts every hue it touches, and the room themes are something the player
+     * paid for. Stepping the same two colours keeps them exactly.
+     */
+    wallBands: Int = 0,
 ) {
     val look = RoomTheme.forId(theme)
     val body: DrawScope.() -> Unit = {
-        drawRect(Brush.verticalGradient(listOf(top, bottom)))
+        if (wallBands > 1) {
+            val step = size.height / wallBands
+            for (i in 0 until wallBands) {
+                drawRect(
+                    color = lerp(top, bottom, i / (wallBands - 1f)),
+                    topLeft = Offset(0f, i * step),
+                    // A hair of overlap: exact edges leave seams of background
+                    // showing between bands once the whole thing is scaled up.
+                    size = Size(size.width, step + 1f),
+                )
+            }
+        } else {
+            drawRect(Brush.verticalGradient(listOf(top, bottom)))
+        }
 
         val wall = size.height * floorFraction.coerceIn(0.2f, 0.95f)
         drawRect(color = floor, topLeft = Offset(0f, wall), size = Size(size.width, size.height - wall))

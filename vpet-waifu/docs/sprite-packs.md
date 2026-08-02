@@ -98,6 +98,14 @@ nearest-neighbour sampling. Same window, same shelf, same cat; same chunky
 edges she has. It happens on the stage and in the widget, and it is cached on
 the theme, the hour and the furniture, so nothing is re-rendered per frame.
 
+The wall's shading is also cut into six flat steps while this is on. The grid
+alone does not finish the job: a smooth vertical gradient survives being
+squeezed through a 250-row bitmap perfectly happily, and the wall stays the one
+unmistakably modern thing in an otherwise pixelated picture. It is done by
+drawing fewer steps of the same two colours rather than by posterising the
+finished bitmap, because posterising shifts every hue it touches and the room
+themes are something the player paid for.
+
 Add `"pixelateRoom": false` to `pet.json` to turn it off — worth doing for a
 pack drawn at a high enough resolution that it does not look pixellated in the
 first place. It also switches itself off automatically when the character's own

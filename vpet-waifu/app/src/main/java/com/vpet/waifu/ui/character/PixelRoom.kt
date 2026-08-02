@@ -43,6 +43,14 @@ private const val MIN_PIXEL_SCALE = 2f
 private const val MIN_ROOM_PX = 8
 
 /**
+ * How many flat steps the wall is cut into while pixelating.
+ *
+ * Six is enough to read as deliberate shading and few enough to read as a
+ * palette; a dozen is indistinguishable from the gradient it replaced.
+ */
+internal const val WALL_BANDS = 6
+
+/**
  * The room's colours at a given moment.
  *
  * Bundled rather than passed loose because they are the cache key: a bitmap has
@@ -117,6 +125,7 @@ fun rememberPixelRoom(
                 detail = detail,
                 decor = decor,
                 theme = theme,
+                wallBands = WALL_BANDS,
             )
         }
     }
@@ -132,6 +141,7 @@ fun renderRoomBitmap(
     detail: RoomDetail,
     decor: Set<String>,
     theme: String,
+    wallBands: Int = 0,
 ): ImageBitmap {
     val image = ImageBitmap(widthPx, heightPx)
     CanvasDrawScope().draw(
@@ -148,6 +158,7 @@ fun renderRoomBitmap(
             detail = detail,
             decor = decor,
             theme = theme,
+            wallBands = wallBands,
         )
     }
     return image

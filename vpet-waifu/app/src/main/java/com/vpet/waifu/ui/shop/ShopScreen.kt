@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.RamenDining
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.RocketLaunch
+import androidx.compose.material.icons.rounded.Weekend
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Icon
@@ -102,6 +103,7 @@ fun ShopScreen(
     onBuy: (ShopItem) -> Unit,
     onBuyUpgrade: (Upgrade) -> Unit,
     onWear: (String) -> Unit,
+    onApplyTheme: (String) -> Unit,
     onCategoryTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -139,12 +141,14 @@ fun ShopScreen(
         // The one shelf that stays open while she is on a shift — that is the
         // entire point of it, so it sits right where a dragging shift sends you.
         section(R.string.section_boosts, Icons.Rounded.RocketLaunch, Color(0xFFE6710B), Shop.BOOSTS, snapshot, nowMillis, onBuy, onCategoryTap, patting)
+        section(R.string.section_comfort, Icons.Rounded.Weekend, Color(0xFF7FD1E8), Shop.CARE, snapshot, nowMillis, onBuy, onCategoryTap, patting)
 
         // Everything above is eaten within the hour. Everything below is kept,
         // which is what makes the money worth earning in the first place.
         upgrades(R.string.section_room, Icons.Rounded.Chair, Color(0xFF7FD1E8), Upgrades.ROOM, snapshot, onBuyUpgrade, onWear, onCategoryTap, patting)
         upgrades(R.string.section_gear, Icons.Rounded.Handyman, Color(0xFFF0C860), Upgrades.GEAR, snapshot, onBuyUpgrade, onWear, onCategoryTap, patting)
         upgrades(R.string.section_outfits, Icons.Rounded.Checkroom, Color(0xFFB39CE8), Upgrades.OUTFITS, snapshot, onBuyUpgrade, onWear, onCategoryTap, patting)
+        upgrades(R.string.section_themes, Icons.Rounded.Weekend, Color(0xFFE8A15C), Upgrades.THEMES, snapshot, onBuyUpgrade, onApplyTheme, onCategoryTap, patting)
     }
 }
 
@@ -190,7 +194,8 @@ private fun UpgradeCard(
     val owned = snapshot.owns(upgrade.id)
     val unlocked = upgrade.isUnlocked(snapshot.level)
     val outfit = upgrade.kind == UpgradeKind.OUTFIT
-    val worn = outfit && snapshot.outfit == upgrade.id
+    val theme = upgrade.kind == UpgradeKind.THEME
+    val worn = (outfit && snapshot.outfit == upgrade.id) || (theme && snapshot.theme == upgrade.id)
     // An outfit tile is tinted with the outfit's own ribbon colour, so the six
     // wardrobe entries read as six different clothes rather than six hangers.
     val tint = when {
@@ -245,7 +250,7 @@ private fun UpgradeCard(
                         text = stringResource(R.string.action_worn),
                         tint = tint,
                     )
-                    owned && outfit -> OutlineButton(
+                    owned && (outfit || theme) -> OutlineButton(
                         text = stringResource(R.string.action_wear),
                         onClick = { onWear(upgrade.id) },
                         tint = tint,
@@ -277,6 +282,7 @@ private fun UpgradeCard(
 private fun upgradeEffectRes(upgrade: Upgrade): Int {
     val e = upgrade.effect
     return when {
+        upgrade.kind == UpgradeKind.THEME -> R.string.effect_theme
         upgrade.kind == UpgradeKind.OUTFIT -> R.string.effect_cosmetic
         e.hungerDecay < 1f -> R.string.effect_hunger_slower
         e.energyDecay < 1f -> R.string.effect_energy_slower
@@ -417,6 +423,7 @@ private fun ShopCard(
                             else R.string.still_paying_it_off,
                         )
                         PurchaseBlock.NOT_SICK -> stringResource(R.string.she_is_healthy)
+                        PurchaseBlock.ALREADY_TODAY -> stringResource(R.string.day_off_used)
                         else -> null
                     }
                     if (blocker != null) {

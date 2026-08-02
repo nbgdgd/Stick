@@ -57,6 +57,7 @@ data class PetStateEntity(
     /** Permanently owned upgrade ids, comma separated. */
     val owned: String = Upgrades.DEFAULT_OUTFIT,
     val outfit: String = Upgrades.DEFAULT_OUTFIT,
+    val theme: String = Upgrades.DEFAULT_THEME,
     val eventKind: String? = null,
     val eventDay: Long = 0,
     val eventSeenAt: Long = 0,
@@ -114,6 +115,14 @@ data class PetStateEntity(
     val goalRewarded: Boolean = false,
     /** The largest day-count anniversary already celebrated. */
     val celebratedMilestone: Int = 0,
+    /** The check-in streak, and the day it was last credited on. */
+    val streakDays: Int = 0,
+    val bestStreak: Int = 0,
+    val lastLoginDay: Long = 0,
+    /** The day the day off was last taken on, 0 for never. */
+    val dayOffDay: Long = 0,
+    /** What the check-in paid, until the player has been shown it. */
+    val pendingDaily: Int = 0,
 ) {
     companion object {
         const val SINGLETON_ID = 0
@@ -154,8 +163,9 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
     emoteUntil = emoteUntil,
     lastTickAt = lastTickAt,
     lastInteractionAt = lastInteractionAt,
-    owned = decodeIds(owned) + Upgrades.DEFAULT_OUTFIT,
+    owned = decodeIds(owned) + Upgrades.DEFAULT_OUTFIT + Upgrades.DEFAULT_THEME,
     outfit = outfit.takeIf { Upgrades.byId(it) != null } ?: Upgrades.DEFAULT_OUTFIT,
+    theme = theme.takeIf { Upgrades.byId(it) != null } ?: Upgrades.DEFAULT_THEME,
     event = enumOrNull<EventKind>(eventKind)?.let { PetEvent(it, eventDay, eventSeenAt) },
     lastMealId = lastMealId,
     repeatedMeals = repeatedMeals.coerceAtLeast(0),
@@ -193,6 +203,11 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
     goalBaseline = goalBaseline.coerceAtLeast(0),
     goalRewarded = goalRewarded,
     celebratedMilestone = celebratedMilestone.coerceAtLeast(0),
+    streakDays = streakDays.coerceAtLeast(0),
+    bestStreak = bestStreak.coerceAtLeast(0),
+    lastLoginDay = lastLoginDay.coerceAtLeast(0),
+    dayOffDay = dayOffDay.coerceAtLeast(0),
+    pendingDaily = pendingDaily.coerceAtLeast(0),
 )
 
 fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
@@ -223,6 +238,7 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     emoteUntil = emoteUntil,
     owned = owned.joinToString(","),
     outfit = outfit,
+    theme = theme,
     eventKind = event?.kind?.name,
     eventDay = event?.day ?: 0,
     eventSeenAt = event?.seenAt ?: 0,
@@ -260,6 +276,11 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     goalBaseline = goalBaseline,
     goalRewarded = goalRewarded,
     celebratedMilestone = celebratedMilestone,
+    streakDays = streakDays,
+    bestStreak = bestStreak,
+    lastLoginDay = lastLoginDay,
+    dayOffDay = dayOffDay,
+    pendingDaily = pendingDaily,
 )
 
 // The diary rides in one text column, like the effects: `kind:detail:amount:at`

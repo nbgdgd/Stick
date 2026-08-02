@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.Upgrades
 
-@Database(entities = [PetStateEntity::class], version = 7, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 8, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
@@ -161,5 +161,45 @@ abstract class PetDatabase : RoomDatabase() {
                 ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
             }
         }
+
+        /**
+         * The check-in streak, the day off, and the room she is decorated in.
+         *
+         * `lastLoginDay` and `dayOffDay` default to 0, which both read as
+         * "never" — so an upgrading save collects its first check-in the next
+         * time the app opens (streak day one) and can take a day off
+         * immediately, rather than being told it already had one in 1970.
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "streakDays INTEGER NOT NULL DEFAULT 0",
+                    "bestStreak INTEGER NOT NULL DEFAULT 0",
+                    "lastLoginDay INTEGER NOT NULL DEFAULT 0",
+                    "dayOffDay INTEGER NOT NULL DEFAULT 0",
+                    "theme TEXT NOT NULL DEFAULT '${Upgrades.DEFAULT_THEME}'",
+                    "pendingDaily INTEGER NOT NULL DEFAULT 0",
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+            }
+        }
+
+        /**
+         * The chain, in order, as one value.
+         *
+         * A migration that exists but is never handed to the builder is worse
+         * than one that does not exist at all: every fresh install works and
+         * every *upgrading* install crashes on launch, which is invisible right
+         * up until release day. Registering the list rather than enumerating
+         * migrations at the call site means adding one here is enough.
+         */
+        val ALL_MIGRATIONS: Array<Migration> = arrayOf(
+            MIGRATION_1_2,
+            MIGRATION_2_3,
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6,
+            MIGRATION_6_7,
+            MIGRATION_7_8,
+        )
     }
 }

@@ -35,6 +35,9 @@ enum class PetAlert(val id: Int) {
     /** Something happened today. */
     EVENT(2_004),
 
+    /** Nobody has looked in for days — the one alert that is not a reaction. */
+    MISSED(2_007),
+
     /** She fell ill — half the game is blocked until she is treated. */
     SICK(2_005),
 
@@ -113,6 +116,18 @@ class PetNotifier @Inject constructor(
             )
         }
 
+        // The only alert that is not a reaction to a transition: everything
+        // else here fires because something changed, which by definition never
+        // happens for a player who has stopped opening the app.
+        val awayDays = ((nowMillis - snapshot.lastInteractionAt) / DAY_MILLIS).toInt()
+        if (awayDays >= MISSED_AFTER_DAYS && previous == null) {
+            show(
+                PetAlert.MISSED,
+                context.getString(R.string.notify_missed_title),
+                context.getString(R.string.notify_missed_body, awayDays),
+            )
+        }
+
         // A fresh wish. Compared by slot so the same request never fires twice.
         val request = snapshot.request
         if (request != null && previous?.request?.slot != request.slot) {
@@ -168,6 +183,9 @@ class PetNotifier @Inject constructor(
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_pet_notification)
+            // The shade tints the small icon with this; without it the app's
+            // own colour never appears anywhere outside the app.
+            .setColor(NOTIFICATION_ACCENT)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
@@ -188,6 +206,10 @@ class PetNotifier @Inject constructor(
     }
 
     private companion object {
+        const val DAY_MILLIS = 24L * 60 * 60 * 1000
+        const val MISSED_AFTER_DAYS = 2
+        const val NOTIFICATION_ACCENT = 0xFFA855F7.toInt()
+
         const val CHANNEL_ID = "pet_events"
     }
 }

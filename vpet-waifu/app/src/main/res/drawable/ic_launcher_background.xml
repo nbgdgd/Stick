@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Deep and near-flat on purpose. The bright violet disc this replaces
+     sat directly behind her hair at 1.33:1, so the top of her head
+     disappeared into it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#16161C"
+        android:fillColor="#14121E"
         android:pathData="M0,0 L108,0 L108,108 L0,108 Z" />
     <path
-        android:fillColor="#A855F7"
-        android:pathData="M54,20 a34,34 0 1,0 68,0 a34,34 0 1,0 -68,0 Z" />
+        android:fillColor="#221C3A"
+        android:pathData="M7,54 a47,47 0 1,0 94,0 a47,47 0 1,0 -94,0 Z" />
+    <path
+        android:fillColor="#FFC46B"
+        android:pathData="M77,28 C77.38,30.04 77.96,30.62 80,31 C77.96,31.38 77.38,31.96 77,34 C76.62,31.96 76.04,31.38 74,31 C76.04,30.62 76.62,30.04 77,28 Z" />
+    <path
+        android:fillColor="#FFC46B"
+        android:pathData="M31,28.8 C31.28,30.3 31.7,30.72 33.2,31 C31.7,31.28 31.28,31.7 31,33.2 C30.72,31.7 30.3,31.28 28.8,31 C30.3,30.72 30.72,30.3 31,28.8 Z" />
 </vector>

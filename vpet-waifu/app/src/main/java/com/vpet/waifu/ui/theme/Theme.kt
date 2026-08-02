@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
+import com.vpet.waifu.ui.character.RoomTheme
 
 /** Stat colours, shared by the bars, the badges and the widget. */
 object StatColors {
@@ -23,14 +24,27 @@ object StatColors {
     val Exp = Tokens.Semantic.Exp
 }
 
-/** Room backdrops behind the character, day and night. */
+/**
+ * Room backdrops behind the character, day and night.
+ *
+ * Violet, to agree with the furniture the room is actually drawn from. These
+ * were briefly cream and tan for a redesign that was reverted to the violet
+ * accent everywhere except here, which left her standing on a tan floor in a
+ * cream room full of lavender furniture. The warm set survives as the "warm
+ * room" theme; the values below and everything in
+ * [com.vpet.waifu.ui.character.RoomTheme.Default] are now the same six colours,
+ * declared once.
+ */
 object StageColors {
-    val DayTop = Color(0xFFFFF3E7)
-    val DayBottom = Color(0xFFF2DCC6)
-    val NightTop = Color(0xFF262638)
-    val NightBottom = Color(0xFF15151F)
-    val FloorLight = Color(0xFFE3C9AE)
-    val FloorDark = Color(0xFF2C2C40)
+    val DayTop = RoomTheme.Default.dayTop
+    val DayBottom = RoomTheme.Default.dayBottom
+    val NightTop = RoomTheme.Default.nightTop
+    val NightBottom = RoomTheme.Default.nightBottom
+    val FloorLight = RoomTheme.Default.floorLight
+    val FloorDark = RoomTheme.Default.floorDark
+
+    /** The wall and floor a bought room id is dressed in. */
+    fun forTheme(themeId: String?): RoomTheme = RoomTheme.forId(themeId)
 }
 
 /**

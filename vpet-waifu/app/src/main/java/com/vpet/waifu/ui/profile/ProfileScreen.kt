@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
@@ -533,7 +534,11 @@ private fun AchievementsCard(snapshot: PetSnapshot) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     // Each family is listed easy-to-hard, so the first unearned entries are
     // the nearest ones to unlocking.
-    val shown = if (expanded) trophies else trophies.filter { !it.earned }.take(3)
+    // "Nearest" by how much of the condition is done, not by declaration
+    // order — a brand-new save used to be shown "fifty shifts" as a goal.
+    val next = trophies.filter { !it.earned }.sortedByDescending { it.fraction }.take(3)
+    val recent = trophies.filter { it.earned }.takeLast(2)
+    val shown = if (expanded) trophies else recent + next
 
     PanelCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -569,10 +574,14 @@ private fun AchievementsCard(snapshot: PetSnapshot) {
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 shown.forEach { trophy ->
-                    Box(modifier = Modifier.alpha(if (trophy.earned) 1f else 0.45f)) {
+                    Box(modifier = Modifier.alpha(if (trophy.earned) 1f else 0.55f)) {
                         EffectChip(
                             icon = trophy.icon,
-                            text = stringResource(trophy.titleRes),
+                            text = if (trophy.earned) {
+                                stringResource(trophy.titleRes)
+                            } else {
+                                "${stringResource(trophy.titleRes)} · ${trophy.current}/${trophy.target}"
+                            },
                             tint = if (trophy.earned) trophy.tint else Accents.TextMuted,
                         )
                     }
@@ -583,13 +592,17 @@ private fun AchievementsCard(snapshot: PetSnapshot) {
 }
 
 /** Owned outfits, wearable with one tap. The shop still sells; this shows off. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WardrobeCard(snapshot: PetSnapshot, onWear: (String) -> Unit) {
     val outfits = Upgrades.OUTFITS.filter { snapshot.owns(it.id) }
     PanelCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(14.dp),
+        // Six of these do not fit a phone: the last two — one of them the
+        // 25 000 ¥ gown — used to be clipped off the card and untappable.
+        FlowRow(
+            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             outfits.forEach { outfit ->
                 val worn = snapshot.outfit == outfit.id
@@ -623,6 +636,7 @@ private fun WardrobeCard(snapshot: PetSnapshot, onWear: (String) -> Unit) {
                         style = MaterialTheme.typography.labelSmall,
                         color = if (worn) Accents.Text else Accents.TextMuted,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

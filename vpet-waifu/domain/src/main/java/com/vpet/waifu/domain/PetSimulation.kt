@@ -515,6 +515,78 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         )
     }
 
+    // --- the daily check-in --------------------------------------------------
+
+    /**
+     * The reason to open the app tomorrow.
+     *
+     * Called once when the app comes to the foreground. Everything else in the
+     * game pays for *doing* something; this pays for turning up, and the streak
+     * is what makes the fourth day in a row worth more than the first — 675 a
+     * day at the top, which is a cafe shift for nothing.
+     *
+     * Keyed on the day index rather than on elapsed hours so that "a day" means
+     * what the calendar says: opening the app at 23:50 and again at 00:10 is
+     * two days, and playing all afternoon is still one.
+     */
+    fun claimDaily(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        val day = Events.dayOf(nowMillis)
+        if (day == current.lastLoginDay) return current
+
+        // Only an unbroken run continues; anything else starts over at one. A
+        // fresh save lands here too, and gets day one.
+        val streak = if (day == current.lastLoginDay + 1) current.streakDays + 1 else 1
+        val reward = dailyReward(streak)
+        val claimed = current.copy(
+            progress = current.progress.plus(money = reward),
+            totalEarned = current.totalEarned + reward,
+            streakDays = streak,
+            bestStreak = max(current.bestStreak, streak),
+            lastLoginDay = day,
+            pendingDaily = reward,
+            journal = Journal.append(
+                current.journal,
+                JournalEntry(JournalKind.DAILY, streak.toString(), reward, nowMillis),
+            ),
+        )
+        return withComeback(claimed, current.lastInteractionAt, nowMillis)
+    }
+
+    /**
+     * A day away is met with a reunion rather than a corpse.
+     *
+     * The catch-up simulation is honest about a long absence: come back after a
+     * day and she is at zero hunger, miserable, and probably ill. That is the
+     * correct arithmetic and the wrong story — the pet the whole app is about
+     * is not a punishment machine, and a player who returns to a wreck has
+     * every reason not to return again. So she coped: she ate something, she
+     * kept busy, and she is glad to see you. The floor is deliberately modest —
+     * she is fine, not fresh — and it never *lowers* anything.
+     */
+    private fun withComeback(snapshot: PetSnapshot, lastInteractionAt: Long, nowMillis: Long): PetSnapshot {
+        if (nowMillis - lastInteractionAt < COMEBACK_AWAY_MILLIS) return snapshot
+        return snapshot.copy(
+            stats = PetStats.coerced(
+                hunger = max(snapshot.stats.hunger, COMEBACK_FLOOR),
+                energy = snapshot.stats.energy,
+                mood = max(snapshot.stats.mood, COMEBACK_FLOOR),
+            ),
+            journal = Journal.append(
+                snapshot.journal,
+                JournalEntry(JournalKind.COMEBACK, at = nowMillis),
+            ),
+        ).plusBond(Bond.COMEBACK, nowMillis)
+    }
+
+    /** What a check-in on day [streak] of a run pays. */
+    fun dailyReward(streak: Int): Int =
+        DAILY_BASE + DAILY_PER_STREAK_DAY * streak.coerceIn(1, DAILY_STREAK_CAP)
+
+    /** Clears the check-in card once the player has seen what it paid. */
+    fun acknowledgeDaily(snapshot: PetSnapshot): PetSnapshot =
+        if (snapshot.pendingDaily == 0) snapshot else snapshot.copy(pendingDaily = 0)
+
     /** Marks the day's event as read, so it stops being announced. */
     fun acknowledgeEvent(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
         val event = snapshot.event ?: return snapshot
@@ -759,6 +831,24 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             if (kind == OccupationKind.WORK) tuning.badWorkMultiplier else tuning.badStudyMultiplier
     }
 
+    /**
+     * How well she is being paid *this minute*, and what that is worth.
+     *
+     * The mood-to-pay curve is the one rule the player can act on mid-shift —
+     * a pat lifts mood, mood lifts wages — and until now it was invisible until
+     * the shift ended and the result card said "poor". Same two functions the
+     * accrual uses, so the number on screen cannot drift from the number in the
+     * wallet.
+     */
+    fun currentQuality(snapshot: PetSnapshot): OutcomeQuality = qualityFor(snapshot.stats.mood)
+
+    fun currentPayMultiplier(snapshot: PetSnapshot): Float = multiplierFor(
+        currentQuality(snapshot),
+        // Off the clock there is no running job to ask; work is the honest
+        // preview, since it is what the button on the card would start.
+        snapshot.occupation?.kind ?: OccupationKind.WORK,
+    )
+
     /** Preview of what a session would pay right now — the UI shows it on the card. */
     fun projectedPayout(snapshot: PetSnapshot, occupation: Occupation): Int {
         val multiplier = multiplierFor(qualityFor(snapshot.stats.mood), occupation.kind)
@@ -836,12 +926,12 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         val emote = when (item.category) {
             ShopCategory.FOOD -> Emote.EATING
             ShopCategory.GIFT -> Emote.LOVED
-            ShopCategory.PILL, ShopCategory.BOOST -> Emote.CELEBRATING
+            ShopCategory.PILL, ShopCategory.BOOST, ShopCategory.CARE -> Emote.CELEBRATING
         }
         val emoteMillis = when (item.category) {
             ShopCategory.FOOD -> tuning.eatingEmoteMillis
             ShopCategory.GIFT -> tuning.lovedEmoteMillis
-            ShopCategory.PILL, ShopCategory.BOOST -> tuning.celebrateEmoteMillis
+            ShopCategory.PILL, ShopCategory.BOOST, ShopCategory.CARE -> tuning.celebrateEmoteMillis
         }
 
         // Feeding her the same thing over and over is something she notices.
@@ -872,11 +962,15 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             sickSince = if (cures) 0L else current.sickSince,
             runDownMinutes = if (cures) 0f else current.runDownMinutes,
             sicknessesNursed = current.sicknessesNursed + (if (cures) 1 else 0),
+            // Spending the day together is the one purchase the calendar
+            // rations, so the day it happened is part of the save.
+            dayOffDay = if (item.id == Shop.DAY_OFF_ID) Events.dayOf(nowMillis) else current.dayOffDay,
         ).let {
             when {
                 cures -> it.plusBond(Bond.NURSED, nowMillis)
                 item.category == ShopCategory.FOOD -> it.plusBond(Bond.FEED, nowMillis)
                 item.category == ShopCategory.GIFT -> it.plusBond(Bond.GIFT, nowMillis)
+                item.category == ShopCategory.CARE -> it.plusBond(Bond.DAY_OFF, nowMillis)
                 else -> it
             }
         }.let { bought ->
@@ -919,8 +1013,10 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             progress = current.progress.plus(money = -upgrade.price),
             owned = current.owned + upgrade.id,
             // Buying an outfit puts it on; there is no reason to make the
-            // player then find it in a list and tap it again.
+            // player then find it in a list and tap it again. A theme is the
+            // same purchase in a different drawer.
             outfit = if (upgrade.kind == UpgradeKind.OUTFIT) upgrade.id else current.outfit,
+            theme = if (upgrade.kind == UpgradeKind.THEME) upgrade.id else current.theme,
             lastInteractionAt = nowMillis,
         ).withEmote(Emote.CELEBRATING, nowMillis, tuning.celebrateEmoteMillis)
     }
@@ -931,6 +1027,15 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         val upgrade = Upgrades.byId(upgradeId) ?: return current
         if (upgrade.kind != UpgradeKind.OUTFIT || !current.owns(upgradeId)) return current
         return current.copy(outfit = upgradeId, lastInteractionAt = nowMillis)
+            .withEmote(Emote.LOVED, nowMillis, tuning.lovedEmoteMillis)
+    }
+
+    /** Redecorates the room with a theme she already owns. */
+    fun applyTheme(snapshot: PetSnapshot, upgradeId: String, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        val upgrade = Upgrades.byId(upgradeId) ?: return current
+        if (upgrade.kind != UpgradeKind.THEME || !current.owns(upgradeId)) return current
+        return current.copy(theme = upgradeId, lastInteractionAt = nowMillis)
             .withEmote(Emote.LOVED, nowMillis, tuning.lovedEmoteMillis)
     }
 
@@ -965,6 +1070,26 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
 
     companion object {
         const val MS_PER_MINUTE = 60_000L
+
+        /** The check-in: a flat welcome, plus a day's worth of streak. */
+        const val DAILY_BASE = 150
+        const val DAILY_PER_STREAK_DAY = 75
+
+        /**
+         * Where the streak stops paying more.
+         *
+         * A week is long enough that keeping it going is an achievement and
+         * short enough that a player who breaks one is a week from the top
+         * again rather than a month — a curve that keeps climbing forever turns
+         * a missed day into a reason to stop playing.
+         */
+        const val DAILY_STREAK_CAP = 7
+
+        /** Away this long and coming back is a reunion — see [withComeback]. */
+        const val COMEBACK_AWAY_MILLIS = 24L * 60 * 60 * 1000
+
+        /** Where she has kept herself while you were gone. Fine, not fresh. */
+        const val COMEBACK_FLOOR = 55f
 
         /**
          * How far ahead [nextVisibleChangeAt] will look.

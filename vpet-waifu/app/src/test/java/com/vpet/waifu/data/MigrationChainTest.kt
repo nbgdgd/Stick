@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import com.vpet.waifu.data.db.PetDatabase
+import com.vpet.waifu.domain.Upgrades
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -34,14 +35,7 @@ class MigrationChainTest {
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
-    private val chain = listOf(
-        PetDatabase.MIGRATION_1_2,
-        PetDatabase.MIGRATION_2_3,
-        PetDatabase.MIGRATION_3_4,
-        PetDatabase.MIGRATION_4_5,
-        PetDatabase.MIGRATION_5_6,
-        PetDatabase.MIGRATION_6_7,
-    )
+    private val chain = PetDatabase.ALL_MIGRATIONS.toList()
 
     @Test
     fun `the full chain runs and lands on exactly the modern schema`() {
@@ -68,6 +62,45 @@ class MigrationChainTest {
             assertEquals(0, cursor.getInt(3))
             assertEquals("", cursor.getString(4))
         }
+    }
+
+    /**
+     * The migrated row has to be *loadable*, not merely shaped right.
+     *
+     * A column that arrives with a default the mapper rejects — an empty theme,
+     * a streak read as "already claimed today" — passes the schema check above
+     * and still ruins the first launch after the update.
+     */
+    @Test
+    fun `an upgraded save loads as a playable pet with everything new at zero`() {
+        val db = v1Database()
+        chain.forEach { it.migrate(db) }
+
+        db.query(
+            "SELECT streakDays, bestStreak, lastLoginDay, dayOffDay, theme, pendingDaily FROM pet_state",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+            assertEquals(0, cursor.getInt(1))
+            // Zero on both day columns reads as "never", so she collects her
+            // first check-in and can take a day off the moment she is updated.
+            assertEquals(0L, cursor.getLong(2))
+            assertEquals(0L, cursor.getLong(3))
+            assertEquals(Upgrades.DEFAULT_THEME, cursor.getString(4))
+            assertEquals(0, cursor.getInt(5))
+        }
+    }
+
+    @Test
+    fun `the chain the app is handed is the whole chain`() {
+        // The failure this catches is invisible on every fresh install and
+        // fatal on every upgrading one: a migration written but never
+        // registered, leaving a gap Room can only answer by crashing.
+        val steps = PetDatabase.ALL_MIGRATIONS.map { it.startVersion to it.endVersion }
+
+        // The version Room itself stamps on a fresh file, so this cannot drift
+        // from the @Database annotation the way a typed-out number would.
+        assertEquals((1 until freshVersion()).map { it to it + 1 }, steps)
     }
 
     /** The v1 table, exactly as the first release created it, with one pet in it. */
@@ -104,12 +137,17 @@ class MigrationChainTest {
     }
 
     /** The column set Room builds when there is no history at all. */
-    private fun freshColumns(): Set<String> {
+    private fun freshColumns(): Set<String> = withFreshDatabase { columnsOf(it) }
+
+    /** The schema version Room stamps on a file it created itself. */
+    private fun freshVersion(): Int = withFreshDatabase { it.version }
+
+    private fun <T> withFreshDatabase(read: (SupportSQLiteDatabase) -> T): T {
         val room = Room.inMemoryDatabaseBuilder(context, PetDatabase::class.java)
             .allowMainThreadQueries()
             .build()
         return try {
-            columnsOf(room.openHelper.writableDatabase)
+            read(room.openHelper.writableDatabase)
         } finally {
             room.close()
         }

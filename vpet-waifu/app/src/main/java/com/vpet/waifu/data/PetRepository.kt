@@ -1,6 +1,7 @@
 package com.vpet.waifu.data
 
 import com.vpet.waifu.data.db.PetStateDao
+import com.vpet.waifu.data.db.PetStateEntity
 import com.vpet.waifu.data.db.toEntity
 import com.vpet.waifu.data.db.toSnapshot
 import com.vpet.waifu.domain.Focus
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.InputStream
+import java.io.OutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -76,6 +79,18 @@ class PetRepository @Inject constructor(
         simulation.wear(current, upgradeId, now)
     }
 
+    suspend fun applyTheme(upgradeId: String): PetSnapshot = mutate { current, now ->
+        simulation.applyTheme(current, upgradeId, now)
+    }
+
+    /** The once-a-day check-in. Called when the app comes to the foreground. */
+    suspend fun claimDaily(): PetSnapshot = mutate(simulation::claimDaily)
+
+    /** Clears the check-in card once the player has seen what it paid. */
+    suspend fun acknowledgeDaily(): PetSnapshot = mutate { current, _ ->
+        simulation.acknowledgeDaily(current)
+    }
+
     suspend fun acknowledgeEvent(): PetSnapshot = mutate { current, now ->
         simulation.acknowledgeEvent(current, now)
     }
@@ -115,6 +130,41 @@ class PetRepository @Inject constructor(
         val now = clock.nowMillis()
         val stored = dao.load()?.toSnapshot() ?: PetSnapshot.initial(now)
         return simulation.advanceTo(stored, now)
+    }
+
+    // --- the save file, as a file --------------------------------------------
+
+    /**
+     * Writes the whole save to [out] — see [SaveCodec].
+     *
+     * The world is advanced first, so the file is the pet as she is now rather
+     * than as she was at the last write; exporting mid-shift and restoring
+     * tomorrow would otherwise resurrect a session that ended hours ago.
+     */
+    suspend fun exportSave(out: OutputStream): Result<Unit> = writeLock.withLock {
+        val now = clock.nowMillis()
+        val current = simulation.advanceTo(
+            dao.load()?.toSnapshot() ?: PetSnapshot.initial(now),
+            now,
+        )
+        val entity = current.toEntity()
+        dao.save(entity)
+        SaveCodec.exportTo(entity, out)
+    }
+
+    /**
+     * Replaces the save with the one in [input].
+     *
+     * All or nothing: a file that fails to parse leaves the row untouched, so
+     * a mis-picked file can never be the thing that ends a pet. The caller is
+     * expected to have asked first — this cannot be undone.
+     */
+    suspend fun importSave(input: InputStream): Result<PetSnapshot> = writeLock.withLock {
+        SaveCodec.importFrom(input).map { imported ->
+            val restored = imported.copy(id = PetStateEntity.SINGLETON_ID)
+            dao.save(restored)
+            restored.toSnapshot()
+        }
     }
 
     private suspend fun mutate(action: (PetSnapshot, Long) -> PetSnapshot): PetSnapshot =

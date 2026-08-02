@@ -7,18 +7,17 @@
 
 ## Иконки
 
-### Tabler Icons — MIT
-- Источник: https://github.com/tabler/tabler-icons
-- Лицензия: MIT License, Copyright (c) 2020-2026 Paweł Kuna
-- Использование: единый набор интерфейсных иконок (целевой набор редизайна)
-- Поставка для Jetpack Compose: библиотека compose-icons,
-  артефакт `br.com.devsrsouza.compose.icons:tabler-icons:1.1.1` (Maven Central),
-  лицензия MIT — https://github.com/DevSrSouza/compose-icons
-
 ### Material Icons (androidx material-icons-extended) — Apache-2.0
 - Источник: https://github.com/google/material-design-icons
 - Лицензия: Apache License 2.0
-- Использование: текущий набор иконок до завершения миграции на Tabler Icons
+- Использование: интерфейсные глифы (чипы, заголовки секций, навигация)
+
+Крупные предметные иконки (товары магазина, работы, наряды, темы комнаты, цели
+мини-игр) — не сторонние: это оригинальные VectorDrawable, нарисованные для
+проекта, `app/src/main/res/drawable/art_*.xml`.
+
+Tabler Icons рассматривались как единый сторонний набор и **не используются** —
+зависимость в проект не добавлялась.
 
 ## Шрифты
 
@@ -52,6 +51,7 @@
 ## Оригинальные ассеты проекта (внешним лицензиям не подлежат)
 
 - Арт персонажа и комнаты: оригинальный векторный риг, отрисован кодом
-  (Jetpack Compose Canvas), все позы и анимации созданы для проекта
-- Звуковые эффекты `res/raw/sfx_*.ogg` и музыка `res/raw/music_*.ogg`:
+  (Jetpack Compose Canvas), все позы, темы комнаты и анимации созданы для проекта
+- Иконка приложения и иконка уведомлений: оригинальные, нарисованы для проекта
+- Звуковые эффекты `res/raw/sfx_*.wav` и музыка `res/raw/music_*.ogg`:
   синтезированы специально для проекта

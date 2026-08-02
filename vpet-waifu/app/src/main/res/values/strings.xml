@@ -31,7 +31,6 @@
     <string name="action_open_app">Open app</string>
     <string name="action_hide_bubble">Hide bubble</string>
     <string name="action_grant_overlay">Open settings</string>
-    <string name="action_send">Send</string>
     <string name="action_call_home">Call home</string>
     <string name="action_ok">OK</string>
 
@@ -39,7 +38,7 @@
     <string name="section_study">Study</string>
     <string name="section_food">Food</string>
     <string name="section_gifts">Gifts</string>
-    <string name="section_pills">Pills</string>
+    <string name="section_pills">Quick fixes</string>
     <string name="section_boosts">Boosts</string>
 
     <string name="job_cafe">Café</string>
@@ -60,16 +59,14 @@
     <string name="item_teddy">Teddy bear</string>
     <string name="item_headphones">Headphones</string>
     <string name="item_ring">Ring</string>
-    <string name="item_advance">Cash advance</string>
-    <string name="item_exp_pill">EXP pill</string>
+    <string name="item_advance">Advance pay</string>
+    <string name="item_exp_pill">All-nighter</string>
     <string name="item_haste_shot">Haste shot</string>
     <string name="item_overtime_pass">Overtime pass</string>
     <string name="item_focus_tea">Focus tea</string>
     <string name="item_second_wind">Second wind</string>
     <string name="item_good_vibes">Good vibes mix</string>
-    <string name="unlocks_at_level" tools:ignore="PluralsCandidate">Unlocks at level %1$d</string>
     <string name="session_remaining">%1$s left</string>
-    <string name="duration_minutes" tools:ignore="PluralsCandidate">%1$d min shift</string>
     <string name="too_tired_to_work">Low energy — she needs food or sleep</string>
     <string name="tab_her">Her</string>
     <string name="state_sick">Under the weather</string>
@@ -92,7 +89,6 @@
     <string name="request_play">She wants to play one round</string>
     <string name="request_window">%1$s left</string>
 
-    <string name="bond_title">Bond</string>
     <string name="bond_level_label" tools:ignore="PluralsCandidate">Bond %1$d</string>
     <string name="bond_progress">%1$d / %2$d</string>
     <string name="bond_today">today +%1$d / %2$d</string>
@@ -204,14 +200,11 @@
     <string name="game_best">Best: %1$d</string>
     <string name="game_new_record">New record: %1$d!</string>
     <string name="still_paying_it_off">The previous one is still active</string>
-    <string name="section_busy">She is busy right now</string>
     <string name="tip_jar_title">Passive income</string>
-    <string name="tip_jar_body">Loose change while you are watching her at home: %1$d ¥ a minute, up to %2$d ¥ a day. It stops while she is out on a shift — what a shift pays is all a shift pays.</string>
     <string name="exp_title">Level %1$d</string>
     <string name="exp_progress">%1$d / %2$d EXP</string>
     <string name="exp_next_level">%1$d EXP to level %2$d</string>
     <string name="exp_maxed">Maximum level</string>
-    <string name="not_enough_money">Too pricey</string>
     <string name="pills_warning">Instant effect, temporary penalty — listed on the card</string>
     <string name="effect_hunger_surge">hunger drains faster for %1$s</string>
     <string name="effect_exhaustion">energy drains faster for %1$s</string>
@@ -381,7 +374,7 @@
     <string name="progress_info">Studying earns EXP; work adds +%1$s EXP per minute. Passive income accrues while the app is open and she is free; the daily cap resets at midnight.</string>
     <string name="settings_title">Settings</string>
     <string name="licenses_title">Licenses</string>
-    <string name="licenses_body">Icons: Material Icons (Apache 2.0). Font: Golos Text (SIL OFL 1.1, Paratype). Sounds, music and character art were made for this app. The full register lives in the project\'s ATTRIBUTIONS.md.</string>
+    <string name="licenses_body">Icons: Material Icons (Apache 2.0). Font: Golos Text (SIL OFL 1.1, Paratype). Sounds, music, character and item art were made for this app.</string>
     <string name="shop_busy_banner">Busy until %1$s — food is unavailable</string>
     <string name="shop_asleep_banner">She is asleep — food is unavailable</string>
     <string name="action_start_work">Start shift</string>
@@ -391,4 +384,62 @@
     <string name="ach_progress">%1$d of %2$d earned</string>
     <string name="ach_show_all">All (%1$d)</string>
     <string name="ach_hide">Collapse</string>
+
+    <!-- celebrations -->
+    <string name="levelup_title">Level up</string>
+    <string name="levelup_body" tools:ignore="PluralsCandidate">Level %1$d</string>
+    <string name="bond_levelup_title">Closer than before</string>
+    <string name="bond_levelup_body">You are now %1$s</string>
+    <string name="action_nice">Nice</string>
+
+    <!-- daily streak -->
+    <string name="streak_title">Day streak</string>
+    <string name="streak_days" tools:ignore="PluralsCandidate">%1$d in a row</string>
+    <string name="streak_best" tools:ignore="PluralsCandidate">best %1$d</string>
+    <string name="daily_title">Welcome back</string>
+    <string name="daily_reward" tools:ignore="PluralsCandidate">Daily reward · +%1$d ¥</string>
+    <string name="daily_streak_reward" tools:ignore="PluralsCandidate">Day %1$d in a row · +%2$d ¥</string>
+
+    <!-- coming back after a long absence -->
+    <string name="comeback_title">She waited</string>
+    <string name="comeback_body">She saved you dinner and some money</string>
+
+    <!-- save file -->
+    <string name="save_title">Save file</string>
+    <string name="save_hint">The file can be moved to another phone</string>
+    <string name="save_export">Save to a file</string>
+    <string name="save_import">Restore from a file</string>
+    <string name="save_exported">File saved</string>
+    <string name="save_imported">Progress restored</string>
+    <string name="save_failed">Could not read that file</string>
+    <string name="save_replace_title">Replace progress?</string>
+    <string name="save_replace_body">Your current progress will be replaced by the file. This cannot be undone.</string>
+    <string name="action_replace">Replace</string>
+    <string name="action_cancel">Cancel</string>
+
+    <!-- room themes &amp; the day off -->
+    <string name="section_comfort">Comfort</string>
+    <string name="section_themes">Room themes</string>
+    <string name="theme_default">Her room</string>
+    <string name="theme_cozy">Warm room</string>
+    <string name="theme_night">Night room</string>
+    <string name="theme_sakura">Sakura</string>
+    <string name="effect_theme">changes the room</string>
+    <string name="item_day_off">A day off together</string>
+    <string name="day_off_effect">full rest · once a day</string>
+    <string name="day_off_used">Already had one today</string>
+
+    <!-- shift payout multiplier -->
+    <string name="shift_pay_great">pay ×1.3</string>
+    <string name="shift_pay_good">pay ×1</string>
+    <string name="shift_pay_poor">pay ×0.7</string>
+    <string name="shift_pay_bad">pay ×0.45</string>
+    <string name="shift_pay_hint">Pat her — the shift pays more</string>
+
+    <!-- arcade cost -->
+    <string name="game_cost_energy" tools:ignore="PluralsCandidate">−%1$d energy</string>
+
+    <!-- pull-back notification -->
+    <string name="notify_missed_title">She misses you</string>
+    <string name="notify_missed_body" tools:ignore="PluralsCandidate">%1$d days since you last met</string>
 </resources>

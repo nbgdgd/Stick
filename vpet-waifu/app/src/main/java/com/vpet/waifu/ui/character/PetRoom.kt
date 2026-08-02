@@ -33,6 +33,158 @@ enum class RoomDetail {
 }
 
 /**
+ * A room look, as sold in the shop.
+ *
+ * Wall and floor live here beside the furniture because a theme that only
+ * recoloured the nightstand would still be the same room. [drawPetRoom] is
+ * still handed its wall and floor colours by the caller rather than reading
+ * them off the theme — the app cross-fades those between day and night, so they
+ * have to be animatable values — and [com.vpet.waifu.ui.theme.StageColors]
+ * takes them from here so there is one source for them.
+ *
+ * Only the things a decorator would choose are themed: planks, carcasses,
+ * cushions, the room's own light. A book spine and a fridge stay the colour a
+ * book spine and a fridge are.
+ */
+data class RoomTheme(
+    val id: String,
+    val dayTop: Color,
+    val dayBottom: Color,
+    val floorLight: Color,
+    val nightTop: Color,
+    val nightBottom: Color,
+    val floorDark: Color,
+    /** Planks, the nightstand's carcass, the plant pot. */
+    val woodDay: Color,
+    val woodNight: Color,
+    /** Drawer fronts and pot rims — one step lighter than the wood. */
+    val trimDay: Color,
+    val trimNight: Color,
+    /** Anything soft: the plush and the cushions. */
+    val plushDay: Color,
+    val plushNight: Color,
+    /**
+     * The cat.
+     *
+     * Pale in both dresses rather than following the plush, because at night
+     * she is a small animal on a near-black floor and the only thing keeping
+     * her visible is that she is lighter than it.
+     */
+    val furDay: Color,
+    val furNight: Color,
+    /** The one light the room signs itself with. */
+    val glow: Color,
+) {
+    internal fun wood(night: Boolean) = if (night) woodNight else woodDay
+
+    internal fun trim(night: Boolean) = if (night) trimNight else trimDay
+
+    internal fun plush(night: Boolean) = if (night) plushNight else plushDay
+
+    internal fun fur(night: Boolean) = if (night) furNight else furDay
+
+    companion object {
+        const val DEFAULT_ID = "theme_default"
+
+        /**
+         * What she starts with: violet, like her hair, her irises and the
+         * app's accent.
+         *
+         * The stage briefly went cream-and-tan in a redesign that was then
+         * reverted to the violet accent everywhere except here, which left
+         * cream walls under lavender furniture. The warm palette was worth
+         * keeping, so it is [Cozy] now — something to buy rather than a clash
+         * to live with.
+         */
+        val Default = RoomTheme(
+            id = DEFAULT_ID,
+            dayTop = Color(0xFFF6EEFF),
+            dayBottom = Color(0xFFE3D6F7),
+            floorLight = Color(0xFFD9C9F0),
+            nightTop = Color(0xFF2B2447),
+            nightBottom = Color(0xFF1A1530),
+            floorDark = Color(0xFF272042),
+            woodDay = Color(0xFFCDB9EC),
+            woodNight = Color(0xFF4A3D78),
+            trimDay = Color(0xFFDDCDF5),
+            trimNight = Color(0xFF5C4D91),
+            plushDay = Color(0xFFCBB8F0),
+            plushNight = Color(0xFF8C7BC7),
+            furDay = Color(0xFFF0E4FA),
+            furNight = Color(0xFFC9B4E8),
+            glow = Color(0xFFFF6FA5),
+        )
+
+        private val Cozy = RoomTheme(
+            id = "theme_cozy",
+            dayTop = Color(0xFFFFF3E7),
+            dayBottom = Color(0xFFF2DCC6),
+            floorLight = Color(0xFFE3C9AE),
+            nightTop = Color(0xFF3A2C28),
+            nightBottom = Color(0xFF241B18),
+            floorDark = Color(0xFF463429),
+            woodDay = Color(0xFFC79A6B),
+            woodNight = Color(0xFF6E523A),
+            trimDay = Color(0xFFE0BB92),
+            trimNight = Color(0xFF8A6A4C),
+            plushDay = Color(0xFFF2C9A0),
+            plushNight = Color(0xFFA98467),
+            furDay = Color(0xFFFFF1E0),
+            furNight = Color(0xFFE8CBA6),
+            glow = Color(0xFFFFC46B),
+        )
+
+        // Its "day" is still dark: the whole point of the night room is that it
+        // is one, so a bought theme does not switch itself off every morning.
+        private val Night = RoomTheme(
+            id = "theme_night",
+            dayTop = Color(0xFF2E2B52),
+            dayBottom = Color(0xFF1B1934),
+            floorLight = Color(0xFF2A2748),
+            nightTop = Color(0xFF201E3C),
+            nightBottom = Color(0xFF12111F),
+            floorDark = Color(0xFF211E3A),
+            woodDay = Color(0xFF3E3A6B),
+            woodNight = Color(0xFF332F5A),
+            trimDay = Color(0xFF524D8A),
+            trimNight = Color(0xFF423E75),
+            plushDay = Color(0xFF6F68B8),
+            plushNight = Color(0xFF5A54A0),
+            furDay = Color(0xFFCFCBF0),
+            furNight = Color(0xFFBDB8E8),
+            glow = Color(0xFF7FE3FF),
+        )
+
+        private val Sakura = RoomTheme(
+            id = "theme_sakura",
+            dayTop = Color(0xFFFFF2F6),
+            dayBottom = Color(0xFFFBDDE7),
+            floorLight = Color(0xFFEFC9D6),
+            nightTop = Color(0xFF3A2438),
+            nightBottom = Color(0xFF24162A),
+            floorDark = Color(0xFF3E2A3C),
+            woodDay = Color(0xFFE3A6BC),
+            woodNight = Color(0xFF7E4C63),
+            trimDay = Color(0xFFF3C6D6),
+            trimNight = Color(0xFF9C6480),
+            plushDay = Color(0xFFFFD9E6),
+            plushNight = Color(0xFFB88099),
+            furDay = Color(0xFFFFF0F5),
+            furNight = Color(0xFFE9C2D2),
+            glow = Color(0xFFFF9CC0),
+        )
+
+        /** The theme an id names, falling back to the one she starts with. */
+        fun forId(id: String?): RoomTheme = when (id) {
+            Cozy.id -> Cozy
+            Night.id -> Night
+            Sakura.id -> Sakura
+            else -> Default
+        }
+    }
+}
+
+/**
  * The room she lives in.
  *
  * Everything is positioned as a fraction of the canvas, so the same scene draws
@@ -65,7 +217,15 @@ fun DrawScope.drawPetRoom(
      * alike, because the room is the receipt.
      */
     decor: Set<String> = emptySet(),
+    /**
+     * Which purchased room look to dress the scene in.
+     *
+     * The id the shop sells, so the caller can hand its saved string straight
+     * over; anything unknown falls back to the room she starts with.
+     */
+    theme: String = RoomTheme.DEFAULT_ID,
 ) {
+    val look = RoomTheme.forId(theme)
     val body: DrawScope.() -> Unit = {
         drawRect(Brush.verticalGradient(listOf(top, bottom)))
 
@@ -80,17 +240,17 @@ fun DrawScope.drawPetRoom(
         )
 
         if (detail != RoomDetail.NONE) {
-            drawWindow(wall, night)
-            drawNeonHeart(wall, night)
-            drawShelf(wall, night)
+            drawWindow(wall, night, look)
+            drawSignature(wall, night, look)
+            drawShelf(wall, night, look)
             // Her gear lives on its own shelf under the window — wall-mounted,
             // so even the widget's floorless cut of the room can show it.
-            drawGearShelf(wall, night, decor)
+            drawGearShelf(wall, night, decor, look)
         }
         if (detail == RoomDetail.FULL) {
-            drawPlant(wall, night)
-            drawNightstand(wall, night)
-            drawFloorDecor(wall, night, decor)
+            drawPlant(wall, night, look)
+            drawNightstand(wall, night, look)
+            drawFloorDecor(wall, night, decor, look)
         }
     }
 
@@ -109,14 +269,17 @@ fun DrawScope.drawPetRoom(
 }
 
 /** A window onto a city, with the sun or the moon over the rooftops. */
-private fun DrawScope.drawWindow(wall: Float, night: Boolean) {
+private fun DrawScope.drawWindow(wall: Float, night: Boolean, look: RoomTheme) {
     val x = size.width * 0.07f
     val y = wall * 0.13f
     val w = size.width * 0.27f
     val h = wall * 0.60f
     val radius = w * 0.07f
-    val frame = if (night) Color(0xFF483C74) else Color(0xFFFFFFFF)
-    val sky = if (night) Color(0xFF141031) else Color(0xFFBFE4FA)
+    // The night room keeps its city lit at every hour: that view is what it was
+    // bought for, and a theme that switches itself off every morning is not one.
+    val dark = night || look.id == "theme_night"
+    val frame = if (dark) look.trim(true) else Color(0xFFFFFFFF)
+    val sky = if (dark) Color(0xFF141031) else Color(0xFFBFE4FA)
 
     drawRoundRect(sky, Offset(x, y), Size(w, h), CornerRadius(radius, radius))
 
@@ -126,11 +289,11 @@ private fun DrawScope.drawWindow(wall: Float, night: Boolean) {
         },
     ) {
         drawCircle(
-            color = if (night) Color(0xFFF4ECD0) else Color(0xFFFFE08A),
+            color = if (dark) Color(0xFFF4ECD0) else Color(0xFFFFE08A),
             radius = w * 0.15f,
             center = Offset(x + w * 0.68f, y + h * 0.24f),
         )
-        if (night) {
+        if (dark) {
             repeat(7) { i ->
                 val sx = x + w * (0.1f + 0.12f * i)
                 val sy = y + h * (0.1f + 0.3f * ((sin(i * 2.3f) + 1f) / 2f))
@@ -144,7 +307,7 @@ private fun DrawScope.drawWindow(wall: Float, night: Boolean) {
             val tw = w * 0.17f
             val th = h * tall
             drawRect(
-                color = if (night) Color(0xFF221C4A) else Color(0xFF9CC6E8),
+                color = if (dark) Color(0xFF221C4A) else Color(0xFF9CC6E8),
                 topLeft = Offset(tx, y + h - th),
                 size = Size(tw, th),
             )
@@ -154,7 +317,7 @@ private fun DrawScope.drawWindow(wall: Float, night: Boolean) {
                     val lit = (row + col + (left * 10).toInt()) % 3 != 0
                     if (!lit) return@repeat
                     drawRect(
-                        color = if (night) Color(0xCCFFE9A8) else Color(0x33FFFFFF),
+                        color = if (dark) Color(0xCCFFE9A8) else Color(0x33FFFFFF),
                         topLeft = Offset(tx + tw * (0.18f + col * 0.42f), y + h - th + h * (0.06f + row * 0.09f)),
                         size = Size(tw * 0.22f, h * 0.05f),
                     )
@@ -171,27 +334,147 @@ private fun DrawScope.drawWindow(wall: Float, night: Boolean) {
     drawLine(frame, Offset(x + w / 2, y), Offset(x + w / 2, y + h), strokeWidth = w * 0.04f)
 }
 
+/**
+ * The one thing each room is recognised by from across a home screen.
+ *
+ * A palette swap alone is not a theme: at widget size two lilac rooms and two
+ * pink ones are the same picture. Each look gets a shape of its own here.
+ */
+private fun DrawScope.drawSignature(wall: Float, night: Boolean, look: RoomTheme) {
+    when (look.id) {
+        "theme_cozy" -> drawWallLamp(wall, night, look)
+        "theme_night" -> drawFairyLights(wall, look)
+        "theme_sakura" -> drawSakuraBranch(wall, night, look)
+        else -> drawNeonHeart(wall, night, look)
+    }
+}
+
 /** A neon heart on the wall — the one light source that reads instantly. */
-private fun DrawScope.drawNeonHeart(wall: Float, night: Boolean) {
+private fun DrawScope.drawNeonHeart(wall: Float, night: Boolean, look: RoomTheme) {
     val center = Offset(size.width * 0.79f, wall * 0.22f)
     val r = size.width * 0.045f
     val glow = if (night) 0.55f else 0.3f
     listOf(2.2f to 0.10f, 1.6f to 0.18f).forEach { (scale, alpha) ->
-        drawPath(heartPath(center, r * scale), Color(0xFFFF6FA5).copy(alpha = alpha * glow * 2f))
+        drawPath(heartPath(center, r * scale), look.glow.copy(alpha = alpha * glow * 2f))
     }
     drawPath(
         heartPath(center, r),
-        Color(0xFFFF6FA5),
+        look.glow,
         style = Stroke(width = r * 0.28f, cap = StrokeCap.Round),
     )
 }
 
+/** The warm room's lamp: a small shade on a bracket, glowing onto the wall. */
+private fun DrawScope.drawWallLamp(wall: Float, night: Boolean, look: RoomTheme) {
+    val x = size.width * 0.79f
+    val y = wall * 0.20f
+    val w = size.width * 0.062f
+
+    drawLine(look.wood(night), Offset(x, y - wall * 0.10f), Offset(x, y), strokeWidth = size.width * 0.010f)
+    val shade = Path().apply {
+        moveTo(x - w * 0.42f, y - wall * 0.055f)
+        lineTo(x + w * 0.42f, y - wall * 0.055f)
+        lineTo(x + w * 0.72f, y)
+        lineTo(x - w * 0.72f, y)
+        close()
+    }
+    drawPath(shade, look.wood(night))
+    drawRoundRect(
+        look.glow,
+        Offset(x - w * 0.68f, y - wall * 0.006f),
+        Size(w * 1.36f, wall * 0.016f),
+        CornerRadius(wall * 0.008f, wall * 0.008f),
+    )
+    // The light itself: three short skirts of glow, each wider and fainter than
+    // the last. One tall cone reads as a tent, not as a lamp being on.
+    val reach = if (night) 0.30f else 0.22f
+    listOf(1.1f to 0.13f, 1.8f to 0.09f, 2.6f to 0.06f, 3.4f to 0.04f).forEach { (spread, alpha) ->
+        val spill = Path().apply {
+            moveTo(x - w * 0.7f, y)
+            lineTo(x + w * 0.7f, y)
+            lineTo(x + w * spread, y + wall * reach)
+            lineTo(x - w * spread, y + wall * reach)
+            close()
+        }
+        drawPath(spill, look.glow.copy(alpha = alpha * (if (night) 1.5f else 1f)))
+    }
+}
+
+/** The night room's garland: a sagging string of bulbs across the wall. */
+private fun DrawScope.drawFairyLights(wall: Float, look: RoomTheme) {
+    val sag = wall * 0.06f
+    val y = wall * 0.06f
+    val wire = Path().apply {
+        moveTo(0f, y)
+        quadraticTo(size.width * 0.5f, y + sag * 2.2f, size.width, y * 0.7f)
+    }
+    drawPath(wire, look.trim(true), style = Stroke(width = size.width * 0.005f))
+
+    repeat(11) { i ->
+        val t = (i + 0.5f) / 11f
+        // The point on the same quadratic the wire follows, so bulbs hang off
+        // the string rather than beside it.
+        val bx = size.width * t
+        val by = (1 - t) * (1 - t) * y + 2 * (1 - t) * t * (y + sag * 2.2f) + t * t * (y * 0.7f)
+        val r = size.width * 0.011f
+        drawCircle(look.glow.copy(alpha = 0.18f), radius = r * 3f, center = Offset(bx, by + r * 2f))
+        drawCircle(look.glow, radius = r, center = Offset(bx, by + r * 2f))
+    }
+}
+
+/** The sakura room's branch, reaching in over the window with petals falling. */
+private fun DrawScope.drawSakuraBranch(wall: Float, night: Boolean, look: RoomTheme) {
+    val bark = if (night) Color(0xFF5B3B4A) else Color(0xFF8D6072)
+    val branch = Path().apply {
+        moveTo(size.width * 1.02f, wall * 0.02f)
+        cubicTo(
+            size.width * 0.86f, wall * 0.10f,
+            size.width * 0.74f, wall * 0.12f,
+            size.width * 0.54f, wall * 0.26f,
+        )
+    }
+    drawPath(branch, bark, style = Stroke(width = size.width * 0.013f, cap = StrokeCap.Round))
+    listOf(0.80f to 0.22f, 0.66f to 0.05f).forEach { (x, dy) ->
+        drawLine(
+            bark,
+            Offset(size.width * x, wall * (0.11f + dy * 0.3f)),
+            Offset(size.width * (x - 0.05f), wall * (0.11f + dy)),
+            strokeWidth = size.width * 0.008f,
+            cap = StrokeCap.Round,
+        )
+    }
+
+    val petal = look.glow.copy(alpha = if (night) 0.85f else 1f)
+    val blossoms = listOf(
+        0.96f to 0.05f, 0.86f to 0.10f, 0.78f to 0.11f,
+        0.70f to 0.16f, 0.62f to 0.20f, 0.55f to 0.27f, 0.81f to 0.26f, 0.67f to 0.06f,
+    )
+    blossoms.forEach { (fx, fy) ->
+        val c = Offset(size.width * fx, wall * fy)
+        val r = size.width * 0.017f
+        repeat(5) { i ->
+            val a = i * 1.2566f
+            drawCircle(petal, radius = r, center = Offset(c.x + sin(a) * r, c.y + kotlin.math.cos(a) * r))
+        }
+        drawCircle(Color(0xFFFFF3C4), radius = r * 0.5f, center = c)
+    }
+
+    // Three petals on their way down, so the branch is not a decal.
+    listOf(0.50f to 0.42f, 0.60f to 0.62f, 0.44f to 0.80f).forEach { (fx, fy) ->
+        drawOval(
+            petal.copy(alpha = 0.75f),
+            Offset(size.width * fx, wall * fy),
+            Size(size.width * 0.018f, size.width * 0.012f),
+        )
+    }
+}
+
 /** A shelf of books. */
-private fun DrawScope.drawShelf(wall: Float, night: Boolean) {
+private fun DrawScope.drawShelf(wall: Float, night: Boolean, look: RoomTheme) {
     val left = size.width * 0.63f
     val right = size.width * 0.95f
     val y = wall * 0.45f
-    val plank = if (night) Color(0xFF4A3D78) else Color(0xFFCDB9EC)
+    val plank = look.wood(night)
     drawRoundRect(
         plank,
         Offset(left, y),
@@ -216,7 +499,7 @@ private fun DrawScope.drawShelf(wall: Float, night: Boolean) {
 }
 
 /** A potted plant beside her. */
-private fun DrawScope.drawPlant(wall: Float, night: Boolean) {
+private fun DrawScope.drawPlant(wall: Float, night: Boolean, look: RoomTheme) {
     val x = size.width * 0.10f
     val base = wall + (size.height - wall) * 0.42f
     val potW = size.width * 0.085f
@@ -241,9 +524,9 @@ private fun DrawScope.drawPlant(wall: Float, night: Boolean) {
         lineTo(x - potW * 0.36f, base)
         close()
     }
-    drawPath(pot, if (night) Color(0xFF6B5AA5) else Color(0xFFB79BE0))
+    drawPath(pot, look.wood(night))
     drawRoundRect(
-        if (night) Color(0xFF7E6BBD) else Color(0xFFC9B2EE),
+        look.trim(night),
         Offset(x - potW * 0.54f, base - potH),
         Size(potW * 1.08f, potH * 0.22f),
         CornerRadius(potH * 0.08f, potH * 0.08f),
@@ -251,12 +534,12 @@ private fun DrawScope.drawPlant(wall: Float, night: Boolean) {
 }
 
 /** A nightstand with a cat plush on top. */
-private fun DrawScope.drawNightstand(wall: Float, night: Boolean) {
+private fun DrawScope.drawNightstand(wall: Float, night: Boolean, look: RoomTheme) {
     val cx = size.width * 0.845f
     val w = size.width * 0.19f
     val h = (size.height - wall) * 0.62f
     val topY = wall + (size.height - wall) * 0.16f
-    val wood = if (night) Color(0xFF4A3D78) else Color(0xFFCDB9EC)
+    val wood = look.wood(night)
 
     drawRoundRect(
         wood, Offset(cx - w / 2, topY), Size(w, h),
@@ -264,7 +547,7 @@ private fun DrawScope.drawNightstand(wall: Float, night: Boolean) {
     )
     repeat(2) { i ->
         drawRoundRect(
-            (if (night) Color(0xFF5C4D91) else Color(0xFFDDCDF5)),
+            look.trim(night),
             Offset(cx - w * 0.38f, topY + h * (0.16f + i * 0.38f)),
             Size(w * 0.76f, h * 0.26f),
             CornerRadius(w * 0.06f, w * 0.06f),
@@ -274,7 +557,7 @@ private fun DrawScope.drawNightstand(wall: Float, night: Boolean) {
     // The plush.
     val catR = w * 0.30f
     val catC = Offset(cx, topY - catR * 0.85f)
-    val fur = if (night) Color(0xFF8C7BC7) else Color(0xFFCBB8F0)
+    val fur = look.plush(night)
     listOf(-1f, 1f).forEach { side ->
         val ear = Path().apply {
             moveTo(catC.x + side * catR * 0.66f, catC.y - catR * 0.42f)
@@ -299,14 +582,14 @@ private fun DrawScope.drawNightstand(wall: Float, night: Boolean) {
  * under the window. Appears with the first owned item so an empty shelf never
  * hangs there promising things.
  */
-private fun DrawScope.drawGearShelf(wall: Float, night: Boolean, decor: Set<String>) {
+private fun DrawScope.drawGearShelf(wall: Float, night: Boolean, decor: Set<String>, look: RoomTheme) {
     val slots = listOf("coffee_machine", "laptop", "textbooks", "studio").filter { it in decor }
     if (slots.isEmpty()) return
 
     val left = size.width * 0.05f
     val right = size.width * 0.33f
     val y = wall * 0.86f
-    val plank = if (night) Color(0xFF4A3D78) else Color(0xFFCDB9EC)
+    val plank = look.wood(night)
     drawRoundRect(
         plank,
         Offset(left, y),
@@ -329,7 +612,7 @@ private fun DrawScope.drawGearShelf(wall: Float, night: Boolean, decor: Set<Stri
             "coffee_machine" -> {
                 val w = size.width * 0.052f
                 drawRoundRect(
-                    if (night) Color(0xFF8C7BC7) else Color(0xFFB79BE0),
+                    look.plush(night),
                     Offset(x, y - itemH),
                     Size(w, itemH),
                     CornerRadius(w * 0.2f, w * 0.2f),
@@ -379,13 +662,16 @@ private fun DrawScope.drawGearShelf(wall: Float, night: Boolean, decor: Set<Stri
                 val cx = x + size.width * 0.016f
                 // Mic on a desk stand, with a little pop shield ring.
                 drawLine(Color(0xFF3B2B52), Offset(cx, y), Offset(cx, y - itemH * 0.55f), strokeWidth = size.width * 0.006f)
+                // Inverted on purpose: the mic is the one thing here that has to
+                // stand *against* the plank, so it takes the shade the plank is
+                // not wearing.
                 drawCircle(
-                    if (night) Color(0xFF8C7BC7) else Color(0xFF6B5CA5),
+                    look.wood(!night),
                     radius = itemH * 0.3f,
                     center = Offset(cx, y - itemH * 0.78f),
                 )
                 drawCircle(
-                    Color(0xFFCBAEF7).copy(alpha = 0.8f),
+                    look.trim(false).copy(alpha = 0.8f),
                     radius = itemH * 0.19f,
                     center = Offset(cx, y - itemH * 0.8f),
                 )
@@ -398,7 +684,7 @@ private fun DrawScope.drawGearShelf(wall: Float, night: Boolean, decor: Set<Stri
  * The floor pieces: the mini-fridge, the cushion corner with a console, and
  * the cat — each standing exactly where its shop card promised a home.
  */
-private fun DrawScope.drawFloorDecor(wall: Float, night: Boolean, decor: Set<String>) {
+private fun DrawScope.drawFloorDecor(wall: Float, night: Boolean, decor: Set<String>, look: RoomTheme) {
     val floorH = size.height - wall
 
     if ("fridge" in decor) {
@@ -421,7 +707,7 @@ private fun DrawScope.drawFloorDecor(wall: Float, night: Boolean, decor: Set<Str
             Size(w * 0.08f, h * 0.16f),
             CornerRadius(w * 0.04f, w * 0.04f),
         )
-        drawPath(heartPath(Offset(x + w * 0.34f, topY + h * 0.6f), w * 0.1f), Color(0xFFFF6FA5))
+        drawPath(heartPath(Offset(x + w * 0.34f, topY + h * 0.6f), w * 0.1f), look.glow)
     }
 
     if ("bed" in decor) {
@@ -430,8 +716,8 @@ private fun DrawScope.drawFloorDecor(wall: Float, night: Boolean, decor: Set<Str
         val w = size.width * 0.1f
         val base = wall + floorH * 0.55f
         listOf(
-            Color(0xFFF2A0C8) to 0f,
-            Color(0xFFB79BE0) to 1f,
+            look.glow to 0f,
+            look.plush(false) to 1f,
         ).forEach { (colour, level) ->
             drawRoundRect(
                 if (night) colour.copy(alpha = 0.75f) else colour,
@@ -448,7 +734,7 @@ private fun DrawScope.drawFloorDecor(wall: Float, night: Boolean, decor: Set<Str
         val w = size.width * 0.07f
         val y = wall + floorH * 0.72f
         drawRoundRect(
-            if (night) Color(0xFF483C74) else Color(0xFF6B5CA5),
+            look.wood(true),
             Offset(x, y),
             Size(w, floorH * 0.16f),
             CornerRadius(w * 0.12f, w * 0.12f),
@@ -456,7 +742,7 @@ private fun DrawScope.drawFloorDecor(wall: Float, night: Boolean, decor: Set<Str
         drawCircle(Color(0xFF56C596), radius = floorH * 0.035f, center = Offset(x + w * 0.8f, y + floorH * 0.08f))
         // The controller resting against it.
         drawRoundRect(
-            if (night) Color(0xFF8C7BC7) else Color(0xFFCBB8F0),
+            look.plush(night),
             Offset(x - w * 0.5f, y + floorH * 0.04f),
             Size(w * 0.44f, floorH * 0.12f),
             CornerRadius(w * 0.14f, w * 0.14f),
@@ -469,7 +755,7 @@ private fun DrawScope.drawFloorDecor(wall: Float, night: Boolean, decor: Set<Str
         val cx = size.width * 0.155f
         val base = wall + floorH * 0.66f
         val r = size.width * 0.045f
-        val fur = if (night) Color(0xFFC9B4E8) else Color(0xFFF0E4FA)
+        val fur = look.fur(night)
         // The tail first, curled around the body.
         drawLine(
             fur,

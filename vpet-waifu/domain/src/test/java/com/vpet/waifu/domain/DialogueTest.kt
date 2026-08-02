@@ -88,6 +88,36 @@ class DialogueTest {
         assertEquals(DialogueTopic.MISSED_YOU, topic(pet(lastInteractionAt = NOW - 30L * 60 * M)))
     }
 
+    /**
+     * Half a day away is *always* a hungry pet — the drain guarantees it — so
+     * ranking hunger above it meant the three MISSED_YOU lines could never be
+     * reached by any state the simulation can actually produce.
+     */
+    @Test
+    fun `after half a day away she says she missed you, not that she is hungry`() {
+        val backToAStarvingPet = pet(hunger = 1f, energy = 5f, lastInteractionAt = NOW - 20L * 60 * M)
+
+        assertEquals(DialogueTopic.MISSED_YOU, topic(backToAStarvingPet))
+    }
+
+    @Test
+    fun `but a long absence never talks over being ill`() {
+        val backToASickPet = pet(hunger = 1f, lastInteractionAt = NOW - 20L * 60 * M)
+            .copy(sickSince = NOW - 60 * M)
+
+        assertEquals(DialogueTopic.SICK, topic(backToASickPet))
+    }
+
+    @Test
+    fun `an hour and a half away still loses to an empty stomach`() {
+        // WELCOME_BACK stays *below* the needs: at ninety minutes she is only
+        // peckish if she was already low, and "you're back!" over a starving
+        // pet is the exact tone problem the ordering above exists to avoid.
+        val peckish = pet(hunger = 5f, lastInteractionAt = NOW - 3 * 60 * M)
+
+        assertEquals(DialogueTopic.STARVING, topic(peckish))
+    }
+
     @Test
     fun `an unread event is worth mentioning`() {
         val withEvent = pet().copy(event = PetEvent(EventKind.LETTER, Events.dayOf(NOW)))

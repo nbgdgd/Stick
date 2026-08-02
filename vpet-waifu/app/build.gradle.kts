@@ -8,14 +8,14 @@ plugins {
 
 android {
     namespace = "com.vpet.waifu"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.vpet.waifu"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.0"
+        targetSdk = 36
+        versionCode = 3
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -65,6 +65,9 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            // Store screenshots are rendered by a unit test on demand; without
+            // the flag it does nothing, so ordinary runs stay fast.
+            all { it.systemProperty("storeshots", providers.gradleProperty("storeshots").getOrElse("")) }
         }
     }
     packaging {

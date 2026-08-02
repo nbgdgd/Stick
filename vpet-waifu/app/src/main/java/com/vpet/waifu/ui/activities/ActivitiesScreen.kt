@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,6 +67,7 @@ import com.vpet.waifu.ui.occupationTint
 import com.vpet.waifu.ui.occupationNameRes
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
+import com.vpet.waifu.ui.theme.Surfaces
 
 /**
  * Work and study.
@@ -74,6 +76,7 @@ import com.vpet.waifu.ui.theme.StatColors
  * multiplier is applied to the preview, so a sad pet visibly earns less before
  * the player commits to a two-hour shift.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ActivitiesScreen(
     snapshot: PetSnapshot,
@@ -101,7 +104,11 @@ fun ActivitiesScreen(
         }
 
         if (snapshot.isBusy) {
-            item { ActiveSession(snapshot, nowMillis, onCancel) }
+            stickyHeader {
+                Box(modifier = Modifier.fillMaxWidth().background(Surfaces.Screen).padding(bottom = 8.dp)) {
+                    ActiveSession(snapshot, nowMillis, onCancel)
+                }
+            }
         } else if (snapshot.stats.energy < tuning.minimumEnergyToWork) {
             item { Notice(stringResource(R.string.too_tired_to_work)) }
         }

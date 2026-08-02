@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +49,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import com.vpet.waifu.ui.components.OutlineButton
+import java.io.InputStream
+import java.io.OutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import com.vpet.waifu.R
 import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.data.PetSettings
@@ -74,6 +85,8 @@ fun SettingsScreen(
     onHapticsChange: (Boolean) -> Unit,
     onNotificationsChange: (Boolean) -> Unit,
     onNameChange: (String) -> Unit,
+    onExportSave: (OutputStream, (Boolean) -> Unit) -> Unit,
+    onImportSave: (InputStream, (Boolean) -> Unit) -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -197,6 +210,8 @@ fun SettingsScreen(
                 }
             }
 
+            SaveCard(onExportSave, onImportSave)
+
             PanelCard(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
@@ -313,4 +328,115 @@ private fun SettingRow(
             ),
         )
     }
+}
+
+/**
+ * The save file, in the player's own hands.
+ *
+ * Android Auto Backup needs a Google transport, which a RuStore install on a
+ * Play-less phone does not have — so without a file the player can copy, a new
+ * phone means a pet raised for a month is simply gone.
+ */
+@Composable
+private fun SaveCard(
+    onExportSave: (OutputStream, (Boolean) -> Unit) -> Unit,
+    onImportSave: (InputStream, (Boolean) -> Unit) -> Unit,
+) {
+    val context = LocalContext.current
+    var notice by remember { mutableStateOf<Int?>(null) }
+    var pendingImport by remember { mutableStateOf<Uri?>(null) }
+
+    val exporter = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val stream = runCatching { context.contentResolver.openOutputStream(uri) }.getOrNull()
+        if (stream == null) {
+            notice = R.string.save_failed
+        } else {
+            onExportSave(stream) { ok -> notice = if (ok) R.string.save_exported else R.string.save_failed }
+        }
+    }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        pendingImport = uri
+    }
+
+    // Replacing a save cannot be undone, so it is the one action here that asks.
+    pendingImport?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            containerColor = Surfaces.Card,
+            titleContentColor = Accents.Text,
+            textContentColor = Accents.TextMuted,
+            shape = RoundedCornerShape(24.dp),
+            title = { Text(stringResource(R.string.save_replace_title)) },
+            text = { Text(stringResource(R.string.save_replace_body)) },
+            confirmButton = {
+                PrimaryButton(
+                    text = stringResource(R.string.action_replace),
+                    onClick = {
+                        pendingImport = null
+                        val stream = runCatching { context.contentResolver.openInputStream(uri) }.getOrNull()
+                        if (stream == null) {
+                            notice = R.string.save_failed
+                        } else {
+                            onImportSave(stream) { ok ->
+                                notice = if (ok) R.string.save_imported else R.string.save_failed
+                            }
+                        }
+                    },
+                )
+            },
+            dismissButton = {
+                OutlineButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = { pendingImport = null },
+                )
+            },
+        )
+    }
+
+    PanelCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.save_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = Accents.Text,
+            )
+            Text(
+                text = stringResource(R.string.save_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = Accents.TextMuted,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlineButton(
+                    text = stringResource(R.string.save_export),
+                    onClick = { exporter.launch(defaultSaveName()) },
+                    tint = StatColors.Exp,
+                    modifier = Modifier.weight(1f),
+                )
+                OutlineButton(
+                    text = stringResource(R.string.save_import),
+                    onClick = { picker.launch(arrayOf("application/json", "*/*")) },
+                    tint = Accents.Bright,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            notice?.let {
+                Text(
+                    text = stringResource(it),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (it == R.string.save_failed) Accents.Danger else StatColors.Exp,
+                )
+            }
+        }
+    }
+}
+
+private fun defaultSaveName(): String {
+    val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+    return "waifu-save-$stamp.json"
 }

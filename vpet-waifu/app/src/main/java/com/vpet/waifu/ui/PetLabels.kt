@@ -8,6 +8,7 @@ import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Backpack
 import androidx.compose.material.icons.rounded.Bed
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Cake
 import androidx.compose.material.icons.rounded.Chair
@@ -19,10 +20,12 @@ import androidx.compose.material.icons.rounded.Diamond
 import androidx.compose.material.icons.rounded.EmojiFoodBeverage
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Healing
 import androidx.compose.material.icons.rounded.Icecream
 import androidx.compose.material.icons.rounded.Kitchen
 import androidx.compose.material.icons.rounded.Laptop
+import androidx.compose.material.icons.rounded.Light
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LocalCafe
 import androidx.compose.material.icons.rounded.LocalFlorist
@@ -45,6 +48,7 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Toys
+import androidx.compose.material.icons.rounded.Weekend
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -109,6 +113,7 @@ fun shopItemNameRes(id: String): Int = when (id) {
     "focus_tea" -> R.string.item_focus_tea
     "second_wind" -> R.string.item_second_wind
     "good_vibes" -> R.string.item_good_vibes
+    "day_off" -> R.string.item_day_off
     else -> R.string.item_onigiri
 }
 
@@ -131,6 +136,7 @@ fun shopItemIcon(id: String): ImageVector = when (id) {
     "focus_tea" -> Icons.Rounded.EmojiFoodBeverage
     "second_wind" -> Icons.Rounded.Air
     "good_vibes" -> Icons.Rounded.MusicNote
+    "day_off" -> Icons.Rounded.Weekend
     else -> Icons.Rounded.CardGiftcard
 }
 
@@ -159,6 +165,7 @@ fun shopItemArtRes(id: String): Int = when (id) {
     "focus_tea" -> R.drawable.art_focus_tea
     "second_wind" -> R.drawable.art_second_wind
     "good_vibes" -> R.drawable.art_good_vibes
+    "day_off" -> R.drawable.art_day_off
     else -> R.drawable.art_onigiri
 }
 
@@ -185,6 +192,17 @@ fun upgradeArtRes(id: String): Int? = when (id) {
     "laptop" -> R.drawable.art_laptop
     "textbooks" -> R.drawable.art_textbooks
     "studio" -> R.drawable.art_studio
+    "theme_cozy" -> R.drawable.art_theme_cozy
+    "theme_night" -> R.drawable.art_theme_night
+    "theme_sakura" -> R.drawable.art_theme_sakura
+    // Six identical coat hangers were the last place the shop still looked
+    // mass-produced — and one of them costs 25 000 ¥.
+    "outfit_uniform" -> R.drawable.art_outfit_uniform
+    "outfit_cocoa" -> R.drawable.art_outfit_cocoa
+    "outfit_mint" -> R.drawable.art_outfit_mint
+    "outfit_sakura" -> R.drawable.art_outfit_sakura
+    "outfit_midnight" -> R.drawable.art_outfit_midnight
+    "outfit_gold" -> R.drawable.art_outfit_gold
     else -> null
 }
 
@@ -225,6 +243,7 @@ fun shopItemTint(id: String): Color = when (id) {
     "focus_tea" -> Color(0xFF7FA845)
     "second_wind" -> Color(0xFF0AACCC)
     "good_vibes" -> Color(0xFFE01E68)
+    "day_off" -> Color(0xFF674599)
     else -> Color(0xFFB9A8DC)
 }
 
@@ -237,6 +256,10 @@ fun upgradeTint(id: String): Color = when (id) {
     "laptop" -> Color(0xFF5D8DF5)
     "textbooks" -> Color(0xFF8FCE73)
     "studio" -> Color(0xFFF5D93A)
+    "theme_default" -> Color(0xFFB9A8DC)
+    "theme_cozy" -> Color(0xFFF26224)
+    "theme_night" -> Color(0xFF15598C)
+    "theme_sakura" -> Color(0xFFD9217B)
     else -> Color(0xFFB9A8DC)
 }
 
@@ -255,6 +278,10 @@ fun upgradeNameRes(id: String): Int = when (id) {
     "outfit_mint" -> R.string.upgrade_outfit_mint
     "outfit_sakura" -> R.string.upgrade_outfit_sakura
     "outfit_midnight" -> R.string.upgrade_outfit_midnight
+    "theme_default" -> R.string.theme_default
+    "theme_cozy" -> R.string.theme_cozy
+    "theme_night" -> R.string.theme_night
+    "theme_sakura" -> R.string.theme_sakura
     else -> R.string.upgrade_outfit_gold
 }
 
@@ -267,8 +294,12 @@ fun upgradeIcon(id: String): ImageVector = when (id) {
     "laptop" -> Icons.Rounded.Laptop
     "textbooks" -> Icons.AutoMirrored.Rounded.MenuBook
     "studio" -> Icons.Rounded.Piano
-    // Every outfit is the same wardrobe icon; the tile's tint carries which
-    // one it is, taken from the outfit's own ribbon colour.
+    "theme_default" -> Icons.Rounded.Home
+    "theme_cozy" -> Icons.Rounded.Light
+    "theme_night" -> Icons.Rounded.Bedtime
+    "theme_sakura" -> Icons.Rounded.LocalFlorist
+    // The outfits fall through to the hanger only in the small chips; their
+    // cards carry the drawn portraits from upgradeArtRes.
     else -> Icons.Rounded.Checkroom
 }
 
@@ -463,8 +494,14 @@ data class Achievement(
     @StringRes val titleRes: Int,
     val icon: ImageVector,
     val tint: Color,
-    val earned: Boolean,
-)
+    val current: Int,
+    val target: Int,
+) {
+    val earned: Boolean get() = current >= target
+
+    /** How much of the condition is done — what "nearest to unlocking" means. */
+    val fraction: Float get() = if (target <= 0) 1f else (current.toFloat() / target).coerceIn(0f, 1f)
+}
 
 /**
  * The cabinet, derived rather than stored: every trophy is a pure function of
@@ -472,21 +509,21 @@ data class Achievement(
  * nothing needs migrating.
  */
 fun achievementsFor(snapshot: PetSnapshot): List<Achievement> = listOf(
-    Achievement(R.string.ach_first_shift, Icons.Rounded.Work, Color(0xFF6E9CF5), snapshot.shiftsWorked >= 1),
-    Achievement(R.string.ach_ten_shifts, Icons.Rounded.Work, Color(0xFF6E9CF5), snapshot.shiftsWorked >= 10),
-    Achievement(R.string.ach_fifty_shifts, Icons.Rounded.Work, Color(0xFFF0C445), snapshot.shiftsWorked >= 50),
-    Achievement(R.string.ach_first_lesson, Icons.Rounded.School, Color(0xFFA8D95C), snapshot.lessonsDone >= 1),
-    Achievement(R.string.ach_twenty_lessons, Icons.Rounded.School, Color(0xFFA8D95C), snapshot.lessonsDone >= 20),
-    Achievement(R.string.ach_hundred_meals, Icons.Rounded.RamenDining, Color(0xFFF2913F), snapshot.mealsFed >= 100),
-    Achievement(R.string.ach_ten_gifts, Icons.Rounded.CardGiftcard, Color(0xFFFF6E8E), snapshot.giftsGiven >= 10),
-    Achievement(R.string.ach_fifty_games, Icons.Rounded.SportsEsports, Color(0xFFF477B8), snapshot.gamesPlayed >= 50),
-    Achievement(R.string.ach_rich, Icons.Rounded.Payments, Color(0xFFF0C445), snapshot.totalEarned >= 25_000),
-    Achievement(R.string.ach_bond_5, Icons.Rounded.Favorite, Color(0xFFF86FB2), snapshot.bondLevel >= 5),
-    Achievement(R.string.ach_bond_10, Icons.Rounded.Favorite, Color(0xFFF86FB2), snapshot.bondLevel >= 10),
-    Achievement(R.string.ach_level_30, Icons.Rounded.Star, Color(0xFFF0C445), snapshot.level >= 30),
+    Achievement(R.string.ach_first_shift, Icons.Rounded.Work, Color(0xFF6E9CF5), snapshot.shiftsWorked, 1),
+    Achievement(R.string.ach_ten_shifts, Icons.Rounded.Work, Color(0xFF6E9CF5), snapshot.shiftsWorked, 10),
+    Achievement(R.string.ach_fifty_shifts, Icons.Rounded.Work, Color(0xFFF0C445), snapshot.shiftsWorked, 50),
+    Achievement(R.string.ach_first_lesson, Icons.Rounded.School, Color(0xFFA8D95C), snapshot.lessonsDone, 1),
+    Achievement(R.string.ach_twenty_lessons, Icons.Rounded.School, Color(0xFFA8D95C), snapshot.lessonsDone, 20),
+    Achievement(R.string.ach_hundred_meals, Icons.Rounded.RamenDining, Color(0xFFF2913F), snapshot.mealsFed, 100),
+    Achievement(R.string.ach_ten_gifts, Icons.Rounded.CardGiftcard, Color(0xFFFF6E8E), snapshot.giftsGiven, 10),
+    Achievement(R.string.ach_fifty_games, Icons.Rounded.SportsEsports, Color(0xFFF477B8), snapshot.gamesPlayed, 50),
+    Achievement(R.string.ach_rich, Icons.Rounded.Payments, Color(0xFFF0C445), snapshot.totalEarned, 25_000),
+    Achievement(R.string.ach_bond_5, Icons.Rounded.Favorite, Color(0xFFF86FB2), snapshot.bondLevel, 5),
+    Achievement(R.string.ach_bond_10, Icons.Rounded.Favorite, Color(0xFFF86FB2), snapshot.bondLevel, 10),
+    Achievement(R.string.ach_level_30, Icons.Rounded.Star, Color(0xFFF0C445), snapshot.level, 30),
     Achievement(
         R.string.ach_all_upgrades, Icons.Rounded.AutoAwesome, Color(0xFF9B7DF0),
-        Upgrades.ALL.all { snapshot.owns(it.id) },
+        Upgrades.ALL.count { snapshot.owns(it.id) }, Upgrades.ALL.size,
     ),
-    Achievement(R.string.ach_nursed, Icons.Rounded.Healing, Color(0xFF54E070), snapshot.sicknessesNursed >= 1),
+    Achievement(R.string.ach_nursed, Icons.Rounded.Healing, Color(0xFF54E070), snapshot.sicknessesNursed, 1),
 )

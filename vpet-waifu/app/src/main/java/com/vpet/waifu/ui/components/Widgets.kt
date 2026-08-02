@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,24 +81,30 @@ private fun Modifier.pressable(
 ): Modifier {
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.955f else 1f,
+        targetValue = if (pressed) if (enabled) 0.955f else 0.985f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "press-scale",
     )
+    // A disabled control used to swallow the touch whole: no dip, no sound,
+    // no answer to "why won't this press?". It still refuses the action, but
+    // it now admits it was pressed.
+    val refuse = LocalRefusal.current
     return this
         .scale(scale)
-        .then(
-            if (enabled) {
-                Modifier.clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick,
-                )
-            } else {
-                Modifier
-            },
+        .clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = { if (enabled) onClick() else refuse() },
         )
 }
+
+/**
+ * What a refused press should do, supplied by the app shell.
+ *
+ * A composable in components/ cannot reach the view model, and threading an
+ * "onRefused" through every button in the app would be worse than this.
+ */
+val LocalRefusal = staticCompositionLocalOf<() -> Unit> { {} }
 
 /** The card every panel in the app is made of: dark fill, hairline outline. */
 @Composable

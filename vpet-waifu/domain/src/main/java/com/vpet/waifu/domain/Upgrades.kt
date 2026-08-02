@@ -39,7 +39,7 @@ data class UpgradeEffect(
 }
 
 /** What kind of thing it is, for grouping in the shop. */
-enum class UpgradeKind { ROOM, GEAR, OUTFIT }
+enum class UpgradeKind { ROOM, GEAR, OUTFIT, THEME }
 
 /**
  * Something bought once and kept.
@@ -119,10 +119,30 @@ object Upgrades {
         Upgrade("outfit_gold", UpgradeKind.OUTFIT, price = 25_000, palette = "gold"),
     )
 
-    val ALL: List<Upgrade> = ROOM + GEAR + OUTFITS
+    /**
+     * The room itself, redecorated. The top of the money curve.
+     *
+     * Outfits top out at 25,000, which a level-twenty pet earns back inside a
+     * week — after that the wallet only ever grows. These run to 80,000 and are
+     * gated deep into the level curve, so there is still something to want at
+     * the point where everything else is owned. Cosmetic on purpose: an
+     * end-game purchase that also bought a multiplier would make the players
+     * who cannot reach it play a worse game.
+     */
+    val THEMES: List<Upgrade> = listOf(
+        Upgrade(DEFAULT_THEME, UpgradeKind.THEME, price = 0),
+        Upgrade("theme_cozy", UpgradeKind.THEME, price = 20_000, requiredLevel = 8),
+        Upgrade("theme_night", UpgradeKind.THEME, price = 45_000, requiredLevel = 14),
+        Upgrade("theme_sakura", UpgradeKind.THEME, price = 80_000, requiredLevel = 20),
+    )
+
+    val ALL: List<Upgrade> = ROOM + GEAR + OUTFITS + THEMES
 
     /** The outfit she starts in, which is always owned and always free. */
     const val DEFAULT_OUTFIT = "outfit_uniform"
+
+    /** The room she starts in — always owned and always free, like the uniform. */
+    const val DEFAULT_THEME = "theme_default"
 
     fun byId(id: String?): Upgrade? = ALL.firstOrNull { it.id == id }
 

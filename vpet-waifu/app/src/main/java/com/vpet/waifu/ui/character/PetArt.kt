@@ -71,6 +71,9 @@ fun DrawScope.drawPet(pose: PetPose, palette: PetPalette = PetPalette.Default) {
 }
 
 private fun DrawScope.drawCharacter(pose: PetPose, palette: PetPalette) {
+    // The workplace stands still while she moves in it, so it goes down before
+    // the lean-and-bounce transform rather than inside it.
+    pose.prop?.let { drawWorkplace(it, palette) }
     drawGroundShadow(pose)
 
     withTransform({ translate(pose.bodyLean, pose.bodyBounce + pose.droop * 3f) }) {
@@ -100,13 +103,27 @@ private fun DrawScope.drawCharacter(pose: PetPose, palette: PetPalette) {
 
 // --- silhouette --------------------------------------------------------------
 
+/**
+ * The contact shadow.
+ *
+ * Near-black rather than the tinted violet it used to be, and in two passes: a
+ * wide soft one and a tight dark core. The old single 9%-alpha violet was
+ * lighter than the night floor it was drawn on, so after dark she had no
+ * shadow at all and stood a few pixels above the boards.
+ */
 private fun DrawScope.drawGroundShadow(pose: PetPose) {
     val lift = max(0f, -pose.bodyBounce)
     val squash = 1f - (lift / 22f).coerceIn(0f, 0.45f)
+    val ink = Color(0xFF120C1E)
     drawOval(
-        color = Color(0x172B1F45),
-        topLeft = Offset(CX - 40f * squash, GROUND_Y),
-        size = Size(80f * squash, 13f * squash),
+        color = ink.copy(alpha = 0.15f * squash),
+        topLeft = Offset(CX - 44f * squash, GROUND_Y - 2f),
+        size = Size(88f * squash, 17f * squash),
+    )
+    drawOval(
+        color = ink.copy(alpha = 0.34f * squash),
+        topLeft = Offset(CX - 27f * squash, GROUND_Y + 2f),
+        size = Size(54f * squash, 10f * squash),
     )
 }
 
@@ -185,12 +202,43 @@ private fun DrawScope.drawLegs(pose: PetPose, palette: PetPalette) {
             width = 14.5f,
             color = palette.sock,
         )
-        drawOval(
-            color = palette.shoe,
-            topLeft = Offset(CX + dx + dy - 9.5f, LEG_BOTTOM + 2f),
-            size = Size(19f, 11f),
-        )
+        drawShoe(Offset(CX + dx + dy, LEG_BOTTOM + 2f), palette)
     }
+}
+
+/**
+ * A Mary Jane seen head-on: a rounded upper on a pale sole, with a heel block
+ * showing behind it.
+ *
+ * The flat oval this replaces had no sole and no heel, so at any size above a
+ * widget's it read as a puddle of ink under the sock rather than as a shoe.
+ */
+private fun DrawScope.drawShoe(at: Offset, palette: PetPalette) {
+    // Heel first: the sole is drawn over its top edge, leaving a block below.
+    drawRoundRectPath(
+        Rect(at.x - 5f, at.y + 8f, at.x + 5f, at.y + 13f),
+        radius = 1.4f,
+        color = palette.shoe,
+    )
+    drawRoundRectPath(
+        Rect(at.x - 9.5f, at.y - 1f, at.x + 9.5f, at.y + 9f),
+        radius = 4.6f,
+        color = palette.shoe,
+    )
+    drawRoundRectPath(
+        Rect(at.x - 8.8f, at.y + 7.5f, at.x + 8.8f, at.y + 10.5f),
+        radius = 1.5f,
+        color = Color(0xFFE8DAC4),
+    )
+    // The strap. One pale line across the instep is what separates a school
+    // shoe from a boot.
+    drawLine(
+        color = palette.collar.copy(alpha = 0.4f),
+        start = Offset(at.x - 7.5f, at.y + 2f),
+        end = Offset(at.x + 7.5f, at.y + 2f),
+        strokeWidth = 1.5f,
+        cap = StrokeCap.Round,
+    )
 }
 
 private fun DrawScope.drawSkirt(pose: PetPose, palette: PetPalette) {
@@ -290,14 +338,23 @@ internal fun handOf(pose: PetPose, left: Boolean): Offset =
 private fun DrawScope.drawArm(pose: PetPose, palette: PetPalette, left: Boolean) {
     val shoulder = shoulderOf(pose, left)
     val elbow = elbowOf(pose, left)
-    val hand = handOf(pose, left)
+    val angle = forearmAngle(pose, left)
 
     // Puffed sleeve in a lighter shade so the arm separates from the torso.
     drawCircle(palette.uniformShade, radius = 9.5f, center = shoulder)
     drawRoundedBar(shoulder, elbow, width = 14f, color = palette.uniform)
-    drawCircle(palette.collar, radius = 6.6f, center = elbow)
-    drawRoundedBar(elbow, hand, width = 11f, color = palette.skin)
-    drawCircle(palette.skin, radius = 7f, center = hand)
+    // The sleeve's own round cap is the elbow now: the bright collar-coloured
+    // ball that used to sit here read as a doll's ball joint from any distance.
+
+    // The mitten is wider than the forearm, and that step is the wrist.
+    val wrist = polar(elbow, angle, FOREARM - 5.5f)
+    drawRoundedBar(elbow, wrist, width = 11f, color = palette.skin)
+    drawRoundedBar(wrist, polar(wrist, angle, 5f), width = 13f, color = palette.skin)
+    // A thumb, always on the side facing her body: without it a hand at this
+    // scale is just a dot on the end of a stick, and every prop she holds looks
+    // balanced on her wrist.
+    val inward = if (left) 1f else -1f
+    drawRoundedBar(wrist, polar(wrist, angle + inward * 74f, 4.6f), width = 6.4f, color = palette.skin)
 }
 
 // --- head ----------------------------------------------------------------------
@@ -311,36 +368,84 @@ private fun DrawScope.drawHeadGroup(pose: PetPose, palette: PetPalette) {
         drawOval(palette.skinShade, Offset(CX - HEAD_RX - 5f, HEAD_CY), Size(13f, 18f))
         drawOval(palette.skinShade, Offset(CX + HEAD_RX - 8f, HEAD_CY), Size(13f, 18f))
 
+        drawHeadShape(palette)
+        // The shadow the bangs cast. It has to reach well *below* the fringe's
+        // edge to be seen at all: the oval this replaces sat entirely under the
+        // hair and never rendered a pixel.
         drawOval(
-            color = palette.skin,
-            topLeft = Offset(CX - HEAD_RX, HEAD_CY - HEAD_RY),
-            size = Size(HEAD_RX * 2, HEAD_RY * 2),
-        )
-        // Shading where the fringe casts onto the forehead.
-        drawOval(
-            color = palette.skinShade.copy(alpha = 0.4f),
-            topLeft = Offset(CX - 33f, HEAD_CY - 38f),
-            size = Size(66f, 22f),
+            color = palette.skinShade.copy(alpha = 0.3f),
+            topLeft = Offset(CX - 36f, HEAD_CY - 26f),
+            size = Size(72f, 32f),
         )
 
         drawFace(pose, palette)
         drawFringe(pose, palette)
+        // Brows last. They used to go down with the face and were then buried
+        // under the fringe, so the worry axis seven poses set moved nothing at
+        // all; over the hair they read the way anime bangs always let them.
+        drawBrows(pose, palette)
         drawAhoge(pose, palette)
     }
+}
+
+/**
+ * The head: a skull that tapers to a chin rather than a plain oval.
+ *
+ * Same width and same height as the ellipse it replaces, so nothing else on the
+ * face has to move — but the lower third pulls in to a soft point, which is the
+ * whole difference between a face and an egg.
+ */
+private fun DrawScope.drawHeadShape(palette: PetPalette) {
+    val head = Path().apply {
+        moveTo(CX - HEAD_RX, HEAD_CY - 4f)
+        cubicTo(
+            CX - HEAD_RX, HEAD_CY - HEAD_RY * 0.78f,
+            CX - HEAD_RX * 0.62f, HEAD_CY - HEAD_RY,
+            CX, HEAD_CY - HEAD_RY,
+        )
+        cubicTo(
+            CX + HEAD_RX * 0.62f, HEAD_CY - HEAD_RY,
+            CX + HEAD_RX, HEAD_CY - HEAD_RY * 0.78f,
+            CX + HEAD_RX, HEAD_CY - 4f,
+        )
+        cubicTo(
+            CX + HEAD_RX, HEAD_CY + 17f,
+            CX + 27f, HEAD_CY + 31f,
+            CX + 11f, HEAD_CY + 39f,
+        )
+        cubicTo(
+            CX + 5f, HEAD_CY + 43f,
+            CX - 5f, HEAD_CY + 43f,
+            CX - 11f, HEAD_CY + 39f,
+        )
+        cubicTo(
+            CX - 27f, HEAD_CY + 31f,
+            CX - HEAD_RX, HEAD_CY + 17f,
+            CX - HEAD_RX, HEAD_CY - 4f,
+        )
+        close()
+    }
+    drawPath(head, palette.skin)
 }
 
 private fun DrawScope.drawFringe(pose: PetPose, palette: PetPalette) {
     val sway = pose.hairSwayDegrees * 0.12f
 
-    // Bangs: a smooth cap with two soft points, no cusps.
+    // Bangs: a smooth cap with three soft points, no cusps.
+    //
+    // The lower edge sits a good ten points higher than it used to. The old
+    // teeth hung to the top of the eyes and the notches between them made two
+    // dark slanted wedges exactly where eyebrows belong — she scowled in every
+    // state, including the happy ones. Clearing the brow line is what lets a
+    // real brow be drawn there and mean something.
     val fringe = Path().apply {
         moveTo(CX - 41f, HEAD_CY + 2f)
         cubicTo(CX - 45f, HEAD_CY - 30f, CX - 26f, HEAD_CY - 46f, CX, HEAD_CY - 46f)
         cubicTo(CX + 26f, HEAD_CY - 46f, CX + 45f, HEAD_CY - 30f, CX + 41f, HEAD_CY + 2f)
-        cubicTo(CX + 38f, HEAD_CY - 12f, CX + 33f, HEAD_CY - 20f, CX + 20f + sway, HEAD_CY - 8f)
-        cubicTo(CX + 13f, HEAD_CY - 22f, CX + 4f, HEAD_CY - 24f, CX - 2f + sway, HEAD_CY - 10f)
-        cubicTo(CX - 9f, HEAD_CY - 24f, CX - 25f, HEAD_CY - 22f, CX - 30f + sway, HEAD_CY - 6f)
-        cubicTo(CX - 34f, HEAD_CY - 18f, CX - 38f, HEAD_CY - 12f, CX - 41f, HEAD_CY + 2f)
+        cubicTo(CX + 40f, HEAD_CY - 11f, CX + 37f, HEAD_CY - 18f, CX + 28f + sway, HEAD_CY - 17f)
+        cubicTo(CX + 18f, HEAD_CY - 27f, CX + 8f, HEAD_CY - 27f, CX + 1f + sway, HEAD_CY - 18.5f)
+        cubicTo(CX - 8f, HEAD_CY - 27f, CX - 20f, HEAD_CY - 27f, CX - 28f + sway, HEAD_CY - 17f)
+        cubicTo(CX - 37f, HEAD_CY - 18f, CX - 40f, HEAD_CY - 11f, CX - 41f, HEAD_CY + 2f)
         close()
     }
     drawPath(fringe, palette.hair)
@@ -394,32 +499,47 @@ private fun DrawScope.drawFace(pose: PetPose, palette: PetPalette) {
     val eyeY = HEAD_CY + 8f
     drawEye(Offset(CX - 17f, eyeY), pose, palette, mirrored = false)
     drawEye(Offset(CX + 17f, eyeY), pose, palette, mirrored = true)
-    drawBrows(pose, palette)
 
     val blush = palette.blush.copy(alpha = pose.blushAlpha)
     drawOval(blush, Offset(CX - 39f, eyeY + 11f), Size(20f, 11f))
     drawOval(blush, Offset(CX + 19f, eyeY + 11f), Size(20f, 11f))
 
+    // A nose at chibi scale is a hint, not a feature: one short soft stroke
+    // under the eye line, off centre the way a light from the upper left would
+    // put it, so the face stops being perfectly flat between eyes and mouth.
+    drawLine(
+        color = palette.skinShade,
+        start = Offset(CX + 1f, eyeY + 7.5f),
+        end = Offset(CX + 3.5f, eyeY + 10.5f),
+        strokeWidth = 2.2f,
+        cap = StrokeCap.Round,
+    )
+
     drawMouth(pose, palette, Offset(CX, eyeY + 20f))
 }
 
+/**
+ * The eyebrows, drawn over the bangs.
+ *
+ * Soft and short, with the inner end sitting slightly higher than the outer one
+ * by default — level or inner-low brows read as a glare. The worry axis lifts
+ * the inner ends further and drops the outer ones, which is the difference
+ * between "worried" and "angry" and the only thing seven of the poses have to
+ * say it with.
+ */
 private fun DrawScope.drawBrows(pose: PetPose, palette: PetPalette) {
-    // Thin and soft. The worry axis lifts the inner ends and drops the outer
-    // ones, which is the difference between "worried" and "angry".
-    // Soft and short, with the inner end sitting slightly higher than the outer
-    // one by default — level or inner-low brows read as a glare.
-    val y = HEAD_CY - 20f
+    val y = HEAD_CY - 12.5f
     val innerDy = -2f - pose.browWorry * 4f
     val outerDy = pose.browWorry * 2.5f
     listOf(-1f, 1f).forEach { side ->
         val path = Path().apply {
-            moveTo(CX + side * 25f, y + outerDy)
-            quadraticTo(CX + side * 17f, y - 3f + outerDy * 0.3f, CX + side * 10f, y + innerDy)
+            moveTo(CX + side * 26f, y + outerDy)
+            quadraticTo(CX + side * 18f, y - 3.5f + outerDy * 0.3f, CX + side * 10f, y + innerDy)
         }
         drawPath(
             path,
-            palette.hairShade.copy(alpha = 0.55f),
-            style = Stroke(width = 2.4f, cap = StrokeCap.Round),
+            palette.hairShade.copy(alpha = 0.8f),
+            style = Stroke(width = 2.6f, cap = StrokeCap.Round),
         )
     }
 }
@@ -501,13 +621,18 @@ private fun DrawScope.drawEye(
         // Upper lash, as a filled crescent rather than a uniform stroke: thick
         // over the pupil and tapering to points at both corners. A constant
         // width here is what makes the eye read as a scowl.
+        //
+        // The inner corner sits almost level with the outer one. It used to
+        // drop six points toward the nose, and two lashes converging downward
+        // at the bridge are the shape of an angry brow — she glared through
+        // every state on the roster, including the ones with hearts for eyes.
         val outer = if (mirrored) 1f else -1f
         val cornerOut = Offset(center.x + outer * 15f, center.y - 15f)
-        val cornerIn = Offset(center.x - outer * 12f, center.y - 9f)
+        val cornerIn = Offset(center.x - outer * 12f, center.y - 12.5f)
         val lash = Path().apply {
             moveTo(cornerOut.x, cornerOut.y)
-            quadraticTo(center.x + outer * 2f, center.y - 21f, cornerIn.x, cornerIn.y)
-            quadraticTo(center.x + outer * 3f, center.y - 14f, cornerOut.x, cornerOut.y)
+            quadraticTo(center.x + outer * 3f, center.y - 22.5f, cornerIn.x, cornerIn.y)
+            quadraticTo(center.x + outer * 4f, center.y - 16f, cornerOut.x, cornerOut.y)
             close()
         }
         drawPath(lash, palette.eyeDark)
@@ -572,6 +697,273 @@ private fun DrawScope.drawMouth(pose: PetPose, palette: PetPalette, at: Offset) 
             )
         }
     }
+}
+
+// --- workplaces ------------------------------------------------------------------
+
+/**
+ * Where the job happens.
+ *
+ * Giving each occupation its own prop fixed her hands and left the *place*
+ * alone: café, shop, office, stage, classroom and lecture hall were all her
+ * bedroom with a different object in it, which is what "почему одна и та же
+ * сцена" was actually about. Each job now gets a few pieces of set dressing
+ * behind her instead.
+ *
+ * They are drawn as furniture — framed, with ends — rather than as a full-bleed
+ * band, because the art box is narrower than the stage and a band would read as
+ * a card floating in the middle of the room. Everything stays inside
+ * [ART_WIDTH] x [ART_HEIGHT] and stays cheap: at this size a suggestion of a
+ * place beats a drawing of one.
+ */
+private fun DrawScope.drawWorkplace(prop: Prop, palette: PetPalette) {
+    when (prop) {
+        Prop.TRAY -> drawCafe(palette)
+        Prop.BAG -> drawShopFloor(palette)
+        Prop.LAPTOP -> drawOffice(palette)
+        Prop.MIC -> drawStage(palette)
+        Prop.NOTEBOOK -> drawClassroom(palette)
+        Prop.LECTURE -> drawStudyNook(palette)
+        Prop.BOOKSTACK -> drawLibrary(palette)
+        // Eating, sleeping, reading and gaming happen at home, and home is the
+        // room already drawn behind her.
+        else -> Unit
+    }
+}
+
+/** The café: a service counter, a chalked menu and a pendant lamp. */
+private fun DrawScope.drawCafe(palette: PetPalette) {
+    val wood = Color(0xFFB07C4F)
+    val woodDark = Color(0xFF8A5E39)
+
+    // The lamp hangs from the ceiling, so its cord starts off the top edge.
+    val lampX = 26f
+    drawLine(woodDark, Offset(lampX, 0f), Offset(lampX, 30f), 1.6f)
+    val shade = Path().apply {
+        moveTo(lampX - 5f, 30f)
+        lineTo(lampX + 5f, 30f)
+        lineTo(lampX + 14f, 46f)
+        lineTo(lampX - 14f, 46f)
+        close()
+    }
+    drawPath(shade, woodDark)
+    drawOval(palette.accent.copy(alpha = 0.85f), Offset(lampX - 11f, 43f), Size(22f, 7f))
+    drawOval(palette.accent.copy(alpha = 0.16f), Offset(lampX - 24f, 46f), Size(48f, 40f))
+
+    // The menu board, chalked.
+    drawRoundRectPath(Rect(126f, 40f, 192f, 96f), radius = 4f, color = woodDark)
+    drawRoundRectPath(Rect(130f, 44f, 188f, 92f), radius = 3f, color = Color(0xFF33302E))
+    for (i in 0..3) {
+        val y = 54f + i * 9f
+        drawLine(
+            palette.white.copy(alpha = 0.55f),
+            Offset(136f, y),
+            Offset(if (i == 0) 172f else 166f - i * 6f, y),
+            1.4f,
+            StrokeCap.Round,
+        )
+    }
+    drawCircle(palette.white.copy(alpha = 0.5f), radius = 4f, center = Offset(178f, 82f))
+
+    // The counter, run down to the floor so it stands on something. She is drawn
+    // over it, which puts her on the customers' side of the bar with the tray.
+    drawRoundRectPath(Rect(2f, 186f, 198f, GROUND_Y + 8f), radius = 3f, color = wood)
+    drawRoundRectPath(Rect(0f, 180f, 200f, 190f), radius = 4f, color = woodDark)
+    drawRoundRectPath(Rect(0f, 180f, 200f, 184f), radius = 2f, color = Color(0xFFD8A874))
+    for (x in listOf(30f, 96f, 162f)) {
+        drawLine(woodDark.copy(alpha = 0.35f), Offset(x, 192f), Offset(x, GROUND_Y + 4f), 1.6f)
+    }
+}
+
+/** The shop floor: stocked shelving either side of her and a swinging price tag. */
+private fun DrawScope.drawShopFloor(palette: PetPalette) {
+    val unit = Color(0xFFE4DAF0)
+    val shadow = palette.propDark.copy(alpha = 0.25f)
+    val goods = listOf(
+        Color(0xFFE8577E), Color(0xFF6FC6F5), Color(0xFFF5C542),
+        Color(0xFF5FD08A), Color(0xFFB79BE0),
+    )
+
+    listOf(0f to 56f, 144f to 200f).forEachIndexed { side, (left, right) ->
+        drawRoundRectPath(Rect(left, 46f, right, 210f), radius = 4f, color = unit)
+        drawRoundRectPath(Rect(left + 3f, 49f, right - 3f, 207f), radius = 3f, color = shadow)
+        for (row in 0..2) {
+            val y = 92f + row * 42f
+            drawRoundRectPath(Rect(left + 2f, y, right - 2f, y + 5f), radius = 2f, color = unit)
+            // Stock: three boxes to a shelf, sizes alternating so the rows are
+            // not a grid.
+            for (i in 0..2) {
+                val bx = left + 8f + i * ((right - left - 20f) / 3f)
+                val h = 16f + ((row + i + side) % 3) * 5f
+                drawRoundRectPath(
+                    Rect(bx, y - h, bx + 12f, y),
+                    radius = 1.6f,
+                    color = goods[(row * 3 + i + side * 2) % goods.size],
+                )
+            }
+        }
+    }
+
+    // A price tag on a string between them.
+    drawLine(palette.propDark.copy(alpha = 0.5f), Offset(78f, 0f), Offset(78f, 34f), 1.2f)
+    drawRoundRectPath(Rect(66f, 34f, 92f, 52f), radius = 4f, color = palette.accent)
+    drawCircle(palette.white, radius = 2f, center = Offset(71f, 39f))
+    drawLine(palette.propDark, Offset(74f, 47f), Offset(88f, 39f), 2f, StrokeCap.Round)
+}
+
+/** The office: a blinded window and a wall clock. */
+private fun DrawScope.drawOffice(palette: PetPalette) {
+    val frame = Color(0xFFD3D8E4)
+    drawRoundRectPath(Rect(112f, 30f, 194f, 132f), radius = 4f, color = frame)
+    drawRoundRectPath(Rect(117f, 35f, 189f, 127f), radius = 2f, color = Color(0xFFBFD9EE))
+    // Slats, tighter toward the top so the blind reads as half drawn.
+    for (i in 0..9) {
+        val y = 39f + i * 9f
+        drawLine(frame.copy(alpha = if (i < 4) 0.95f else 0.55f), Offset(117f, y), Offset(189f, y), 4.6f)
+    }
+    drawLine(frame, Offset(185f, 35f), Offset(185f, 118f), 1.6f)
+
+    drawCircle(Color(0xFFE9E4F2), radius = 15f, center = Offset(30f, 62f))
+    drawCircle(palette.propDark.copy(alpha = 0.25f), radius = 15f, center = Offset(30f, 62f))
+    drawCircle(Color(0xFFF7F4FC), radius = 12.5f, center = Offset(30f, 62f))
+    drawLine(palette.propDark, Offset(30f, 62f), Offset(30f, 54f), 1.8f, StrokeCap.Round)
+    drawLine(palette.propDark, Offset(30f, 62f), Offset(37f, 65f), 1.6f, StrokeCap.Round)
+}
+
+/** The idol stage: two beams, a truss and a pair of speaker stacks. */
+private fun DrawScope.drawStage(palette: PetPalette) {
+    listOf(18f to 1f, 182f to -1f).forEach { (originX, dir) ->
+        val beam = Path().apply {
+            moveTo(originX - dir * 7f, 14f)
+            lineTo(originX + dir * 7f, 14f)
+            lineTo(originX + dir * 96f, 232f)
+            lineTo(originX + dir * 22f, 232f)
+            close()
+        }
+        drawPath(beam, palette.accent.copy(alpha = 0.16f))
+        drawCircle(palette.accent.copy(alpha = 0.75f), radius = 7f, center = Offset(originX, 12f))
+    }
+
+    // The truss, hung on two drops rather than running off both edges: a bar cut
+    // flush at the frame reads as a stray rectangle over the room behind it.
+    listOf(52f, 148f).forEach { x ->
+        drawLine(palette.propDark, Offset(x, 0f), Offset(x, 6f), 2f)
+    }
+    drawRoundRectPath(Rect(10f, 4f, 190f, 12f), radius = 4f, color = palette.propDark)
+    for (i in 0..8) {
+        val x = 14f + i * 20f
+        drawLine(palette.prop.copy(alpha = 0.6f), Offset(x, 5f), Offset(x + 12f, 11f), 1.4f)
+    }
+
+    // Speaker stacks, standing on the floor at either side of her.
+    listOf(2f, 168f).forEach { x ->
+        drawRoundRectPath(Rect(x, 168f, x + 30f, 244f), radius = 3f, color = palette.propDark)
+        drawCircle(palette.prop, radius = 10f, center = Offset(x + 15f, 190f))
+        drawCircle(palette.propDark, radius = 4f, center = Offset(x + 15f, 190f))
+        drawCircle(palette.prop, radius = 6f, center = Offset(x + 15f, 218f))
+        drawCircle(palette.accent.copy(alpha = 0.8f), radius = 1.8f, center = Offset(x + 25f, 174f))
+    }
+}
+
+/** School: the board at the front of the class, with its chalk tray. */
+private fun DrawScope.drawClassroom(palette: PetPalette) {
+    drawRoundRectPath(Rect(14f, 38f, 186f, 136f), radius = 4f, color = Color(0xFFC9A876))
+    drawRoundRectPath(Rect(19f, 43f, 181f, 128f), radius = 2f, color = Color(0xFF2F5346))
+
+    // Chalk: a heading rule and two lines of writing, on the half of the board
+    // her head does not cover.
+    drawLine(palette.white.copy(alpha = 0.5f), Offset(28f, 56f), Offset(66f, 56f), 1.6f, StrokeCap.Round)
+    for (i in 0..2) {
+        val y = 68f + i * 9f
+        drawLine(palette.white.copy(alpha = 0.3f), Offset(28f, y), Offset(58f - i * 6f, y), 1.3f, StrokeCap.Round)
+    }
+    listOf(146f to 62f, 160f to 76f).forEach { (x, y) ->
+        drawLine(palette.white.copy(alpha = 0.35f), Offset(x - 12f, y), Offset(x + 12f, y), 1.3f, StrokeCap.Round)
+    }
+
+    // The tray, a stick of chalk and the eraser.
+    drawRoundRectPath(Rect(19f, 128f, 181f, 134f), radius = 2f, color = Color(0xFFB0905E))
+    drawRoundRectPath(Rect(30f, 124f, 42f, 128f), radius = 1.5f, color = palette.white)
+    drawRoundRectPath(Rect(156f, 122f, 172f, 128f), radius = 1.5f, color = palette.prop)
+}
+
+/** The online course: a corkboard of notes and a wall calendar at her desk. */
+private fun DrawScope.drawStudyNook(palette: PetPalette) {
+    drawRoundRectPath(Rect(118f, 34f, 194f, 110f), radius = 4f, color = Color(0xFF8A6A45))
+    drawRoundRectPath(Rect(122f, 38f, 190f, 106f), radius = 2f, color = Color(0xFFD7B183))
+    val notes = listOf(
+        Triple(128f, 44f, Color(0xFFFFE07A)),
+        Triple(160f, 48f, Color(0xFFA8E6C4)),
+        Triple(132f, 76f, Color(0xFFFFB8CE)),
+        Triple(162f, 78f, Color(0xFFB9D8FF)),
+    )
+    notes.forEach { (x, y, colour) ->
+        drawRoundRectPath(Rect(x, y, x + 24f, y + 22f), radius = 1.5f, color = colour)
+        drawLine(palette.propDark.copy(alpha = 0.3f), Offset(x + 4f, y + 9f), Offset(x + 19f, y + 9f), 1.1f)
+        drawLine(palette.propDark.copy(alpha = 0.3f), Offset(x + 4f, y + 14f), Offset(x + 15f, y + 14f), 1.1f)
+        drawCircle(Color(0xFFE8577E), radius = 2.2f, center = Offset(x + 12f, y + 2.5f))
+    }
+
+    drawRoundRectPath(Rect(10f, 40f, 54f, 96f), radius = 3f, color = palette.white)
+    drawRoundRectPath(Rect(10f, 40f, 54f, 54f), radius = 3f, color = Color(0xFFE8577E))
+    for (row in 0..2) {
+        for (col in 0..3) {
+            drawCircle(
+                palette.propDark.copy(alpha = if (row == 1 && col == 2) 0.7f else 0.2f),
+                radius = 2f,
+                center = Offset(18f + col * 10f, 64f + row * 12f),
+            )
+        }
+    }
+}
+
+/** The university: a library wall of books and a tall arched window. */
+private fun DrawScope.drawLibrary(palette: PetPalette) {
+    val case = Color(0xFF6B4A33)
+    val caseDark = Color(0xFF503522)
+    val spines = listOf(
+        Color(0xFFE8577E), Color(0xFF6FC6F5), Color(0xFFF5C542),
+        Color(0xFF5FD08A), Color(0xFFB79BE0), Color(0xFFF2926B),
+    )
+
+    drawRoundRectPath(Rect(112f, 20f, 198f, 200f), radius = 3f, color = case)
+    drawRoundRectPath(Rect(116f, 24f, 194f, 196f), radius = 2f, color = caseDark)
+    for (row in 0..3) {
+        val y = 62f + row * 44f
+        // Books lean and vary in height, otherwise the shelf reads as a barcode.
+        var x = 120f
+        var i = row
+        while (x < 188f) {
+            val w = 5f + (i % 3) * 2f
+            val h = 26f + ((i * 5) % 4) * 3f
+            drawRoundRectPath(Rect(x, y - h, x + w, y), radius = 1f, color = spines[i % spines.size])
+            x += w + 1.5f
+            i++
+        }
+        drawRoundRectPath(Rect(116f, y, 194f, y + 5f), radius = 1.5f, color = case)
+    }
+
+    val window = Path().apply {
+        moveTo(8f, 150f)
+        lineTo(8f, 70f)
+        cubicTo(8f, 34f, 68f, 34f, 68f, 70f)
+        lineTo(68f, 150f)
+        close()
+    }
+    drawPath(window, Color(0xFFE7E1D2))
+    val glass = Path().apply {
+        moveTo(13f, 145f)
+        lineTo(13f, 71f)
+        cubicTo(13f, 41f, 63f, 41f, 63f, 71f)
+        lineTo(63f, 145f)
+        close()
+    }
+    drawPath(glass, Color(0xFFCFE4F2))
+    drawLine(Color(0xFFE7E1D2), Offset(38f, 42f), Offset(38f, 145f), 3f)
+    listOf(74f, 104f).forEach { y ->
+        drawLine(Color(0xFFE7E1D2), Offset(13f, y), Offset(63f, y), 3f)
+    }
+    drawPath(window, palette.propDark.copy(alpha = 0.18f), style = Stroke(width = 2f))
 }
 
 // --- props ---------------------------------------------------------------------
@@ -1042,6 +1434,13 @@ private fun DrawScope.drawController(pose: PetPose, palette: PetPalette) {
     drawCircle(if (lit) palette.prop else palette.ribbon, radius = 3.2f, center = Offset(c.x + 20f, c.y + 3f))
 }
 
+/**
+ * The duvet.
+ *
+ * It reaches the floor and spreads as it goes. Stopping short of her shoes with
+ * vertical sides and two big rounded bottom corners made a violet tub with a
+ * pair of feet under it rather than something she was sleeping in.
+ */
 private fun DrawScope.drawBlanket(pose: PetPose, palette: PetPalette) {
     val rise = pose.breath * 1.3f
     val top = 186f + rise
@@ -1049,12 +1448,22 @@ private fun DrawScope.drawBlanket(pose: PetPose, palette: PetPalette) {
         moveTo(CX - 54f, top + 20f)
         cubicTo(CX - 56f, top + 2f, CX - 30f, top - 6f, CX, top - 6f)
         cubicTo(CX + 30f, top - 6f, CX + 56f, top + 2f, CX + 54f, top + 20f)
-        cubicTo(CX + 56f, 232f, CX + 40f, 240f, CX + 20f, 240f)
-        lineTo(CX - 20f, 240f)
-        cubicTo(CX - 40f, 240f, CX - 56f, 232f, CX - 54f, top + 20f)
+        cubicTo(CX + 60f, 232f, CX + 66f, 246f, CX + 68f, GROUND_Y + 4f)
+        lineTo(CX - 68f, GROUND_Y + 4f)
+        cubicTo(CX - 66f, 246f, CX - 60f, 232f, CX - 54f, top + 20f)
         close()
     }
-    drawPath(blanket, palette.iris.copy(alpha = 0.92f))
+    drawPath(blanket, palette.iris)
+    // Creases falling from the fold, so the duvet has cloth in it.
+    listOf(-34f, -12f, 14f, 36f).forEach { dx ->
+        drawLine(
+            color = palette.irisDeep.copy(alpha = 0.22f),
+            start = Offset(CX + dx, top + 16f),
+            end = Offset(CX + dx * 1.35f, GROUND_Y + 2f),
+            strokeWidth = 2f,
+            cap = StrokeCap.Round,
+        )
+    }
     // Folded-over sheet along the top edge.
     val fold = Path().apply {
         moveTo(CX - 55f, top + 12f)

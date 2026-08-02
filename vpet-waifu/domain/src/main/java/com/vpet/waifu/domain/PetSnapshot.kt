@@ -4,7 +4,7 @@ package com.vpet.waifu.domain
 enum class PetActivity { AWAKE, SLEEPING, WORKING, STUDYING, PLAYING }
 
 /** Why a shop item is greyed out. */
-enum class PurchaseBlock { LEVEL, MONEY, BUSY, STILL_PAYING, NOT_SICK }
+enum class PurchaseBlock { LEVEL, MONEY, BUSY, STILL_PAYING, NOT_SICK, ALREADY_TODAY }
 
 /** A short-lived reaction that overrides the idle animation. */
 enum class Emote { EATING, LOVED, CELEBRATING }
@@ -72,9 +72,11 @@ data class PetSnapshot(
     val lastTickAt: Long,
     val lastInteractionAt: Long,
     /** Everything bought once and kept — see [Upgrades]. */
-    val owned: Set<String> = setOf(Upgrades.DEFAULT_OUTFIT),
+    val owned: Set<String> = setOf(Upgrades.DEFAULT_OUTFIT, Upgrades.DEFAULT_THEME),
     /** Which owned outfit she is wearing. */
     val outfit: String = Upgrades.DEFAULT_OUTFIT,
+    /** Which owned theme the room is decorated in. */
+    val theme: String = Upgrades.DEFAULT_THEME,
     /** Today's event, if one has landed. */
     val event: PetEvent? = null,
     /** The last thing she was fed, and how many times running. */
@@ -123,6 +125,15 @@ data class PetSnapshot(
     val goalRewarded: Boolean = false,
     /** The largest day-count anniversary already celebrated. */
     val celebratedMilestone: Int = 0,
+    /** The check-in streak — see [PetSimulation.claimDaily]. */
+    val streakDays: Int = 0,
+    val bestStreak: Int = 0,
+    /** The day index the streak was last credited on. */
+    val lastLoginDay: Long = 0L,
+    /** The day index the day off was last taken on, or 0 for never. */
+    val dayOffDay: Long = 0L,
+    /** What the check-in just paid, until the player has been told. */
+    val pendingDaily: Int = 0,
 ) {
     val isSleeping: Boolean get() = activity == PetActivity.SLEEPING
 
@@ -181,7 +192,8 @@ data class PetSnapshot(
             (item.effect == null || !hasEffect(item.effect, nowMillis)) &&
             // Medicine is for the sick; sold to the healthy it is a coin sink
             // wearing a cross.
-            (item.id != Shop.MEDICINE_ID || isSick)
+            (item.id != Shop.MEDICINE_ID || isSick) &&
+            (item.id != Shop.DAY_OFF_ID || !dayOffTaken(nowMillis))
 
     /** Why [item] cannot be bought, for the shop card to explain. */
     fun blockedBy(item: ShopItem, nowMillis: Long): PurchaseBlock? = when {
@@ -190,8 +202,20 @@ data class PetSnapshot(
         item.category == ShopCategory.FOOD && !acceptsInteraction -> PurchaseBlock.BUSY
         item.effect != null && hasEffect(item.effect, nowMillis) -> PurchaseBlock.STILL_PAYING
         item.id == Shop.MEDICINE_ID && !isSick -> PurchaseBlock.NOT_SICK
+        item.id == Shop.DAY_OFF_ID && dayOffTaken(nowMillis) -> PurchaseBlock.ALREADY_TODAY
         else -> null
     }
+
+    /**
+     * Whether today's day off has already been taken.
+     *
+     * Zero means "never", exactly as it does for [sickSince]: the day index of
+     * the epoch is not a day anybody is playing on, and reading it as a real
+     * date would lock the very first purchase behind a calendar day that ended
+     * in 1970.
+     */
+    fun dayOffTaken(nowMillis: Long): Boolean =
+        dayOffDay > 0L && dayOffDay == Events.dayOf(nowMillis)
 
     fun owns(upgradeId: String): Boolean = upgradeId in owned
 

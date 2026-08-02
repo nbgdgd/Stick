@@ -31,7 +31,6 @@
     <string name="action_open_app">Открыть</string>
     <string name="action_hide_bubble">Скрыть</string>
     <string name="action_grant_overlay">Открыть настройки</string>
-    <string name="action_send">Отправить</string>
     <string name="action_call_home">Вернуть домой</string>
     <string name="action_ok">Понятно</string>
 
@@ -39,7 +38,7 @@
     <string name="section_study">Учёба</string>
     <string name="section_food">Еда</string>
     <string name="section_gifts">Подарки</string>
-    <string name="section_pills">Таблетки</string>
+    <string name="section_pills">Экстренное</string>
     <string name="section_boosts">Баффы</string>
 
     <string name="job_cafe">Кафе</string>
@@ -61,15 +60,13 @@
     <string name="item_headphones">Наушники</string>
     <string name="item_ring">Колечко</string>
     <string name="item_advance">Аванс</string>
-    <string name="item_exp_pill">EXP-таблетка</string>
+    <string name="item_exp_pill">Ночная зубрёжка</string>
     <string name="item_haste_shot">Шот ускорения</string>
     <string name="item_overtime_pass">Сверхурочный пропуск</string>
     <string name="item_focus_tea">Чай для фокуса</string>
     <string name="item_second_wind">Второе дыхание</string>
     <string name="item_good_vibes">Плейлист вайба</string>
-    <string name="unlocks_at_level">Откроется на %1$d уровне</string>
     <string name="session_remaining">осталось %1$s</string>
-    <string name="duration_minutes">смена %1$d мин</string>
     <string name="too_tired_to_work">Мало энергии — нужны еда или сон</string>
     <string name="tab_her">Она</string>
     <string name="state_sick">Приболела</string>
@@ -92,18 +89,17 @@
     <string name="request_play">Хочет сыграть один раунд</string>
     <string name="request_window">осталось %1$s</string>
 
-    <string name="bond_title">Привязанность</string>
     <string name="bond_level_label">Привязанность %1$d</string>
     <string name="bond_progress">%1$d / %2$d</string>
     <string name="bond_today">сегодня +%1$d / %2$d</string>
     <string name="bond_hint">Растёт от заботы, никогда не убывает</string>
-    <string name="bond_name_0">Незнакомки</string>
-    <string name="bond_name_1">Знакомые</string>
-    <string name="bond_name_2">Соседки</string>
-    <string name="bond_name_3">Подруги</string>
-    <string name="bond_name_4">Близкие подруги</string>
-    <string name="bond_name_5">Дорогой человек</string>
-    <string name="bond_name_6">Доверие</string>
+    <string name="bond_name_0">Пока незнакомы</string>
+    <string name="bond_name_1">Знакомы</string>
+    <string name="bond_name_2">Соседи</string>
+    <string name="bond_name_3">Друзья</string>
+    <string name="bond_name_4">Близкие друзья</string>
+    <string name="bond_name_5">Родные люди</string>
+    <string name="bond_name_6">Полное доверие</string>
     <string name="bond_name_7">Не разлей вода</string>
     <string name="bond_name_8">Семья</string>
     <string name="bond_name_9">Родные души</string>
@@ -204,14 +200,11 @@
     <string name="game_best">Рекорд: %1$d</string>
     <string name="game_new_record">Новый рекорд: %1$d!</string>
     <string name="still_paying_it_off">Эффект прошлой покупки ещё активен</string>
-    <string name="section_busy">Она сейчас занята</string>
     <string name="tip_jar_title">Пассивный доход</string>
-    <string name="tip_jar_body">Мелочь капает, пока ты за ней смотришь дома: %1$d ¥ в минуту, но не больше %2$d ¥ в день. На смене копилка молчит — смена платит только тем, что платит смена.</string>
     <string name="exp_title">Уровень %1$d</string>
     <string name="exp_progress">%1$d / %2$d опыта</string>
     <string name="exp_next_level">%1$d опыта до %2$d уровня</string>
     <string name="exp_maxed">Максимальный уровень</string>
-    <string name="not_enough_money">Дорого</string>
     <string name="pills_warning">Эффект мгновенный, штраф временный — указан на карточке</string>
     <string name="effect_hunger_surge">голод падает быстрее %1$s</string>
     <string name="effect_exhaustion">энергия падает быстрее %1$s</string>
@@ -381,7 +374,7 @@
     <string name="progress_info">Опыт даёт учёба; работа приносит +%1$s опыта в минуту. Пассивный доход начисляется, пока приложение открыто и она свободна; дневной лимит обновляется в полночь.</string>
     <string name="settings_title">Настройки</string>
     <string name="licenses_title">Лицензии</string>
-    <string name="licenses_body">Иконки: Material Icons (Apache 2.0). Шрифт: Golos Text (SIL OFL 1.1, Paratype). Звуки, музыка и арт персонажа созданы для приложения. Полный реестр — в файле ATTRIBUTIONS.md проекта.</string>
+    <string name="licenses_body">Иконки: Material Icons (Apache 2.0). Шрифт: Golos Text (SIL OFL 1.1, Paratype). Звуки, музыка, арт персонажа и предметов созданы для этого приложения.</string>
     <string name="shop_busy_banner">Она занята до %1$s — еда недоступна</string>
     <string name="shop_asleep_banner">Она спит — еда недоступна</string>
     <string name="action_start_work">На смену</string>
@@ -391,4 +384,62 @@
     <string name="ach_progress">%1$d из %2$d открыто</string>
     <string name="ach_show_all">Все (%1$d)</string>
     <string name="ach_hide">Свернуть</string>
+
+    <!-- celebrations -->
+    <string name="levelup_title">Новый уровень</string>
+    <string name="levelup_body">Уровень %1$d</string>
+    <string name="bond_levelup_title">Вы стали ближе</string>
+    <string name="bond_levelup_body">Теперь вы — %1$s</string>
+    <string name="action_nice">Отлично</string>
+
+    <!-- daily streak -->
+    <string name="streak_title">Дней подряд</string>
+    <string name="streak_days">%1$d подряд</string>
+    <string name="streak_best">рекорд %1$d</string>
+    <string name="daily_title">С возвращением</string>
+    <string name="daily_reward">Награда за вход · +%1$d ¥</string>
+    <string name="daily_streak_reward">День %1$d подряд · +%2$d ¥</string>
+
+    <!-- coming back after a long absence -->
+    <string name="comeback_title">Она ждала</string>
+    <string name="comeback_body">Отложила для тебя ужин и немного денег</string>
+
+    <!-- save file -->
+    <string name="save_title">Сохранение</string>
+    <string name="save_hint">Файл можно перенести на другой телефон</string>
+    <string name="save_export">Сохранить в файл</string>
+    <string name="save_import">Восстановить из файла</string>
+    <string name="save_exported">Файл сохранён</string>
+    <string name="save_imported">Прогресс восстановлен</string>
+    <string name="save_failed">Не удалось прочитать файл</string>
+    <string name="save_replace_title">Заменить прогресс?</string>
+    <string name="save_replace_body">Текущий прогресс будет заменён содержимым файла. Отменить нельзя.</string>
+    <string name="action_replace">Заменить</string>
+    <string name="action_cancel">Отмена</string>
+
+    <!-- room themes &amp; the day off -->
+    <string name="section_comfort">Уют</string>
+    <string name="section_themes">Темы комнаты</string>
+    <string name="theme_default">Её комната</string>
+    <string name="theme_cozy">Тёплая комната</string>
+    <string name="theme_night">Ночная комната</string>
+    <string name="theme_sakura">Сакура</string>
+    <string name="effect_theme">меняет комнату</string>
+    <string name="item_day_off">Выходной вместе</string>
+    <string name="day_off_effect">полный отдых · раз в день</string>
+    <string name="day_off_used">Сегодня уже был</string>
+
+    <!-- shift payout multiplier -->
+    <string name="shift_pay_great">оплата ×1.3</string>
+    <string name="shift_pay_good">оплата ×1</string>
+    <string name="shift_pay_poor">оплата ×0.7</string>
+    <string name="shift_pay_bad">оплата ×0.45</string>
+    <string name="shift_pay_hint">Гладь её — смена платит больше</string>
+
+    <!-- arcade cost -->
+    <string name="game_cost_energy">−%1$d энергии</string>
+
+    <!-- pull-back notification -->
+    <string name="notify_missed_title">Она скучает</string>
+    <string name="notify_missed_body">Вы не виделись %1$d дн.</string>
 </resources>

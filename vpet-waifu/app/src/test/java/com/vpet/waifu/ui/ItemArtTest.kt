@@ -41,11 +41,14 @@ class ItemArtTest {
     }
 
     @Test
-    fun `room and gear have portraits, outfits use their swatches`() {
-        val furnishings = Upgrades.ALL.filter { it.kind != UpgradeKind.OUTFIT }
-        val arts = furnishings.map { upgradeArtRes(it.id) }
-        arts.forEach { assertNotNull("furnishing without art", it) }
-        assertEquals(furnishings.size, arts.toSet().size)
-        Upgrades.OUTFITS.forEach { assertNull(upgradeArtRes(it.id)) }
+    fun `every purchasable upgrade has its own portrait`() {
+        // The default room is the one thing here nobody buys, so it is the one
+        // thing without a picture; everything else — including the six outfits
+        // that used to share a single coat hanger — carries its own.
+        val bought = Upgrades.ALL.filter { it.id != Upgrades.DEFAULT_THEME }
+        val arts = bought.map { upgradeArtRes(it.id) }
+        arts.forEach { assertNotNull("purchasable upgrade without art", it) }
+        assertEquals("two upgrades share a portrait", bought.size, arts.toSet().size)
+        assertNull(upgradeArtRes(Upgrades.DEFAULT_THEME))
     }
 }

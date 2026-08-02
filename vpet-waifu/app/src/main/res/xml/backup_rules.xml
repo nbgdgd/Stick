@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What Google's backup transport may carry. The save is one Room database plus
+  the settings store; nothing else in here is worth restoring, and the WAL
+  sidecars are excluded because a half-checkpointed copy restores as a corrupt
+  database rather than as a pet.
+-->
+<full-backup-content>
+    <include domain="database" path="vpet.db" />
+    <include domain="file" path="datastore/" />
+    <exclude domain="database" path="vpet.db-wal" />
+    <exclude domain="database" path="vpet.db-shm" />
+</full-backup-content>

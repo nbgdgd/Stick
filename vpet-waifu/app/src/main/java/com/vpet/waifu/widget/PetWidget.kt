@@ -88,7 +88,10 @@ class PetWidget : GlanceAppWidget() {
         // not the system theme: a widget showing noon at midnight breaks the
         // fiction harder than any missing feature. The 15-minute heartbeat
         // carries the flip across the boundary.
-        val palette = WidgetPalette.of(night = isRealNight(now) || state == PetState.SLEEPING)
+        val palette = WidgetPalette.of(
+            night = isRealNight(now) || state == PetState.SLEEPING,
+            theme = snapshot.theme,
+        )
         val size = widgetSize(context, id)
         val density = context.resources.displayMetrics.density
 
@@ -117,7 +120,7 @@ class PetWidget : GlanceAppWidget() {
         // hidden for an identical picture.
         val decor = snapshot.owned.filter { decorVisible(it, detail) }.sorted()
         val room = ROOMS.getOrPut(
-            "${roomWidthPx}x$roomHeightPx|${palette.room.night}|${floorFraction.round3()}|$detail|${decor.joinToString(",")}",
+            "${roomWidthPx}x$roomHeightPx|${palette.room.night}|${snapshot.theme}|${floorFraction.round3()}|$detail|${decor.joinToString(",")}",
         ) {
             PetRasterizer.roomPng(
                 widthPx = roomWidthPx,
@@ -130,6 +133,7 @@ class PetWidget : GlanceAppWidget() {
                 floorFraction = floorFraction,
                 detail = detail,
                 decor = decor.toSet(),
+                theme = snapshot.theme,
             )
         }
 
@@ -336,24 +340,17 @@ private enum class FlipTempo(val layoutRes: Int, val loopSeconds: Float) {
  */
 private data class WidgetPalette(val room: RoomColors) {
     companion object {
-        fun of(night: Boolean): WidgetPalette = if (night) Dark else Light
-
-        private val Light = WidgetPalette(
-            RoomColors(
-                top = StageColors.DayTop,
-                bottom = StageColors.DayBottom,
-                floor = StageColors.FloorLight,
-                night = false,
-            ),
-        )
-        private val Dark = WidgetPalette(
-            RoomColors(
-                top = StageColors.NightTop,
-                bottom = StageColors.NightBottom,
-                floor = StageColors.FloorDark,
-                night = true,
-            ),
-        )
+        /** The bought room reaches the home screen too, or it is half a purchase. */
+        fun of(night: Boolean, theme: String): WidgetPalette {
+            val room = StageColors.forTheme(theme)
+            return WidgetPalette(
+                if (night) {
+                    RoomColors(top = room.nightTop, bottom = room.nightBottom, floor = room.floorDark, night = true)
+                } else {
+                    RoomColors(top = room.dayTop, bottom = room.dayBottom, floor = room.floorLight, night = false)
+                },
+            )
+        }
     }
 }
 

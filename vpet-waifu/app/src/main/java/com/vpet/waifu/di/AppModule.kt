@@ -41,14 +41,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PetDatabase =
         Room.databaseBuilder(context, PetDatabase::class.java, PetDatabase.NAME)
-            .addMigrations(
-                PetDatabase.MIGRATION_1_2,
-                PetDatabase.MIGRATION_2_3,
-                PetDatabase.MIGRATION_3_4,
-                PetDatabase.MIGRATION_4_5,
-                PetDatabase.MIGRATION_5_6,
-                PetDatabase.MIGRATION_6_7,
-            )
+            .addMigrations(*PetDatabase.ALL_MIGRATIONS)
             .build()
 
     @Provides

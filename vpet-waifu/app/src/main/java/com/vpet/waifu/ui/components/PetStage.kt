@@ -21,6 +21,8 @@ import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.AnimatedPet
 import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.Prop
+import com.vpet.waifu.ui.character.RoomDetail
+import com.vpet.waifu.ui.character.RoomTheme
 import com.vpet.waifu.ui.character.drawPetRoom
 import com.vpet.waifu.ui.theme.StageColors
 
@@ -48,17 +50,20 @@ fun PetStage(
      * shows stars at the player's midnight instead of a noon sky.
      */
     night: Boolean = state == PetState.SLEEPING,
+    /** The room she is living in — bought in the shop, applied here. */
+    theme: String = RoomTheme.DEFAULT_ID,
 ) {
+    val room = StageColors.forTheme(theme)
     val top by animateColorAsState(
-        if (night) StageColors.NightTop else StageColors.DayTop,
+        if (night) room.nightTop else room.dayTop,
         label = "stage-top",
     )
     val bottom by animateColorAsState(
-        if (night) StageColors.NightBottom else StageColors.DayBottom,
+        if (night) room.nightBottom else room.dayBottom,
         label = "stage-bottom",
     )
     val floor by animateColorAsState(
-        if (night) StageColors.FloorDark else StageColors.FloorLight,
+        if (night) room.floorDark else room.floorLight,
         label = "stage-floor",
     )
 
@@ -70,7 +75,18 @@ fun PetStage(
         contentAlignment = Alignment.BottomCenter,
     ) {
         Canvas(Modifier.fillMaxSize()) {
-            drawPetRoom(top = top, bottom = bottom, floor = floor, night = night, decor = decor)
+            drawPetRoom(
+                top = top,
+                bottom = bottom,
+                floor = floor,
+                night = night,
+                // Her bedroom's window, shelf and cat behind the café counter
+                // or the stage truss is two rooms at once; while she is out,
+                // only the wall dressing stays.
+                detail = if (workProp != null) RoomDetail.WALL else RoomDetail.FULL,
+                decor = decor,
+                theme = theme,
+            )
         }
 
         AnimatedPet(

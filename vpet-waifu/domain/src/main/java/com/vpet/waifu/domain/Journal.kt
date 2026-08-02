@@ -25,6 +25,12 @@ enum class JournalKind {
 
     /** A day-count anniversary; amount is the number of days. */
     ANNIVERSARY,
+
+    /** The daily check-in paid out; amount is what it paid, detail the streak. */
+    DAILY,
+
+    /** She held the fort through a long absence and put something aside. */
+    COMEBACK,
 }
 
 /**

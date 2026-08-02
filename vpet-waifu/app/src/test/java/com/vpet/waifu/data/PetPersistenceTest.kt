@@ -51,8 +51,12 @@ class PetPersistenceTest {
     @Test
     fun `everything on the snapshot survives a round trip`() {
         val rich = PetSnapshot.initial(pet.clock.nowMillis).copy(
-            owned = setOf(Upgrades.DEFAULT_OUTFIT, "fridge", "laptop", "outfit_mint"),
+            owned = setOf(
+                Upgrades.DEFAULT_OUTFIT, Upgrades.DEFAULT_THEME,
+                "fridge", "laptop", "outfit_mint", "theme_cozy",
+            ),
             outfit = "outfit_mint",
+            theme = "theme_cozy",
             event = PetEvent(EventKind.COLD, day = 19_680, seenAt = 42L),
             lastMealId = "ramen",
             repeatedMeals = 3,
@@ -88,12 +92,18 @@ class PetPersistenceTest {
             goalBaseline = 17,
             goalRewarded = true,
             celebratedMilestone = 30,
+            streakDays = 5,
+            bestStreak = 11,
+            lastLoginDay = 19_681,
+            dayOffDay = 19_680,
+            pendingDaily = 525,
         )
 
         val restored = rich.toEntity().toSnapshot()
 
         assertEquals(rich.owned, restored.owned)
         assertEquals(rich.outfit, restored.outfit)
+        assertEquals(rich.theme, restored.theme)
         assertEquals(rich.event, restored.event)
         assertEquals(rich.lastMealId, restored.lastMealId)
         assertEquals(rich.repeatedMeals, restored.repeatedMeals)
@@ -129,6 +139,13 @@ class PetPersistenceTest {
         assertEquals(rich.goalBaseline, restored.goalBaseline)
         assertEquals(rich.goalRewarded, restored.goalRewarded)
         assertEquals(rich.celebratedMilestone, restored.celebratedMilestone)
+        // The streak is the reason to come back tomorrow; losing it on a
+        // restart would quietly cost the player a week of them.
+        assertEquals(rich.streakDays, restored.streakDays)
+        assertEquals(rich.bestStreak, restored.bestStreak)
+        assertEquals(rich.lastLoginDay, restored.lastLoginDay)
+        assertEquals(rich.dayOffDay, restored.dayOffDay)
+        assertEquals(rich.pendingDaily, restored.pendingDaily)
     }
 
     @Test
@@ -179,8 +196,9 @@ class PetPersistenceTest {
 
         val restored = legacy.toSnapshot()
 
-        assertEquals(setOf(Upgrades.DEFAULT_OUTFIT), restored.owned)
+        assertEquals(setOf(Upgrades.DEFAULT_OUTFIT, Upgrades.DEFAULT_THEME), restored.owned)
         assertEquals(Upgrades.DEFAULT_OUTFIT, restored.outfit)
+        assertEquals(Upgrades.DEFAULT_THEME, restored.theme)
         assertEquals(null, restored.event)
     }
 

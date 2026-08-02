@@ -53,6 +53,13 @@ class MainActivity : ComponentActivity() {
         viewModel.markSeen()
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Coming back is the moment the day's reward is owed — and, after a
+        // long absence, the moment she hands over what she saved.
+        viewModel.claimDaily()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

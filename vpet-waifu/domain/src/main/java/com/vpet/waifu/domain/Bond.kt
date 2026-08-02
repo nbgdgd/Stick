@@ -29,6 +29,9 @@ object Bond {
     const val GAME = 2
     const val REQUEST_GRANTED = 5
     const val NURSED = 6
+    const val DAY_OFF = 3
+    /** Coming home to her after a day away is worth something by itself. */
+    const val COMEBACK = 2
 
     /** Total points needed to *reach* [level]. Level 0 is where everyone starts. */
     fun pointsForLevel(level: Int): Int {

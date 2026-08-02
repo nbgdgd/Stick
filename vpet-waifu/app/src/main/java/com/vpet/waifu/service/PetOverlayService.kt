@@ -29,6 +29,8 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.vpet.waifu.MainActivity
 import com.vpet.waifu.R
 import com.vpet.waifu.data.PetPreferences
+import com.vpet.waifu.feedback.Cue
+import com.vpet.waifu.feedback.PetSounds
 import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.di.ApplicationScope
 import com.vpet.waifu.domain.PetSnapshot
@@ -61,6 +63,10 @@ class PetOverlayService :
     @Inject lateinit var repository: PetRepository
     @Inject lateinit var preferences: PetPreferences
     @Inject lateinit var tuning: PetTuning
+
+    // The bubble was the one surface in the app with no sound at all: six
+    // controls, every one of them mute.
+    @Inject lateinit var sounds: PetSounds
     @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
 
     override val viewModelStore: ViewModelStore = ViewModelStore()
@@ -152,7 +158,8 @@ class PetOverlayService :
         }
     }
 
-    private fun act(action: suspend PetRepository.() -> PetSnapshot) {
+    private fun act(cue: Cue? = null, action: suspend PetRepository.() -> PetSnapshot) {
+        cue?.let(sounds::play)
         lifecycleScope.launch { repository.action() }
     }
 
@@ -184,28 +191,34 @@ class PetOverlayService :
                         expanded = panelExpanded,
                         onTap = {
                             // She sleeps through taps; only a long press reaches her.
-                            if (current.acceptsInteraction) panelExpanded = !panelExpanded
+                            if (current.acceptsInteraction) {
+                                panelExpanded = !panelExpanded
+                                sounds.play(Cue.POP)
+                            } else {
+                                sounds.play(Cue.TAP)
+                            }
                         },
                         onLongPress = {
                             // A long press is the shortcut: wake her, or a quick
                             // head pat without opening the panel.
-                            if (current.isSleeping) act { wake() } else act { pet() }
+                            if (current.isSleeping) act(Cue.TAP) { wake() } else act(Cue.PET_TAP) { pet() }
                         },
                         onDrag = { dx, dy -> overlayWindow.moveBy(dx, dy) },
                         onDragEnd = { overlayWindow.snapToNearestEdge() },
-                        onFeed = { act { feed() } },
-                        onPet = { act { pet() } },
+                        onFeed = { act(Cue.EAT) { feed() } },
+                        onPet = { act(Cue.HAPPY) { pet() } },
                         onToggleSleep = {
-                            if (current.isSleeping) act { wake() } else act { startSleep() }
+                            if (current.isSleeping) act(Cue.TAP) { wake() } else act(Cue.TAP) { startSleep() }
                         },
                         onOpenApp = {
+                            sounds.play(Cue.TAP)
                             panelExpanded = false
                             startActivity(
                                 Intent(this@PetOverlayService, MainActivity::class.java)
                                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                             )
                         },
-                        onHide = ::dismiss,
+                        onHide = { sounds.play(Cue.TAP); dismiss() },
                     )
                 }
             }

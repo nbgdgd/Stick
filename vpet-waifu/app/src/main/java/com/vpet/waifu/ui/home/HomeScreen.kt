@@ -75,6 +75,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -95,6 +96,7 @@ import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.domain.Dialogue
 import com.vpet.waifu.domain.OccupationKind
+import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.Anniversaries
 import com.vpet.waifu.domain.JournalEntry
@@ -177,6 +179,7 @@ fun HomeScreen(
     onDismissEvent: () -> Unit,
     onBuy: (ShopItem) -> Unit,
     onAcknowledgeStory: () -> Unit,
+    onAcknowledgeDaily: () -> Unit,
     onSeen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -261,6 +264,7 @@ fun HomeScreen(
                 workProp = workPropFor(snapshot.occupation?.id),
                 decor = snapshot.owned,
                 night = state == PetState.SLEEPING || isRealNight(nowMillis),
+                theme = snapshot.theme,
             )
             // The tap layer sits over the room but under the chips and bubble.
             Box(
@@ -331,6 +335,11 @@ fun HomeScreen(
         }
 
         // What happened while nobody was looking — shown once per return.
+        // Today's reward for turning up, and the streak it belongs to.
+        if (snapshot.pendingDaily > 0) {
+            DailyCard(snapshot, onAcknowledgeDaily)
+        }
+
         AwayRecap(snapshot, settings.lastSeenAt, nowMillis, onSeen)
 
         // A round number of days together is a small holiday.
@@ -358,14 +367,14 @@ fun HomeScreen(
         }
 
         AnimatedVisibility(visible = snapshot.isBusy) {
-            SessionCard(snapshot, nowMillis, onCancelOccupation)
+            SessionCard(snapshot, simulation, nowMillis, onCancelOccupation)
         }
 
         ActiveBoosts(snapshot, nowMillis)
 
         StatsCard(snapshot)
         ProgressCard(snapshot, simulation, tuning)
-        CareRow(snapshot, tuning, onFeed, onPet, onToggleSleep)
+        CareRow(snapshot, simulation, tuning, nowMillis, onFeed, onPet, onToggleSleep)
         Spacer(Modifier.height(4.dp))
     }
 
@@ -552,7 +561,12 @@ private fun NameDialog(
 }
 
 @Composable
-private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> Unit) {
+private fun SessionCard(
+    snapshot: PetSnapshot,
+    simulation: PetSimulation,
+    nowMillis: Long,
+    onCancel: () -> Unit,
+) {
     val session = snapshot.session ?: return
     val occupation = snapshot.occupation ?: return
 
@@ -605,6 +619,26 @@ private fun SessionCard(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -> 
             }
             Spacer(Modifier.height(14.dp))
             StatBarTrack(fraction = session.progress(nowMillis), color = Accents.Bright, height = 7.dp)
+            Spacer(Modifier.height(12.dp))
+            // Wages are recomputed from her CURRENT mood every simulated
+            // minute, so a pat mid-shift is worth real money for every minute
+            // that is left. The game never said so.
+            val quality = simulation.currentQuality(snapshot)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                EffectChip(
+                    icon = Icons.Rounded.Favorite,
+                    text = stringResource(payChipRes(quality)),
+                    tint = payChipTint(quality),
+                )
+                Spacer(Modifier.width(8.dp))
+                if (quality != OutcomeQuality.GREAT) {
+                    Text(
+                        text = stringResource(R.string.shift_pay_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Accents.TextDim,
+                    )
+                }
+            }
             Spacer(Modifier.height(14.dp))
             // Full width and on its own line: beside the title it fought the
             // job name for space and both ended up truncated.
@@ -786,23 +820,34 @@ private fun StatsCard(snapshot: PetSnapshot) {
 @Composable
 private fun CareRow(
     snapshot: PetSnapshot,
+    simulation: PetSimulation,
     tuning: PetTuning,
+    nowMillis: Long,
     onFeed: () -> Unit,
     onPet: () -> Unit,
     onToggleSleep: () -> Unit,
 ) {
+    // The buttons used to be the only actions in the game that said nothing
+    // about what they were worth, while tapping her directly floated a number.
+    var feeds by remember { mutableIntStateOf(0) }
+    var pats by remember { mutableIntStateOf(0) }
+    val fedGain = tuning.feedHunger.roundToInt()
+    val patGain = simulation.patMood(snapshot, nowMillis).roundToInt()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        ActionButton(
-            icon = Icons.Rounded.Restaurant,
-            label = stringResource(R.string.action_feed),
-            tint = StatColors.Hunger,
-            enabled = snapshot.canFeed(tuning),
-            onClick = onFeed,
-            modifier = Modifier.weight(1f),
-        )
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
+            ActionButton(
+                icon = Icons.Rounded.Restaurant,
+                label = stringResource(R.string.action_feed),
+                tint = StatColors.Hunger,
+                enabled = snapshot.canFeed(tuning),
+                onClick = { feeds++; onFeed() },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ValuePop(trigger = feeds, text = "+$fedGain", tint = StatColors.Hunger)
+        }
         ActionButton(
             icon = if (snapshot.isSleeping) Icons.Rounded.WbSunny else Icons.Rounded.Bedtime,
             label = stringResource(
@@ -813,15 +858,102 @@ private fun CareRow(
             onClick = onToggleSleep,
             modifier = Modifier.weight(1f),
         )
-        ActionButton(
-            icon = Icons.Rounded.Favorite,
-            label = stringResource(R.string.action_pet),
-            tint = StatColors.Mood,
-            enabled = snapshot.acceptsInteraction,
-            onClick = onPet,
-            modifier = Modifier.weight(1f),
-        )
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
+            ActionButton(
+                icon = Icons.Rounded.Favorite,
+                label = stringResource(R.string.action_pet),
+                tint = StatColors.Mood,
+                enabled = snapshot.acceptsInteraction,
+                onClick = { pats++; onPet() },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ValuePop(trigger = pats, text = "+$patGain", tint = StatColors.Mood)
+        }
     }
+}
+
+/** A value floating off a button that just paid out. */
+@Composable
+private fun ValuePop(trigger: Int, text: String, tint: Color) {
+    if (trigger <= 0) return
+    val rise = remember(trigger) { Animatable(0f) }
+    LaunchedEffect(trigger) { rise.animateTo(1f, tween(900, easing = LinearOutSlowInEasing)) }
+    if (rise.value >= 1f) return
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = tint.copy(alpha = 1f - rise.value),
+        modifier = Modifier.padding(top = 2.dp).graphicsLayer {
+            translationY = -26.dp.toPx() * rise.value
+        },
+    )
+}
+
+/**
+ * Turning up today, and the run of days it continues.
+ *
+ * The cheapest retention mechanic in the genre and the game had none of it:
+ * a missed day cost nothing and a kept one gave nothing.
+ */
+@Composable
+private fun DailyCard(snapshot: PetSnapshot, onDismiss: () -> Unit) {
+    val comeback = snapshot.journal.lastOrNull()?.kind == JournalKind.COMEBACK
+    PanelCard(
+        modifier = Modifier.fillMaxWidth(),
+        color = StatColors.Money.copy(alpha = 0.10f),
+        border = StatColors.Money.copy(alpha = 0.45f),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.Savings,
+                    contentDescription = null,
+                    tint = StatColors.Money,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(
+                            if (comeback) R.string.comeback_title else R.string.daily_title,
+                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Accents.Text,
+                    )
+                    Text(
+                        text = if (comeback) {
+                            stringResource(R.string.comeback_body)
+                        } else {
+                            stringResource(R.string.daily_streak_reward, snapshot.streakDays, snapshot.pendingDaily)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Accents.TextMuted,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlineButton(
+                text = stringResource(R.string.action_nice),
+                onClick = onDismiss,
+                tint = StatColors.Money,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@StringRes
+private fun payChipRes(quality: OutcomeQuality): Int = when (quality) {
+    OutcomeQuality.GREAT -> R.string.shift_pay_great
+    OutcomeQuality.GOOD -> R.string.shift_pay_good
+    OutcomeQuality.POOR -> R.string.shift_pay_poor
+    OutcomeQuality.BAD -> R.string.shift_pay_bad
+}
+
+private fun payChipTint(quality: OutcomeQuality): Color = when (quality) {
+    OutcomeQuality.GREAT -> StatColors.Money
+    OutcomeQuality.GOOD -> Accents.TextMuted
+    else -> Accents.Danger
 }
 
 /** One tap's worth of stars, at the finger. */
@@ -1339,6 +1471,8 @@ private fun journalLook(entry: JournalEntry) = when (entry.kind) {
     JournalKind.EVENT -> Icons.Rounded.AutoAwesome to Accents.Bright
     JournalKind.GOAL_DONE -> Icons.Rounded.Check to StatColors.Money
     JournalKind.ANNIVERSARY -> Icons.Rounded.Cake to StatColors.Mood
+    JournalKind.DAILY -> Icons.Rounded.CurrencyYen to StatColors.Money
+    JournalKind.COMEBACK -> Icons.Rounded.Favorite to StatColors.Mood
 }
 
 @Composable
@@ -1359,6 +1493,8 @@ private fun journalLine(entry: JournalEntry): String = when (entry.kind) {
     JournalKind.EVENT -> stringResource(R.string.recap_event)
     JournalKind.GOAL_DONE -> stringResource(R.string.recap_goal, entry.amount)
     JournalKind.ANNIVERSARY -> stringResource(R.string.recap_anniversary, entry.amount)
+    JournalKind.DAILY -> stringResource(R.string.daily_reward, entry.amount)
+    JournalKind.COMEBACK -> stringResource(R.string.comeback_body)
 }
 
 /** A round number of days together — a small holiday, no button needed. */

@@ -110,8 +110,17 @@ object Dialogue {
         if (snapshot.event != null && !snapshot.event.acknowledged) return DialogueTopic.EVENT
 
         // Being ill outranks everything ambient — it is the one state the
-        // player has to actually do something about.
+        // player has to actually do something about. Half a day away and back
+        // to a sick pet is still "I don't feel well".
         if (snapshot.isSick) return DialogueTopic.SICK
+
+        // Being gone half a day comes before the complaining, because after
+        // twelve hours she is *always* hungry as well — which is how three
+        // written lines went unreachable for the entire life of the game. The
+        // first thing said to someone who has been away all day is that she
+        // noticed; the empty stomach is still right there on the bar, and the
+        // next line she says will be about it.
+        if (awayMinutes >= LONG_AWAY_MINUTES) return DialogueTopic.MISSED_YOU
 
         // Then the two things that actually need doing something about.
         if (snapshot.stats.hunger <= tuning.hungryThreshold / 2f) return DialogueTopic.STARVING
@@ -121,8 +130,8 @@ object Dialogue {
         // Her own wish, once nothing is urgent.
         if (snapshot.request != null && nowMillis < snapshot.request.until) return DialogueTopic.REQUEST
 
-        // Then noticing you.
-        if (awayMinutes >= LONG_AWAY_MINUTES) return DialogueTopic.MISSED_YOU
+        // An hour and a half is not long enough to interrupt a real need with,
+        // so this one stays below them.
         if (awayMinutes >= AWAY_MINUTES) return DialogueTopic.WELCOME_BACK
 
         if (snapshot.stats.mood >= tuning.happyThreshold) return DialogueTopic.CONTENT

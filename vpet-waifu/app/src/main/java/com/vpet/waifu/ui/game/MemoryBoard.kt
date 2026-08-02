@@ -41,6 +41,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,11 +55,11 @@ import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 /** The four pads, each its own colour *and* its own shape. */
-private enum class Pad(val tint: Color, val icon: ImageVector) {
-    HEART(Color(0xFFF477B8), Icons.Rounded.Favorite),
-    STAR(Color(0xFFF0C860), Icons.Rounded.Star),
-    FLOWER(Color(0xFF8FCE73), Icons.Rounded.LocalFlorist),
-    COOKIE(Color(0xFF7FD1E8), Icons.Rounded.Cookie),
+private enum class Pad(val tint: Color, @DrawableRes val art: Int) {
+    HEART(Color(0xFFF477B8), R.drawable.art_pad_heart),
+    STAR(Color(0xFFF0C860), R.drawable.art_pad_star),
+    FLOWER(Color(0xFF8FCE73), R.drawable.art_pad_flower),
+    COOKIE(Color(0xFF7FD1E8), R.drawable.art_pad_cookie),
 }
 
 /** Sequence length at difficulty [level], capped so the show phase stays watchable. */
@@ -251,11 +254,10 @@ private fun PadButton(
             .alpha(if (enabled || lit) 1f else 0.7f),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = pad.icon,
-            contentDescription = null,
-            tint = if (lit) Surfaces.Screen else pad.tint,
-            modifier = Modifier.size(38.dp),
-        )
+        Image(
+                painter = painterResource(pad.art),
+                contentDescription = null,
+                modifier = Modifier.size(38.dp),
+            )
     }
 }

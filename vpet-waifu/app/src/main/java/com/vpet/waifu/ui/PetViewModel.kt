@@ -19,18 +19,33 @@ import com.vpet.waifu.domain.ShopItem
 import com.vpet.waifu.domain.Upgrade
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.InputStream
+import java.io.OutputStream
 import javax.inject.Inject
 
 data class PetUiState(
     val snapshot: PetSnapshot? = null,
     val settings: PetSettings = PetSettings(),
 )
+
+/**
+ * A threshold the pet just crossed, held until the screen has shown it.
+ *
+ * Levels are derived from EXP rather than stored, so nothing in the app ever
+ * knew a level-up had happened: the ring silently reset and the bar drained
+ * from full back to empty, which read as a punishment. This is the event that
+ * was missing.
+ */
+data class Milestone(val kind: Kind, val value: Int) {
+    enum class Kind { LEVEL, BOND }
+}
 
 /**
  * One view model behind every tab.
@@ -53,6 +68,38 @@ class PetViewModel @Inject constructor(
         combine(repository.snapshot, preferences.settings) { snapshot, settings ->
             PetUiState(snapshot, settings)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PetUiState())
+
+    private val _milestone = MutableStateFlow<Milestone?>(null)
+
+    /** The level or bond level she just reached, until [clearMilestone]. */
+    val milestone: StateFlow<Milestone?> = _milestone
+
+    /** Seeded on the first snapshot so opening the app is never a level-up. */
+    private var lastLevel: Int? = null
+    private var lastBondLevel: Int? = null
+
+    init {
+        viewModelScope.launch {
+            repository.snapshot.collect { snapshot ->
+                val level = snapshot.level
+                val bond = snapshot.bondLevel
+                if (lastLevel != null && level > lastLevel!!) {
+                    _milestone.value = Milestone(Milestone.Kind.LEVEL, level)
+                    sounds.play(Cue.FANFARE)
+                } else if (lastBondLevel != null && bond > lastBondLevel!!) {
+                    _milestone.value = Milestone(Milestone.Kind.BOND, bond)
+                    sounds.play(Cue.FANFARE)
+                }
+                lastLevel = level
+                lastBondLevel = bond
+            }
+        }
+    }
+
+    /** The celebration has been seen. */
+    fun clearMilestone() {
+        _milestone.value = null
+    }
 
     init {
         // Opening the app is itself a tick: pay off everything owed since the
@@ -112,6 +159,36 @@ class PetViewModel @Inject constructor(
 
     fun wear(upgradeId: String) = act(Cue.HAPPY) { repository.wear(upgradeId) }
 
+    fun applyTheme(upgradeId: String) = act(Cue.HAPPY) { repository.applyTheme(upgradeId) }
+
+    /** Called when the app comes forward: pays the streak and the comeback. */
+    fun claimDaily() = act { repository.claimDaily() }
+
+    fun acknowledgeDaily() = act(Cue.COIN) { repository.acknowledgeDaily() }
+
+    /**
+     * Writes the whole save to a file the player owns.
+     *
+     * The only defence a RuStore install has: there is no Google backup
+     * transport on a phone without Play services, so without this a new phone
+     * means a pet raised for a month is gone.
+     */
+    fun exportSave(out: OutputStream, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val ok = repository.exportSave(out).isSuccess
+            sounds.play(if (ok) Cue.HAPPY else Cue.DENIED)
+            onResult(ok)
+        }
+    }
+
+    fun importSave(input: InputStream, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val ok = repository.importSave(input).isSuccess
+            sounds.play(if (ok) Cue.FANFARE else Cue.DENIED)
+            onResult(ok)
+        }
+    }
+
     fun startPlaying() = act(Cue.TAP) { repository.startPlaying() }
 
     fun finishPlaying(score: Int, game: MiniGame) = act(if (score > 0) Cue.HAPPY else null) {
@@ -133,23 +210,37 @@ class PetViewModel @Inject constructor(
 
     fun acknowledgeStory() = act(Cue.FANFARE) { repository.acknowledgeStory() }
 
-    fun setBubbleEnabled(enabled: Boolean) = act { preferences.setBubbleEnabled(enabled) }
+    fun setBubbleEnabled(enabled: Boolean) = act(Cue.TAP) { preferences.setBubbleEnabled(enabled) }
 
-    fun setSoundEnabled(enabled: Boolean) = act { preferences.setSoundEnabled(enabled) }
+    /**
+     * Turning sound back on has to be audible, so the cue is played after the
+     * preference lands rather than before it — otherwise the one switch whose
+     * effect you cannot see also gives no sign it worked.
+     */
+    fun setSoundEnabled(enabled: Boolean) = viewModelScope.launch {
+        preferences.setSoundEnabled(enabled)
+        if (enabled) sounds.play(Cue.HAPPY)
+    }.let { }
 
-    fun setMusicEnabled(enabled: Boolean) = act { preferences.setMusicEnabled(enabled) }
+    fun setMusicEnabled(enabled: Boolean) = act(Cue.TAP) { preferences.setMusicEnabled(enabled) }
 
     /** The screen that owns the moment decides what plays over it. */
     fun setMusicScene(track: MusicTrack?) = music.setScene(track)
 
-    fun setHapticsEnabled(enabled: Boolean) = act { preferences.setHapticsEnabled(enabled) }
+    fun setHapticsEnabled(enabled: Boolean) = act(Cue.TAP) { preferences.setHapticsEnabled(enabled) }
 
-    fun setNotificationsEnabled(enabled: Boolean) = act { preferences.setNotificationsEnabled(enabled) }
+    fun setNotificationsEnabled(enabled: Boolean) = act(Cue.TAP) { preferences.setNotificationsEnabled(enabled) }
 
-    fun setPetName(name: String) = act { preferences.setPetName(name) }
+    fun setPetName(name: String) = act(Cue.HAPPY) { preferences.setPetName(name) }
 
     /** The player has caught up — the next recap starts from now. */
-    fun markSeen() = act { preferences.setLastSeenAt(System.currentTimeMillis()) }
+    fun markSeen() = act(Cue.TAP) { preferences.setLastSeenAt(System.currentTimeMillis()) }
+
+    /** A press that the rules refuse — the answer to "why won't this work". */
+    fun refused() = sounds.play(Cue.DENIED)
+
+    /** A target allowed to expire in the catch game. */
+    fun targetMissed() = sounds.play(Cue.DENIED)
 
     /** A new personal best in the arcade deserves the fanfare. */
     fun recordSet() = sounds.play(Cue.FANFARE)

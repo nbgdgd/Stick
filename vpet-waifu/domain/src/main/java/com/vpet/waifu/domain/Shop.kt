@@ -1,6 +1,6 @@
 package com.vpet.waifu.domain
 
-enum class ShopCategory { FOOD, GIFT, PILL, BOOST }
+enum class ShopCategory { FOOD, GIFT, PILL, BOOST, CARE }
 
 /**
  * A lingering side effect, currently only ever applied by pills.
@@ -149,7 +149,27 @@ object Shop {
         ),
     )
 
-    val ALL: List<ShopItem> = FOOD + GIFTS + PILLS + BOOSTS
+    /**
+     * A whole day given to her, and the only sink the late game can spend on
+     * twice.
+     *
+     * Everything else permanent is bought once and then the wallet has nowhere
+     * left to go; every consumable is pocket change by level fifteen. This is
+     * priced at a day's serious work and can be taken once per calendar day —
+     * so it stays a decision rather than a button, and the money keeps meaning
+     * something after the catalogue is owned.
+     */
+    val CARE: List<ShopItem> = listOf(
+        ShopItem(
+            DAY_OFF_ID, ShopCategory.CARE, price = 6_000,
+            hunger = PetStats.MAX, energy = PetStats.MAX, mood = PetStats.MAX,
+        ),
+    )
+
+    /** The one item gated on the calendar rather than on level or wallet. */
+    const val DAY_OFF_ID = "day_off"
+
+    val ALL: List<ShopItem> = FOOD + GIFTS + PILLS + BOOSTS + CARE
 
     fun byId(id: String): ShopItem? = ALL.firstOrNull { it.id == id }
 }

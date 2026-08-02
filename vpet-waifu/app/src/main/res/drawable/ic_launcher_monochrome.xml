@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The themed-icon layer. The launcher throws the colours away and
+     tints the alpha, so this has to read as her from shape alone:
+     twin tails held clear of the head, ahoge, shoulders. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M66,35 C77,35 81.5,44 80,55.5 C79,63.5 73.5,66.5 71,62.5 C73.5,54 73,44 64.5,39 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,35 C31,35 26.5,44 28,55.5 C29,63.5 34.5,66.5 37,62.5 C34.5,54 35,44 43.5,39 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M39,48 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M55,34 C57,28.5 62,27.5 62.5,32" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,92 C32,74 42,67 54,67 C66,67 76,74 76,92 Z" />
+</vector>

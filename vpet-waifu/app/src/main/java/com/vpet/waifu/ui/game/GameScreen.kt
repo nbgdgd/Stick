@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Cookie
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LocalFlorist
@@ -63,6 +64,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -101,13 +105,14 @@ private enum class TargetKind(val tint: Color) {
     GIFT(Color(0xFFFF80AB)),
     ;
 
-    val icon: ImageVector
+    @get:DrawableRes
+    val art: Int
         get() = when (this) {
-            HEART -> Icons.Rounded.Favorite
-            STAR -> Icons.Rounded.Star
-            COOKIE -> Icons.Rounded.Cookie
-            FLOWER -> Icons.Rounded.LocalFlorist
-            GIFT -> Icons.Rounded.Redeem
+            HEART -> R.drawable.art_target_heart
+            STAR -> R.drawable.art_target_star
+            COOKIE -> R.drawable.art_target_cookie
+            FLOWER -> R.drawable.art_target_flower
+            GIFT -> R.drawable.art_target_gift
         }
 }
 
@@ -144,6 +149,8 @@ fun GameScreen(
     // detected against the *old* record, not the one this round just wrote.
     var bestAtStart by remember { mutableIntStateOf(0) }
     var newRecord by remember { mutableStateOf(false) }
+    // Letting one slip past used to be completely silent.
+    var misses by remember { mutableIntStateOf(0) }
     var seed by remember { mutableLongStateOf(0L) }
     val targets: SnapshotStateList<Target> = remember { emptyList<Target>().toMutableStateList() }
 
@@ -176,6 +183,11 @@ fun GameScreen(
                 elapsed += FRAME_MILLIS
                 // Targets live a fixed time; ids are monotonic so the oldest expire first.
                 val expiredBefore = nextId - (TARGET_LIFETIME_MILLIS / SPAWN_INTERVAL_MILLIS).toLong() - 1
+                val expired = targets.count { it.id <= expiredBefore }
+                if (expired > 0) {
+                    misses += expired
+                    onMiss()
+                }
                 targets.removeAll { it.id <= expiredBefore }
                 secondsLeft = (game.durationSeconds - elapsed / 1000L).toInt().coerceAtLeast(0)
             }
@@ -294,6 +306,9 @@ fun GameScreen(
             // Top of the board, not the centre: she stands in the middle, and
             // the centred button sat straight across her face with the "she is
             // busy" line under it on her chin.
+            // A red pulse across the board so a miss is seen, not only heard.
+            MissFlash(misses)
+
             StartOverlay(
                 visible = !running,
                 canPlay = snapshot.acceptsInteraction && !snapshot.isSick,
@@ -547,13 +562,23 @@ private fun IdleHeader(
                         style = MaterialTheme.typography.bodyMedium,
                         color = Accents.TextDim,
                     )
-                    if (best > 0) {
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.game_best, best),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = StatColors.Money,
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        // Playing costs energy. The prose that used to say so
+                        // was deleted in a rewrite and nothing replaced it, so
+                        // the arcade drained her in silence.
+                        EffectChip(
+                            icon = Icons.Rounded.Bolt,
+                            text = stringResource(R.string.game_cost_energy, game.energyCost(0).roundToInt()),
+                            tint = StatColors.Energy,
                         )
+                        if (best > 0) {
+                            EffectChip(
+                                icon = Icons.Rounded.Star,
+                                text = stringResource(R.string.game_best, best),
+                                tint = StatColors.Money,
+                            )
+                        }
                     }
                 }
             } else {
@@ -634,11 +659,25 @@ private fun TargetBubble(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = target.kind.icon,
+        // Image, not Icon: a tint would flatten the drawn art to one colour.
+        Image(
+            painter = painterResource(target.kind.art),
             contentDescription = null,
-            tint = target.kind.tint,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(34.dp),
         )
     }
+}
+
+/** The board answering a target that was allowed to expire. */
+@Composable
+private fun MissFlash(misses: Int) {
+    if (misses <= 0) return
+    val fade = remember(misses) { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(misses) { fade.animateTo(0f, tween(420)) }
+    if (fade.value <= 0f) return
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Accents.Danger.copy(alpha = 0.16f * fade.value)),
+    )
 }

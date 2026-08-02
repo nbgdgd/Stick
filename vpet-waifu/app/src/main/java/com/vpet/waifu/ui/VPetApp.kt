@@ -45,6 +45,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -74,6 +75,8 @@ import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.occupationArtRes
 import com.vpet.waifu.ui.components.HeartLayer
+import com.vpet.waifu.ui.components.LocalRefusal
+import com.vpet.waifu.ui.bondNameRes
 import com.vpet.waifu.ui.components.PrimaryButton
 import com.vpet.waifu.ui.components.rememberHeartTapState
 import com.vpet.waifu.ui.theme.Accents
@@ -85,6 +88,7 @@ import com.vpet.waifu.ui.home.HomeScreen
 import com.vpet.waifu.ui.profile.ProfileScreen
 import com.vpet.waifu.ui.settings.SettingsScreen
 import com.vpet.waifu.ui.shop.ShopScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 
 private enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
@@ -110,6 +114,7 @@ fun VPetApp(
     onGrantOverlayPermission: () -> Unit,
 ) {
     val snapshot = state.snapshot ?: return
+    val milestone by viewModel.milestone.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
 
@@ -143,6 +148,7 @@ fun VPetApp(
     }
     LaunchedEffect(musicTrack) { viewModel.setMusicScene(musicTrack) }
 
+    CompositionLocalProvider(LocalRefusal provides viewModel::refused) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Surfaces.Screen,
@@ -198,6 +204,7 @@ fun VPetApp(
                     onDismissEvent = viewModel::acknowledgeEvent,
                     onBuy = viewModel::buy,
                     onAcknowledgeStory = viewModel::acknowledgeStory,
+                    onAcknowledgeDaily = viewModel::acknowledgeDaily,
                     onSeen = viewModel::markSeen,
                 )
                 Tab.ACTIVITIES -> ActivitiesScreen(
@@ -219,6 +226,7 @@ fun VPetApp(
                     onBuy = viewModel::buy,
                     onBuyUpgrade = viewModel::buyUpgrade,
                     onWear = viewModel::wear,
+                    onApplyTheme = viewModel::applyTheme,
                     onCategoryTap = viewModel::categoryTap,
                 )
                 Tab.GAME -> GameScreen(
@@ -245,6 +253,12 @@ fun VPetApp(
             OutcomeDialog(outcome, viewModel::acknowledgeOutcome)
         }
 
+        // The two moments the game never celebrated. A level-up used to be a
+        // bar quietly draining back to empty.
+        milestone?.let { reached ->
+            MilestoneDialog(reached, viewModel::clearMilestone)
+        }
+
         // Settings are a place you go, not a card at the bottom of Home.
         if (showSettings) {
             SettingsScreen(
@@ -257,9 +271,12 @@ fun VPetApp(
                 onHapticsChange = viewModel::setHapticsEnabled,
                 onNotificationsChange = viewModel::setNotificationsEnabled,
                 onNameChange = viewModel::setPetName,
+                onExportSave = viewModel::exportSave,
+                onImportSave = viewModel::importSave,
                 onBack = { showSettings = false },
             )
         }
+    }
     }
 }
 
@@ -452,6 +469,58 @@ private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
                     )
                 }
             }
+        },
+    )
+}
+
+/**
+ * Reaching a new level, or a new step of the bond.
+ *
+ * Deliberately a dialog rather than a toast: these are the two numbers the
+ * whole game is built to raise, and they happened invisibly until now.
+ */
+@Composable
+private fun MilestoneDialog(milestone: Milestone, onDismiss: () -> Unit) {
+    var landed by remember { mutableStateOf(false) }
+    val pop by animateFloatAsState(
+        targetValue = if (landed) 1f else 0.3f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "milestone-pop",
+    )
+    LaunchedEffect(Unit) { landed = true }
+
+    val level = milestone.kind == Milestone.Kind.LEVEL
+    val tint = if (level) StatColors.Exp else StatColors.Mood
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Surfaces.Card,
+        titleContentColor = Accents.Text,
+        textContentColor = Accents.TextMuted,
+        shape = RoundedCornerShape(24.dp),
+        confirmButton = {
+            PrimaryButton(text = stringResource(R.string.action_nice), onClick = onDismiss)
+        },
+        icon = {
+            Icon(
+                imageVector = if (level) Icons.Rounded.Star else Icons.Rounded.Favorite,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(44.dp).scale(pop),
+            )
+        },
+        title = {
+            Text(stringResource(if (level) R.string.levelup_title else R.string.bond_levelup_title))
+        },
+        text = {
+            Text(
+                text = if (level) {
+                    stringResource(R.string.levelup_body, milestone.value)
+                } else {
+                    stringResource(R.string.bond_levelup_body, stringResource(bondNameRes(milestone.value)))
+                },
+                style = MaterialTheme.typography.titleMedium,
+                color = tint,
+            )
         },
     )
 }

@@ -405,6 +405,9 @@
     <string name="comeback_body">She saved you dinner and some money</string>
 
     <!-- save file -->
+    <string name="skin_title">Character</string>
+    <string name="skin_hint">The drawn character can wear the outfits the shop sells; sprite packs cannot.</string>
+    <string name="skin_drawn">Drawn (default)</string>
     <string name="save_title">Save file</string>
     <string name="save_hint">The file can be moved to another phone</string>
     <string name="save_export">Save to a file</string>

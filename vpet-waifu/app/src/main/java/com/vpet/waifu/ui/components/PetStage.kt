@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.AnimatedPet
+import com.vpet.waifu.ui.character.SpritePack
+import com.vpet.waifu.ui.character.SpritePet
 import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.Prop
 import com.vpet.waifu.ui.character.RoomDetail
@@ -52,6 +54,13 @@ fun PetStage(
     night: Boolean = state == PetState.SLEEPING,
     /** The room she is living in — bought in the shop, applied here. */
     theme: String = RoomTheme.DEFAULT_ID,
+    /**
+     * A sprite pack to draw instead of the vector rig.
+     *
+     * Null keeps the rig, which is the only character that can wear the shop's
+     * outfits or hold a job's prop — a sheet is a fixed set of pictures.
+     */
+    pack: SpritePack? = null,
 ) {
     val room = StageColors.forTheme(theme)
     val top by animateColorAsState(
@@ -89,20 +98,26 @@ fun PetStage(
             )
         }
 
-        AnimatedPet(
-            state = state,
-            palette = palette,
-            workProp = workProp,
-            modifier = Modifier
-                .fillMaxSize()
-                // The top band is reserved for the speech bubble; pushing her
-                // start line down keeps the bubble in the sky and off her face.
-                .padding(bottom = 8.dp, top = 48.dp)
-                .graphicsLayer {
-                    scaleX = characterScale
-                    scaleY = characterScale
-                    transformOrigin = TransformOrigin(0.5f, 0.95f)
-                },
-        )
+        val characterModifier = Modifier
+            .fillMaxSize()
+            // The top band is reserved for the speech bubble; pushing her
+            // start line down keeps the bubble in the sky and off her face.
+            .padding(bottom = 8.dp, top = 48.dp)
+            .graphicsLayer {
+                scaleX = characterScale
+                scaleY = characterScale
+                transformOrigin = TransformOrigin(0.5f, 0.95f)
+            }
+
+        if (pack != null) {
+            SpritePet(pack = pack, state = state, modifier = characterModifier)
+        } else {
+            AnimatedPet(
+                state = state,
+                palette = palette,
+                workProp = workProp,
+                modifier = characterModifier,
+            )
+        }
     }
 }

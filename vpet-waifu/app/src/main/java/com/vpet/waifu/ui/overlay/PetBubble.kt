@@ -46,6 +46,8 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.accentFor
 import com.vpet.waifu.ui.character.AnimatedPet
+import com.vpet.waifu.ui.character.SpritePack
+import com.vpet.waifu.ui.character.SpritePet
 import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.components.StatBarTrack
@@ -83,6 +85,7 @@ fun PetBubble(
     onToggleSleep: () -> Unit,
     onOpenApp: () -> Unit,
     onHide: () -> Unit,
+    pack: SpritePack? = null,
 ) {
     val state = snapshot.state(nowMillis, tuning)
 
@@ -110,14 +113,19 @@ fun PetBubble(
                     )
                 },
         ) {
-            AnimatedPet(
-                state = state,
-                palette = PetPalette.forOutfit(snapshot.outfit),
-                workProp = workPropFor(snapshot.occupation?.id),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(3.dp),
-            )
+            val petModifier = Modifier
+                .fillMaxSize()
+                .padding(3.dp)
+            if (pack != null) {
+                SpritePet(pack = pack, state = state, modifier = petModifier)
+            } else {
+                AnimatedPet(
+                    state = state,
+                    palette = PetPalette.forOutfit(snapshot.outfit),
+                    workProp = workPropFor(snapshot.occupation?.id),
+                    modifier = petModifier,
+                )
+            }
         }
 
         AnimatedVisibility(

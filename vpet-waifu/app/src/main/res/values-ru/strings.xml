@@ -405,6 +405,9 @@
     <string name="comeback_body">Отложила для тебя ужин и немного денег</string>
 
     <!-- save file -->
+    <string name="skin_title">Персонаж</string>
+    <string name="skin_hint">Нарисованная героиня умеет носить наряды из магазина; спрайтовые наборы — нет.</string>
+    <string name="skin_drawn">Рисованная (по умолчанию)</string>
     <string name="save_title">Сохранение</string>
     <string name="save_hint">Файл можно перенести на другой телефон</string>
     <string name="save_export">Сохранить в файл</string>

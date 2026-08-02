@@ -55,10 +55,14 @@ class PetNotifierTest {
         notifier = PetNotifier(context, PetPreferences(context), tuning)
     }
 
-    private fun pet(hunger: Float = 80f, energy: Float = 80f) = PetSnapshot(
+    private fun pet(
+        hunger: Float = 80f,
+        energy: Float = 80f,
+        lastInteractionAt: Long = NOW,
+    ) = PetSnapshot(
         stats = PetStats(hunger, energy, 70f),
         lastTickAt = NOW,
-        lastInteractionAt = NOW,
+        lastInteractionAt = lastInteractionAt,
     )
 
     @Test
@@ -170,6 +174,29 @@ class PetNotifierTest {
             ),
             NOW,
         )
+
+        assertEquals(0, manager.allNotifications.size)
+    }
+
+    @Test
+    fun `a player who has stopped coming back is missed, once`() = runBlocking {
+        val day = 24L * 60 * 60 * 1000
+        // Yesterday she was one day alone; today she is two, which is the line.
+        val before = pet(lastInteractionAt = NOW - day)
+        val after = pet(lastInteractionAt = NOW - 2 * day)
+
+        notifier.notifyChanges(before, after, NOW)
+        assertEquals(1, manager.allNotifications.size)
+
+        // A third day is not a second crossing, and must stay quiet.
+        notifier.notifyChanges(after, pet(lastInteractionAt = NOW - 3 * day), NOW)
+        assertEquals(1, manager.allNotifications.size)
+    }
+
+    @Test
+    fun `a player who came back today is not missed`() = runBlocking {
+        val day = 24L * 60 * 60 * 1000
+        notifier.notifyChanges(pet(lastInteractionAt = NOW - 5 * day), pet(), NOW)
 
         assertEquals(0, manager.allNotifications.size)
     }

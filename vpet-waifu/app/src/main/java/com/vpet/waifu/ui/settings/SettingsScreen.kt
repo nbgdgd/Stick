@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
@@ -53,6 +54,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
+import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.ui.components.OutlineButton
 import java.io.InputStream
 import java.io.OutputStream
@@ -85,6 +87,7 @@ fun SettingsScreen(
     onHapticsChange: (Boolean) -> Unit,
     onNotificationsChange: (Boolean) -> Unit,
     onNameChange: (String) -> Unit,
+    onSkinChange: (String) -> Unit,
     onExportSave: (OutputStream, (Boolean) -> Unit) -> Unit,
     onImportSave: (InputStream, (Boolean) -> Unit) -> Unit,
     onBack: () -> Unit,
@@ -209,6 +212,8 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            SkinCard(settings.petSkin, onSkinChange)
 
             SaveCard(onExportSave, onImportSave)
 
@@ -439,4 +444,81 @@ private fun SaveCard(
 private fun defaultSaveName(): String {
     val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
     return "waifu-save-$stamp.json"
+}
+
+/**
+ * Which character is drawn.
+ *
+ * Only shown when there is a choice to make: with no sprite packs installed
+ * the app has exactly one character, and a picker with one entry is furniture.
+ */
+@Composable
+private fun SkinCard(selected: String, onSelect: (String) -> Unit) {
+    val context = LocalContext.current
+    val packs = remember { SpritePacks.installedIds(context) }
+    if (packs.isEmpty()) return
+
+    PanelCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.skin_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = Accents.Text,
+            )
+            Text(
+                text = stringResource(R.string.skin_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = Accents.TextMuted,
+            )
+            SkinRow(
+                label = stringResource(R.string.skin_drawn),
+                selected = selected.isBlank(),
+                onClick = { onSelect("") },
+            )
+            packs.forEach { id ->
+                val pack = remember(id) { SpritePacks.load(context, id) }
+                SkinRow(
+                    label = pack?.displayName ?: id,
+                    selected = selected == id,
+                    onClick = { onSelect(id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SkinRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) StatColors.Mood.copy(alpha = 0.14f) else Surfaces.Tile)
+            .border(
+                1.dp,
+                if (selected) StatColors.Mood.copy(alpha = 0.5f) else Surfaces.CardBorder,
+                RoundedCornerShape(12.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Accents.Text,
+            modifier = Modifier.weight(1f),
+        )
+        if (selected) {
+            Icon(
+                imageVector = Icons.Rounded.Check,
+                contentDescription = null,
+                tint = StatColors.Mood,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
 }

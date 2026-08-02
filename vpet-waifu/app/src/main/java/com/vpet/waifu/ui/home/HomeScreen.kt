@@ -114,6 +114,7 @@ import com.vpet.waifu.domain.Progression
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.components.ActionButton
 import com.vpet.waifu.ui.character.PetPalette
+import com.vpet.waifu.ui.character.SpritePack
 import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.EventCard
@@ -181,6 +182,7 @@ fun HomeScreen(
     onAcknowledgeStory: () -> Unit,
     onAcknowledgeDaily: () -> Unit,
     onSeen: () -> Unit,
+    pack: SpritePack? = null,
     modifier: Modifier = Modifier,
 ) {
     val state = snapshot.state(nowMillis, tuning)
@@ -265,6 +267,7 @@ fun HomeScreen(
                 decor = snapshot.owned,
                 night = state == PetState.SLEEPING || isRealNight(nowMillis),
                 theme = snapshot.theme,
+                pack = pack,
             )
             // The tap layer sits over the room but under the chips and bubble.
             Box(

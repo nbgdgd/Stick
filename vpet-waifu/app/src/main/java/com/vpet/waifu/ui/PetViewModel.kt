@@ -233,6 +233,9 @@ class PetViewModel @Inject constructor(
 
     fun setPetName(name: String) = act(Cue.HAPPY) { preferences.setPetName(name) }
 
+    /** Swapping the character is a big enough change to be worth a fanfare. */
+    fun setPetSkin(id: String) = act(Cue.FANFARE) { preferences.setPetSkin(id) }
+
     /** The player has caught up — the next recap starts from now. */
     fun markSeen() = act(Cue.TAP) { preferences.setLastSeenAt(System.currentTimeMillis()) }
 

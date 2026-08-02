@@ -21,6 +21,11 @@ data class PetSettings(
     val bubbleEnabled: Boolean = false,
     /** Blank until she is named; the UI falls back to the app's own name. */
     val petName: String = "",
+    /**
+     * Which character is drawn: "" for the app's own vector rig, or the id of
+     * a sprite pack installed under assets/pets/.
+     */
+    val petSkin: String = "",
     val soundEnabled: Boolean = true,
     val musicEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
@@ -44,6 +49,7 @@ class PetPreferences @Inject constructor(
         PetSettings(
             bubbleEnabled = it[BUBBLE_ENABLED] ?: false,
             petName = (it[PET_NAME] ?: "").take(MAX_NAME_LENGTH),
+            petSkin = it[PET_SKIN] ?: "",
             soundEnabled = it[SOUND] ?: true,
             musicEnabled = it[MUSIC] ?: true,
             hapticsEnabled = it[HAPTICS] ?: true,
@@ -61,6 +67,11 @@ class PetPreferences @Inject constructor(
     /** Trimmed and capped: this string ends up in notifications and a widget. */
     suspend fun setPetName(name: String) {
         context.dataStore.edit { it[PET_NAME] = name.trim().take(MAX_NAME_LENGTH) }
+    }
+
+    /** Which character is drawn: "" for the vector rig, or a sprite pack id. */
+    suspend fun setPetSkin(id: String) {
+        context.dataStore.edit { it[PET_SKIN] = id }
     }
 
     suspend fun setSoundEnabled(enabled: Boolean) {
@@ -89,6 +100,7 @@ class PetPreferences @Inject constructor(
 
         private val BUBBLE_ENABLED = booleanPreferencesKey("bubble_enabled")
         private val PET_NAME = stringPreferencesKey("pet_name")
+        private val PET_SKIN = stringPreferencesKey("pet_skin")
         private val SOUND = booleanPreferencesKey("sound_enabled")
         private val MUSIC = booleanPreferencesKey("music_enabled")
         private val HAPTICS = booleanPreferencesKey("haptics_enabled")

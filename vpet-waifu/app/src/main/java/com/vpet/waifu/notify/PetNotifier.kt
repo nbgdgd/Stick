@@ -116,11 +116,18 @@ class PetNotifier @Inject constructor(
             )
         }
 
-        // The only alert that is not a reaction to a transition: everything
-        // else here fires because something changed, which by definition never
-        // happens for a player who has stopped opening the app.
-        val awayDays = ((nowMillis - snapshot.lastInteractionAt) / DAY_MILLIS).toInt()
-        if (awayDays >= MISSED_AFTER_DAYS && previous == null) {
+        // The one alert nothing else here can raise: every other line reacts to
+        // a stat crossing a line, which by definition never happens for a
+        // player who has stopped opening the app — her stats bottomed out days
+        // ago and have been flat ever since.
+        //
+        // So the transition being watched is the absence itself getting longer,
+        // measured the same way and with the same rule as the rest: it fires on
+        // the tick that crosses the threshold, and never on the first look,
+        // where there is no previous value to have crossed anything.
+        val awayDays = awayDays(snapshot.lastInteractionAt, nowMillis)
+        val wasAwayDays = previous?.let { awayDays(it.lastInteractionAt, nowMillis) }
+        if (wasAwayDays != null && awayDays >= MISSED_AFTER_DAYS && wasAwayDays < MISSED_AFTER_DAYS) {
             show(
                 PetAlert.MISSED,
                 context.getString(R.string.notify_missed_title),
@@ -138,6 +145,9 @@ class PetNotifier @Inject constructor(
             )
         }
     }
+
+    private fun awayDays(lastInteractionAt: Long, nowMillis: Long): Int =
+        ((nowMillis - lastInteractionAt) / DAY_MILLIS).toInt()
 
     /** Clears an alert the player has now dealt with. */
     fun clear(alert: PetAlert) = manager.cancel(alert.id)

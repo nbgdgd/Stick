@@ -31,9 +31,11 @@ import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import com.vpet.waifu.MainActivity
 import com.vpet.waifu.R
+import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.ART_HEIGHT
+import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.ui.character.ART_WIDTH
 import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.PetRasterizer
@@ -43,6 +45,7 @@ import com.vpet.waifu.ui.isRealNight
 import com.vpet.waifu.ui.character.RoomColors
 import com.vpet.waifu.ui.character.RoomDetail
 import com.vpet.waifu.ui.theme.StageColors
+import kotlinx.coroutines.flow.first
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -109,10 +112,24 @@ class PetWidget : GlanceAppWidget() {
         val floorFraction = (padding + stageHeightDp * FEET_FRACTION) / size.height.value
         val detail = if (size.height.value < 150f) RoomDetail.NONE else RoomDetail.WALL
 
+        // Whichever character the player picked. The skin is part of the key,
+        // or switching characters would keep serving the old one's frames.
+        val skin = preferencesOf(context).settings.first().petSkin
+        val pack = SpritePacks.load(context, skin)
         val frames = FRAMES.getOrPut(
-            "$state|$tempo|$workProp|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density|${snapshot.outfit}",
+            "$state|$tempo|$workProp|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density|${snapshot.outfit}|$skin",
         ) {
-            renderFrames(state, tempo, stageWidthDp, stageHeightDp, density, snapshot.outfit, workProp)
+            if (pack != null) {
+                PetRasterizer.spriteFrames(
+                    pack = pack,
+                    state = state,
+                    widthPx = (stageWidthDp * density).roundToInt().coerceAtMost(MAX_ROOM_PX),
+                    heightPx = (stageHeightDp * density).roundToInt().coerceAtMost(MAX_ROOM_PX),
+                    frameCount = FRAME_COUNT,
+                )
+            } else {
+                renderFrames(state, tempo, stageWidthDp, stageHeightDp, density, snapshot.outfit, workProp)
+            }
         }
         val flipper = buildFlipper(context, tempo, frames)
         // Only the decor this cut of the room can actually show goes into the
@@ -398,9 +415,13 @@ class PetWidgetReceiver : GlanceAppWidgetReceiver() {
 @InstallIn(SingletonComponent::class)
 interface WidgetEntryPoint {
     fun petRepository(): PetRepository
+    fun petPreferences(): PetPreferences
 }
 
-private fun repositoryOf(context: Context): PetRepository =
+private fun entryPoint(context: Context): WidgetEntryPoint =
     EntryPointAccessors
         .fromApplication(context.applicationContext, WidgetEntryPoint::class.java)
-        .petRepository()
+
+private fun repositoryOf(context: Context): PetRepository = entryPoint(context).petRepository()
+
+private fun preferencesOf(context: Context): PetPreferences = entryPoint(context).petPreferences()

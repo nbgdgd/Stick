@@ -1,6 +1,7 @@
 package com.vpet.waifu.ui.character
 
 import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
@@ -13,6 +14,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.vpet.waifu.domain.PetState
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
+import kotlin.math.min
 
 /** Colours for the room baked into a rasterised frame. */
 data class RoomColors(
@@ -85,6 +88,55 @@ object PetRasterizer {
                 drawPet(pose, palette)
             },
         )
+    }
+
+    /**
+     * The same loop, cut out of a sprite sheet instead of drawn.
+     *
+     * The widget cannot host a composable, so whichever character is selected
+     * has to arrive as PNG bytes either way; for a sheet that is a crop and a
+     * scale rather than thirty paths per frame, which is a good deal cheaper.
+     */
+    fun spriteFrames(
+        pack: SpritePack,
+        state: PetState,
+        widthPx: Int,
+        heightPx: Int,
+        frameCount: Int,
+    ): List<ByteArray> {
+        val clip = pack.clipFor(state)
+        val source = pack.sheet.asAndroidBitmap()
+        val scale = min(
+            widthPx.toFloat() / pack.frameWidth,
+            heightPx.toFloat() / pack.frameHeight,
+        )
+        val w = (pack.frameWidth * scale).roundToInt().coerceAtLeast(1)
+        val h = (pack.frameHeight * scale).roundToInt().coerceAtLeast(1)
+
+        return (0 until frameCount).map { index ->
+            // Sample the clip evenly across the widget's own loop length, so a
+            // six-frame clip and a three-frame one both fill the same period.
+            val cell = clip.row * pack.columns + clip.from +
+                (index * clip.count / frameCount).coerceAtMost(clip.count - 1)
+            val col = cell % pack.columns
+            val row = cell / pack.columns
+            val frame = Bitmap.createBitmap(
+                source,
+                col * pack.frameWidth,
+                row * pack.frameHeight,
+                pack.frameWidth,
+                pack.frameHeight,
+            )
+            val target = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+            android.graphics.Canvas(target).drawBitmap(
+                frame,
+                null,
+                android.graphics.Rect((widthPx - w) / 2, heightPx - h, (widthPx + w) / 2, heightPx),
+                android.graphics.Paint().apply { isFilterBitmap = false },
+            )
+            frame.recycle()
+            png(target)
+        }
     }
 
     private fun png(bitmap: Bitmap): ByteArray =

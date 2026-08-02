@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +76,7 @@ import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.occupationArtRes
 import com.vpet.waifu.ui.components.HeartLayer
+import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.ui.components.LocalRefusal
 import com.vpet.waifu.ui.bondNameRes
 import com.vpet.waifu.ui.components.PrimaryButton
@@ -115,6 +117,13 @@ fun VPetApp(
 ) {
     val snapshot = state.snapshot ?: return
     val milestone by viewModel.milestone.collectAsStateWithLifecycle()
+
+    // Decoding a sheet is a couple of megabytes of RGBA, so it happens once
+    // per selected pack and is remembered for as long as the choice stands.
+    val context = LocalContext.current
+    val pack = remember(state.settings.petSkin) {
+        SpritePacks.load(context, state.settings.petSkin)
+    }
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
 
@@ -205,6 +214,7 @@ fun VPetApp(
                     onBuy = viewModel::buy,
                     onAcknowledgeStory = viewModel::acknowledgeStory,
                     onAcknowledgeDaily = viewModel::acknowledgeDaily,
+                    pack = pack,
                     onSeen = viewModel::markSeen,
                 )
                 Tab.ACTIVITIES -> ActivitiesScreen(
@@ -237,6 +247,7 @@ fun VPetApp(
                     onScored = viewModel::scored,
                     onMiss = viewModel::missed,
                     onRecord = viewModel::recordSet,
+                    pack = pack,
                 )
                 Tab.HER -> ProfileScreen(
                     snapshot = snapshot,
@@ -271,6 +282,7 @@ fun VPetApp(
                 onHapticsChange = viewModel::setHapticsEnabled,
                 onNotificationsChange = viewModel::setNotificationsEnabled,
                 onNameChange = viewModel::setPetName,
+                onSkinChange = viewModel::setPetSkin,
                 onExportSave = viewModel::exportSave,
                 onImportSave = viewModel::importSave,
                 onBack = { showSettings = false },

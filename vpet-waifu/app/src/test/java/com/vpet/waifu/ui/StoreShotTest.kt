@@ -24,6 +24,7 @@ import com.vpet.waifu.ui.home.HomeScreen
 import com.vpet.waifu.ui.profile.ProfileScreen
 import com.vpet.waifu.ui.shop.ShopScreen
 import com.vpet.waifu.ui.activities.ActivitiesScreen
+import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.ui.theme.VPetTheme
 import com.vpet.waifu.ui.theme.Surfaces
 import org.junit.Test
@@ -118,6 +119,30 @@ class StoreShotTest {
                 onBuy = {}, onBuyUpgrade = {}, onWear = {}, onApplyTheme = {}, onCategoryTap = {},
             )
         }
+        // Proof the sprite pipeline actually draws: same screen, sheet instead
+        // of rig. Skipped silently when no pack is installed.
+        SpritePacks.load(
+            androidx.test.core.app.ApplicationProvider.getApplicationContext(),
+            "anya",
+        )?.let { pack ->
+            shoot("05-sprite") {
+                HomeScreen(
+                    snapshot = snapshot,
+                    simulation = simulation,
+                    tuning = tuning,
+                    nowMillis = now,
+                    settings = PetSettings(petName = "Аня", lastSeenAt = now, petSkin = "anya"),
+                    wallet = snapshot.progress.money,
+                    walletSettled = true,
+                    onOpenSettings = {}, onNameChange = {}, onFeed = {}, onPet = {}, onTapPet = {},
+                    onCoinLanded = {}, onExpLanded = {}, onToggleSleep = {}, onCancelOccupation = {},
+                    onDismissEvent = {}, onBuy = {}, onAcknowledgeStory = {}, onAcknowledgeDaily = {},
+                    onSeen = {},
+                    pack = pack,
+                )
+            }
+        }
+
         shoot("04-her") {
             ProfileScreen(
                 snapshot = snapshot,

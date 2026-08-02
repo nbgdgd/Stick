@@ -31,6 +31,7 @@ import com.vpet.waifu.R
 import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.feedback.Cue
 import com.vpet.waifu.feedback.PetSounds
+import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.di.ApplicationScope
 import com.vpet.waifu.domain.PetSnapshot
@@ -79,6 +80,9 @@ class PetOverlayService :
 
     /** Compose state, fed from the repository flow. */
     private var snapshot by mutableStateOf<PetSnapshot?>(null)
+
+    /** Which character the player picked; the bubble has to agree with the app. */
+    private var skinId by mutableStateOf("")
     private var panelExpanded by mutableStateOf(false)
 
     /**
@@ -136,6 +140,9 @@ class PetOverlayService :
         lifecycleScope.launch {
             repository.snapshot.collect { snapshot = it }
         }
+        lifecycleScope.launch {
+            preferences.settings.collect { skinId = it.petSkin }
+        }
     }
 
     /**
@@ -185,6 +192,7 @@ class PetOverlayService :
                 val current = snapshot
                 if (current != null) {
                     PetBubble(
+                        pack = SpritePacks.load(this@PetOverlayService, skinId),
                         snapshot = current,
                         tuning = tuning,
                         nowMillis = nowMillis,

@@ -375,7 +375,7 @@
     <string name="settings_title">Настройки</string>
     <string name="licenses_title">Лицензии</string>
     <string name="licenses_body">Иконки: Material Icons (Apache 2.0). Шрифт: Golos Text (SIL OFL 1.1, Paratype). Звуки, музыка, арт персонажа и предметов созданы для этого приложения.</string>
-    <string name="shop_busy_banner">Она занята до %1$s — еда недоступна</string>
+    <string name="shop_busy_banner">Она занята до %1$s — еда недоступна, кроме энергетика</string>
     <string name="shop_asleep_banner">Она спит — еда недоступна</string>
     <string name="action_start_work">На смену</string>
     <string name="action_start_study">Начать</string>

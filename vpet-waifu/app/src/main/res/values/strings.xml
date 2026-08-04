@@ -375,7 +375,7 @@
     <string name="settings_title">Settings</string>
     <string name="licenses_title">Licenses</string>
     <string name="licenses_body">Icons: Material Icons (Apache 2.0). Font: Golos Text (SIL OFL 1.1, Paratype). Sounds, music, character and item art were made for this app.</string>
-    <string name="shop_busy_banner">Busy until %1$s — food is unavailable</string>
+    <string name="shop_busy_banner">Busy until %1$s — food is unavailable, apart from the energy drink</string>
     <string name="shop_asleep_banner">She is asleep — food is unavailable</string>
     <string name="action_start_work">Start shift</string>
     <string name="action_start_study">Start</string>

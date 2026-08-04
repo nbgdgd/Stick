@@ -78,11 +78,20 @@ object Shop {
         // costs money and comes with a caffeine crash — but it lets her push
         // through a shift instead of losing half an hour to a nap.
         ShopItem(
-            "energy_drink", ShopCategory.FOOD, price = 110,
+            ENERGY_DRINK_ID, ShopCategory.FOOD, price = 110,
             hunger = 5f, energy = 45f, mood = 4f,
             effect = EffectKind.EXHAUSTION, effectMinutes = 30,
         ),
     )
+
+    /**
+     * The one food that is sold while she is on the clock.
+     *
+     * It is shelved with the food because it is something she drinks, but it
+     * is a boost in everything that matters — see [PetSnapshot.canBuy] for the
+     * exception that makes the comment above true.
+     */
+    const val ENERGY_DRINK_ID = "energy_drink"
 
     val GIFTS: List<ShopItem> = listOf(
         ShopItem("flowers", ShopCategory.GIFT, price = 130, mood = 22f),

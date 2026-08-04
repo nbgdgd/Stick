@@ -206,18 +206,34 @@ data class PetSnapshot(
      */
     fun canBuy(item: ShopItem, nowMillis: Long = 0L): Boolean =
         item.isUnlocked(level) && progress.canAfford(item.price) &&
-            (item.category != ShopCategory.FOOD || acceptsInteraction) &&
+            servable(item) &&
             (item.effect == null || !hasEffect(item.effect, nowMillis)) &&
             // Medicine is for the sick; sold to the healthy it is a coin sink
             // wearing a cross.
             (item.id != Shop.MEDICINE_ID || isSick) &&
             (item.id != Shop.DAY_OFF_ID || !dayOffTaken(nowMillis))
 
+    /**
+     * Whether she can take [item] right now, given what she is doing.
+     *
+     * Food needs her free: she cannot sit down to a bowl of ramen halfway
+     * through a shift. The energy drink is the exception the item was written
+     * for — its entire purpose is pushing through the shift she is already on,
+     * and refusing to sell it until she clocks off left it doing nothing that
+     * a nap does not do cheaper. Sleep is still off limits, for the drink as
+     * for everything else: waking her is a separate decision with a button of
+     * its own, not something a purchase should do behind the player's back.
+     */
+    private fun servable(item: ShopItem): Boolean =
+        item.category != ShopCategory.FOOD ||
+            acceptsInteraction ||
+            (item.id == Shop.ENERGY_DRINK_ID && acceptsPat)
+
     /** Why [item] cannot be bought, for the shop card to explain. */
     fun blockedBy(item: ShopItem, nowMillis: Long): PurchaseBlock? = when {
         !item.isUnlocked(level) -> PurchaseBlock.LEVEL
         !progress.canAfford(item.price) -> PurchaseBlock.MONEY
-        item.category == ShopCategory.FOOD && !acceptsInteraction -> PurchaseBlock.BUSY
+        !servable(item) -> PurchaseBlock.BUSY
         item.effect != null && hasEffect(item.effect, nowMillis) -> PurchaseBlock.STILL_PAYING
         item.id == Shop.MEDICINE_ID && !isSick -> PurchaseBlock.NOT_SICK
         item.id == Shop.DAY_OFF_ID && dayOffTaken(nowMillis) -> PurchaseBlock.ALREADY_TODAY

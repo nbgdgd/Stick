@@ -29,6 +29,7 @@ class BoostsTest {
     private val focusTea = Shop.byId("focus_tea")!!
     private val secondWind = Shop.byId("second_wind")!!
     private val goodVibes = Shop.byId("good_vibes")!!
+    private val energyDrink = Shop.byId(Shop.ENERGY_DRINK_ID)!!
 
     /** Rich, experienced, cared for — and with the tip jar parked for the day. */
     private fun snapshot(mood: Float = 70f) = PetSnapshot(
@@ -70,6 +71,49 @@ class BoostsTest {
         val ramen = Shop.byId("ramen")!!
         assertFalse(working.canBuy(ramen, T0))
         assertEquals(PurchaseBlock.BUSY, working.blockedBy(ramen, T0))
+    }
+
+    @Test
+    fun `the energy drink is the one food sold mid-shift`() {
+        val working = sim.startOccupation(snapshot(), shift, T0)
+        assertEquals(PetActivity.WORKING, working.activity)
+
+        assertTrue(working.canBuy(energyDrink, T0))
+        assertEquals(null, working.blockedBy(energyDrink, T0))
+
+        // …and it lands on the shift she is already on, rather than ending it.
+        val drunk = sim.buy(working, energyDrink, T0)
+        assertEquals(PetActivity.WORKING, drunk.activity)
+        assertNotNull(drunk.session)
+        assertTrue(drunk.stats.energy > working.stats.energy)
+    }
+
+    @Test
+    fun `studying counts as a shift for the energy drink too`() {
+        val studying = sim.startOccupation(snapshot(), lesson, T0)
+        assertEquals(PetActivity.STUDYING, studying.activity)
+
+        assertTrue(studying.canBuy(energyDrink, T0))
+    }
+
+    @Test
+    fun `the energy drink still will not be poured into a sleeping girl`() {
+        val asleep = sim.startSleep(snapshot(), T0)
+        assertEquals(PetActivity.SLEEPING, asleep.activity)
+
+        assertFalse(asleep.canBuy(energyDrink, T0))
+        assertEquals(PurchaseBlock.BUSY, asleep.blockedBy(energyDrink, T0))
+    }
+
+    @Test
+    fun `a second can of energy drink waits for the crash to pass`() {
+        val working = sim.startOccupation(snapshot(), shift, T0)
+        val drunk = sim.buy(working, energyDrink, T0)
+
+        // The caffeine crash is the price, and it is what stops the drink from
+        // being an infinite shift extender: one can per half hour, no more.
+        assertFalse(drunk.canBuy(energyDrink, T0))
+        assertEquals(PurchaseBlock.STILL_PAYING, drunk.blockedBy(energyDrink, T0))
     }
 
     @Test

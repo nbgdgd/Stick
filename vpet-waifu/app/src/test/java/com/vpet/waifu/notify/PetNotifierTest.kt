@@ -53,6 +53,15 @@ class PetNotifierTest {
         // is the same gate production goes through — see the last test.
         shadowOf(context as Application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         notifier = PetNotifier(context, PetPreferences(context), tuning)
+
+        // Start from an empty shade. "The very first look is silent" asserts a
+        // total of zero, which makes it a claim about the whole process rather
+        // than about the call under test: anything another test left behind
+        // fails it, and it duly failed once in a full run and never again on
+        // its own. The assertion is worth keeping — it is the difference
+        // between silent and quiet — so the state it reads is made local
+        // instead of the assertion being weakened.
+        context.getSystemService(NotificationManager::class.java).cancelAll()
     }
 
     private fun pet(

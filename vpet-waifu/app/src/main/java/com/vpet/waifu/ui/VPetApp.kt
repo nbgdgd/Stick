@@ -81,6 +81,7 @@ import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.ui.components.LocalRefusal
 import com.vpet.waifu.ui.bondNameRes
+import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PrimaryButton
 import com.vpet.waifu.ui.components.rememberHeartTapState
 import com.vpet.waifu.ui.theme.Accents
@@ -292,6 +293,46 @@ fun VPetApp(
         // bar quietly draining back to empty.
         milestone?.let { reached ->
             MilestoneDialog(reached, viewModel::clearMilestone)
+        }
+
+        // A fresh install with a backup sitting in Downloads. Offered rather
+        // than restored: a stale copy silently overwriting a deliberate fresh
+        // start would be worse than the loss it is meant to prevent.
+        var restoreOffered by rememberSaveable { mutableStateOf(true) }
+        var restoreFailed by rememberSaveable { mutableStateOf(false) }
+        if (restoreOffered && viewModel.offersRestore(state.snapshot)) {
+            AlertDialog(
+                onDismissRequest = { restoreOffered = false },
+                containerColor = Surfaces.Card,
+                titleContentColor = Accents.Text,
+                textContentColor = Accents.TextMuted,
+                shape = RoundedCornerShape(24.dp),
+                title = { Text(stringResource(R.string.restore_found_title)) },
+                text = {
+                    Text(
+                        stringResource(
+                            if (restoreFailed) R.string.restore_failed else R.string.restore_found_body,
+                        ),
+                    )
+                },
+                confirmButton = {
+                    PrimaryButton(
+                        text = stringResource(R.string.restore_action),
+                        onClick = {
+                            viewModel.restoreBackup { ok ->
+                                restoreFailed = !ok
+                                if (ok) restoreOffered = false
+                            }
+                        },
+                    )
+                },
+                dismissButton = {
+                    OutlineButton(
+                        text = stringResource(R.string.restore_start_fresh),
+                        onClick = { restoreOffered = false },
+                    )
+                },
+            )
         }
 
         // Settings are a place you go, not a card at the bottom of Home.

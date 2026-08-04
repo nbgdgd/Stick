@@ -154,6 +154,24 @@ data class PetSnapshot(
      */
     val acceptsPat: Boolean get() = activity != PetActivity.SLEEPING
 
+    /**
+     * Nothing has happened here yet.
+     *
+     * Deliberately about what the player *did*, not about the clock: a save
+     * left alone for a week still has its shifts and its meals in it, while a
+     * genuinely new one has none however long ago it was created. This is what
+     * decides whether the app may offer to read a backup back in — offering it
+     * over a game in progress would be alarming, and offering it over a fresh
+     * start is the whole point.
+     */
+    val isFresh: Boolean
+        get() = progress.exp == 0 &&
+            totalEarned == 0 &&
+            shiftsWorked == 0 &&
+            lessonsDone == 0 &&
+            mealsFed == 0 &&
+            bondPoints == 0
+
     val isSick: Boolean get() = sickSince > 0L
 
     val bondLevel: Int get() = Bond.levelFor(bondPoints)

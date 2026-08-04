@@ -407,6 +407,9 @@
     <!-- save file -->
     <string name="skin_title">Персонаж</string>
     <string name="skin_hint">Нарисованная героиня умеет носить наряды из магазина; спрайтовые наборы — нет.</string>
+    <string name="shift_pay_total">оплата ×%1$s</string>
+    <string name="shift_exp_total">опыт ×%1$s</string>
+    <string name="shift_pay_from_boost">настроение ×%1$s · бафф ×%2$s</string>
     <string name="effect_running_haste">Работает вдвое быстрее</string>
     <string name="effect_running_overtime">Оплата ×1.5</string>
     <string name="effect_running_focus">Учёба ×1.5</string>
@@ -417,6 +420,12 @@
     <string name="skin_modern">Рисованная</string>
     <string name="skin_classic">Классическая</string>
     <string name="skin_drawn_old">Рисованная (по умолчанию)</string>
+    <string name="restore_found_title">Найдено сохранение</string>
+    <string name="restore_found_body">В папке «Загрузки» лежит резервная копия прогресса. Восстановить её или начать заново?</string>
+    <string name="restore_action">Восстановить</string>
+    <string name="restore_start_fresh">Начать заново</string>
+    <string name="restore_failed">Не удалось прочитать копию. Можно попробовать ещё раз или начать заново.</string>
+    <string name="save_autobackup_hint">Копия сохраняется в «Загрузки» при каждом выходе — переживает удаление приложения.</string>
     <string name="save_title">Сохранение</string>
     <string name="save_hint">Файл можно перенести на другой телефон</string>
     <string name="save_export">Сохранить в файл</string>

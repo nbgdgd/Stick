@@ -417,6 +417,11 @@ private fun SaveCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = Accents.TextMuted,
             )
+            Text(
+                text = stringResource(R.string.save_autobackup_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = StatColors.Exp,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlineButton(
                     text = stringResource(R.string.save_export),

@@ -51,6 +51,9 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         // Leaving is the moment the "while you were away" window opens.
         viewModel.markSeen()
+        // ...and the last quiet moment before anything can happen to the
+        // install. The database goes with the app; this copy does not.
+        viewModel.backUpSave()
     }
 
     override fun onStart() {

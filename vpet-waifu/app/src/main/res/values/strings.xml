@@ -407,6 +407,9 @@
     <!-- save file -->
     <string name="skin_title">Character</string>
     <string name="skin_hint">The drawn character can wear the outfits the shop sells; sprite packs cannot.</string>
+    <string name="shift_pay_total">pay ×%1$s</string>
+    <string name="shift_exp_total">EXP ×%1$s</string>
+    <string name="shift_pay_from_boost">mood ×%1$s · boost ×%2$s</string>
     <string name="effect_running_haste">Working at double speed</string>
     <string name="effect_running_overtime">Wages ×1.5</string>
     <string name="effect_running_focus">Study ×1.5</string>
@@ -417,6 +420,12 @@
     <string name="skin_modern">Drawn</string>
     <string name="skin_classic">Classic</string>
     <string name="skin_drawn_old">Drawn (default)</string>
+    <string name="restore_found_title">A save was found</string>
+    <string name="restore_found_body">There is a backup of your progress in Downloads. Restore it, or start fresh?</string>
+    <string name="restore_action">Restore</string>
+    <string name="restore_start_fresh">Start fresh</string>
+    <string name="restore_failed">The backup could not be read. Try again, or start fresh.</string>
+    <string name="save_autobackup_hint">A copy is written to Downloads every time you leave — it survives uninstalling the app.</string>
     <string name="save_title">Save file</string>
     <string name="save_hint">The file can be moved to another phone</string>
     <string name="save_export">Save to a file</string>

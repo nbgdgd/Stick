@@ -849,10 +849,47 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         snapshot.occupation?.kind ?: OccupationKind.WORK,
     )
 
-    /** Preview of what a session would pay right now — the UI shows it on the card. */
-    fun projectedPayout(snapshot: PetSnapshot, occupation: Occupation): Int {
+    /**
+     * Everything multiplying her wages this minute, boosts included.
+     *
+     * [currentPayMultiplier] answers only the mood question, which is what the
+     * shift card used to display — so an overtime pass would raise the pay in
+     * [accrue] while the card went on saying the same number it said before the
+     * purchase. The boost worked; the only screen that could have shown it
+     * denied it, which is indistinguishable from the boost being broken.
+     */
+    fun payMultiplierNow(snapshot: PetSnapshot, nowMillis: Long): Float {
+        val kind = snapshot.occupation?.kind ?: OccupationKind.WORK
+        val mood = multiplierFor(currentQuality(snapshot), kind)
+        val overtime = if (snapshot.hasEffect(EffectKind.OVERTIME, nowMillis)) {
+            tuning.overtimeMultiplier
+        } else {
+            1f
+        }
+        return mood * overtime
+    }
+
+    /** The same for study EXP, where the focus tea is what applies. */
+    fun studyMultiplierNow(snapshot: PetSnapshot, nowMillis: Long): Float {
+        val mood = multiplierFor(currentQuality(snapshot), OccupationKind.STUDY)
+        val focus = if (snapshot.hasEffect(EffectKind.FOCUS, nowMillis)) tuning.focusMultiplier else 1f
+        return mood * focus
+    }
+
+    /**
+     * Preview of what a session would pay right now — the UI shows it on the
+     * card. Boosts already running count, because they will still be running
+     * when the shift starts and the preview is a promise about that shift.
+     */
+    fun projectedPayout(snapshot: PetSnapshot, occupation: Occupation, nowMillis: Long = 0L): Int {
         val multiplier = multiplierFor(qualityFor(snapshot.stats.mood), occupation.kind)
-        return (occupation.payout * multiplier).roundToInt()
+        val boost = when (occupation.kind) {
+            OccupationKind.WORK ->
+                if (snapshot.hasEffect(EffectKind.OVERTIME, nowMillis)) tuning.overtimeMultiplier else 1f
+            OccupationKind.STUDY ->
+                if (snapshot.hasEffect(EffectKind.FOCUS, nowMillis)) tuning.focusMultiplier else 1f
+        }
+        return (occupation.payout * multiplier * boost).roundToInt()
     }
 
     fun acknowledgeOutcome(snapshot: PetSnapshot): PetSnapshot = snapshot.copy(lastOutcome = null)

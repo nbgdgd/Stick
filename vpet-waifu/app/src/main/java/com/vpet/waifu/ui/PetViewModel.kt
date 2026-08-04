@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.data.PetRepository
+import com.vpet.waifu.data.SaveAutoBackup
 import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.feedback.Cue
 import com.vpet.waifu.feedback.MusicTrack
@@ -59,6 +60,7 @@ class PetViewModel @Inject constructor(
     private val repository: PetRepository,
     private val preferences: PetPreferences,
     private val sounds: PetSounds,
+    private val autoBackup: SaveAutoBackup,
     private val music: PetMusic,
     val simulation: PetSimulation,
     val tuning: PetTuning,
@@ -235,6 +237,37 @@ class PetViewModel @Inject constructor(
 
     /** Swapping the character is a big enough change to be worth a fanfare. */
     fun setPetSkin(id: String) = act(Cue.FANFARE) { preferences.setPetSkin(id) }
+
+    /**
+     * Writes the off-app copy of the save.
+     *
+     * Called when the app goes to the background, which is both the moment the
+     * state is settled and the last moment before anything can happen to the
+     * install. Silent by design: a toast every time you press home would be
+     * noise, and the only thing worth reporting is a restore.
+     */
+    fun backUpSave() {
+        val out = autoBackup.openForWrite() ?: return
+        viewModelScope.launch { repository.exportSave(out) }
+    }
+
+    /** True when the game is untouched and a backup is sitting there. */
+    fun offersRestore(snapshot: PetSnapshot?): Boolean =
+        snapshot != null && snapshot.isFresh && autoBackup.exists()
+
+    /** Reads the off-app copy back in. */
+    fun restoreBackup(onResult: (Boolean) -> Unit) {
+        val input = autoBackup.openForRead()
+        if (input == null) {
+            onResult(false)
+            return
+        }
+        viewModelScope.launch {
+            val ok = repository.importSave(input).isSuccess
+            sounds.play(if (ok) Cue.FANFARE else Cue.DENIED)
+            onResult(ok)
+        }
+    }
 
     /** The player has caught up — the next recap starts from now. */
     fun markSeen() = act(Cue.TAP) { preferences.setLastSeenAt(System.currentTimeMillis()) }

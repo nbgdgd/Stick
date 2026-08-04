@@ -622,6 +622,7 @@ private fun NameDialog(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SessionCard(
     snapshot: PetSnapshot,
@@ -686,20 +687,53 @@ private fun SessionCard(
             // minute, so a pat mid-shift is worth real money for every minute
             // that is left. The game never said so.
             val quality = simulation.currentQuality(snapshot)
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            val isWork = snapshot.occupation?.kind == OccupationKind.WORK
+            // The real number, boosts included. It used to be a fixed label per
+            // mood band, so an overtime pass raised the wages in the simulation
+            // while this line went on reading exactly as it had before the
+            // purchase — the one place that could have shown the boost working
+            // was the place saying it was not.
+            val total = if (isWork) {
+                simulation.payMultiplierNow(snapshot, nowMillis)
+            } else {
+                simulation.studyMultiplierNow(snapshot, nowMillis)
+            }
+            val mood = simulation.currentPayMultiplier(snapshot)
+            val boosted = total > mood + 0.01f
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 EffectChip(
                     icon = Icons.Rounded.Favorite,
-                    text = stringResource(payChipRes(quality)),
-                    tint = payChipTint(quality),
+                    text = stringResource(
+                        if (isWork) R.string.shift_pay_total else R.string.shift_exp_total,
+                        formatMultiplier(total),
+                    ),
+                    tint = if (boosted) StatColors.Money else payChipTint(quality),
                 )
-                Spacer(Modifier.width(8.dp))
-                if (quality != OutcomeQuality.GREAT) {
-                    Text(
-                        text = stringResource(R.string.shift_pay_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Accents.TextDim,
+                // Named separately when a boost is in it, so the bigger number
+                // has a reason attached rather than being a number that moved.
+                if (boosted) {
+                    EffectChip(
+                        icon = Icons.Rounded.Bolt,
+                        text = stringResource(
+                            R.string.shift_pay_from_boost,
+                            formatMultiplier(mood),
+                            formatMultiplier(total / mood),
+                        ),
+                        tint = Accents.Bright,
                     )
                 }
+            }
+            if (!boosted && quality != OutcomeQuality.GREAT) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.shift_pay_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Accents.TextDim,
+                )
             }
             Spacer(Modifier.height(14.dp))
             // Full width and on its own line: beside the title it fought the
@@ -1016,6 +1050,12 @@ private fun payChipTint(quality: OutcomeQuality): Color = when (quality) {
     OutcomeQuality.GREAT -> StatColors.Money
     OutcomeQuality.GOOD -> Accents.TextMuted
     else -> Accents.Danger
+}
+
+/** "1.95", "1.5" — no trailing zero on a whole multiplier. */
+private fun formatMultiplier(value: Float): String {
+    val rounded = kotlin.math.round(value * 100f) / 100f
+    return if (rounded % 1f == 0f) rounded.toInt().toString() else "%.2f".format(rounded).trimEnd('0').trimEnd('.')
 }
 
 /** The stage's own height, shared with whatever has to line up inside it. */

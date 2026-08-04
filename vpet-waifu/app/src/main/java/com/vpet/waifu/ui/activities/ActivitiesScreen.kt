@@ -123,7 +123,7 @@ fun ActivitiesScreen(
             )
         }
         items(Occupations.WORK, key = { it.id }) { occupation ->
-            OccupationCard(occupation, snapshot, simulation, tuning, onStart, onCategoryTap, patting, Modifier.animateItem())
+            OccupationCard(occupation, snapshot, nowMillis, simulation, tuning, onStart, onCategoryTap, patting, Modifier.animateItem())
         }
 
         item {
@@ -136,7 +136,7 @@ fun ActivitiesScreen(
             )
         }
         items(Occupations.STUDY, key = { it.id }) { occupation ->
-            OccupationCard(occupation, snapshot, simulation, tuning, onStart, onCategoryTap, patting, Modifier.animateItem())
+            OccupationCard(occupation, snapshot, nowMillis, simulation, tuning, onStart, onCategoryTap, patting, Modifier.animateItem())
         }
     }
 }
@@ -251,6 +251,7 @@ private fun ActiveSession(snapshot: PetSnapshot, nowMillis: Long, onCancel: () -
 private fun OccupationCard(
     occupation: Occupation,
     snapshot: PetSnapshot,
+    nowMillis: Long,
     simulation: PetSimulation,
     tuning: PetTuning,
     onStart: (Occupation) -> Unit,
@@ -260,7 +261,7 @@ private fun OccupationCard(
 ) {
     val unlocked = occupation.isUnlocked(snapshot.level)
     val canStart = snapshot.canStart(occupation, tuning)
-    val payout = simulation.projectedPayout(snapshot, occupation)
+    val payout = simulation.projectedPayout(snapshot, occupation, nowMillis)
     val isWork = occupation.kind == OccupationKind.WORK
     val mood = occupation.moodCost.toInt()
 

@@ -6,6 +6,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.annotation.ChecksSdkIntAtLeast
+import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.InputStream
 import java.io.OutputStream
@@ -39,6 +41,16 @@ class SaveAutoBackup @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
 
+    /**
+     * Annotated so lint can follow the guard.
+     *
+     * Every MediaStore.Downloads call below is behind this property, but a
+     * plain Boolean tells the analyser nothing — it reported each call as an
+     * unguarded API-29 use on a minSdk-26 project, which is exactly the check
+     * worth keeping rather than suppressing. This is the annotation that says
+     * "this Boolean *is* the version check".
+     */
+    @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.Q)
     val isSupported: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
     /** Opens the backup for writing, replacing any previous one. */
@@ -73,6 +85,7 @@ class SaveAutoBackup @Inject constructor(
     /** Whether a backup is sitting there waiting to be read. */
     fun exists(): Boolean = isSupported && runCatching { existing() != null }.getOrDefault(false)
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun existing(): Uri? {
         val resolver = context.contentResolver
         resolver.query(

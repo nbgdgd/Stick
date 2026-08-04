@@ -44,6 +44,32 @@ data class PetPalette(
         val Default = PetPalette()
 
         /**
+         * The colours the character wore before the redraw.
+         *
+         * Kept whole rather than derived: the violet hair and the amethyst eyes
+         * are what made her that character, and the classic rig is offered as
+         * that character rather than as the new one recoloured.
+         */
+        val Classic = PetPalette(
+            hair = Color(0xFF7B5EA7),
+            hairShade = Color(0xFF5E4483),
+            hairLight = Color(0xFFA98BD6),
+            skin = Color(0xFFFFE1D0),
+            skinShade = Color(0xFFEEBFA8),
+            uniform = Color(0xFF44396E),
+            uniformShade = Color(0xFF332A57),
+            skirt = Color(0xFF3B3163),
+            collar = Color(0xFFF5EFFD),
+            ribbon = Color(0xFFE8577E),
+            sock = Color(0xFFF5EFFD),
+            shoe = Color(0xFF2B2447),
+            eyeDark = Color(0xFF2E2044),
+            iris = Color(0xFF8B5FD6),
+            irisDeep = Color(0xFF573A8F),
+            irisLight = Color(0xFFCBAEF7),
+        )
+
+        /**
          * The outfits, by the id [com.vpet.waifu.domain.Upgrades] sells them
          * under.
          *
@@ -106,6 +132,27 @@ data class PetPalette(
         fun forOutfit(outfitId: String?): PetPalette {
             val name = outfitId?.removePrefix("outfit_")
             return BY_NAME[name] ?: Default
+        }
+
+        /**
+         * The same, for whichever rig is drawing.
+         *
+         * The outfits only ever replace cloth, so the classic character keeps
+         * her own hair and eyes in every one of them.
+         */
+        fun forOutfit(outfitId: String?, classic: Boolean): PetPalette {
+            val clothes = forOutfit(outfitId)
+            if (!classic) return clothes
+            return Classic.copy(
+                uniform = clothes.uniform,
+                uniformShade = clothes.uniformShade,
+                skirt = clothes.skirt,
+                collar = clothes.collar,
+                ribbon = clothes.ribbon,
+                sock = clothes.sock,
+                shoe = clothes.shoe,
+                accent = clothes.accent,
+            )
         }
     }
 }

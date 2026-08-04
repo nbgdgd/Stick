@@ -54,6 +54,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
+import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.ui.components.OutlineButton
 import java.io.InputStream
@@ -456,7 +457,6 @@ private fun defaultSaveName(): String {
 private fun SkinCard(selected: String, onSelect: (String) -> Unit) {
     val context = LocalContext.current
     val packs = remember { SpritePacks.installedIds(context) }
-    if (packs.isEmpty()) return
 
     PanelCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -474,9 +474,14 @@ private fun SkinCard(selected: String, onSelect: (String) -> Unit) {
                 color = Accents.TextMuted,
             )
             SkinRow(
-                label = stringResource(R.string.skin_drawn),
+                label = stringResource(R.string.skin_modern),
                 selected = selected.isBlank(),
-                onClick = { onSelect("") },
+                onClick = { onSelect(PetSkin.MODERN_ID) },
+            )
+            SkinRow(
+                label = stringResource(R.string.skin_classic),
+                selected = selected == PetSkin.CLASSIC_ID,
+                onClick = { onSelect(PetSkin.CLASSIC_ID) },
             )
             packs.forEach { id ->
                 val pack = remember(id) { SpritePacks.load(context, id) }

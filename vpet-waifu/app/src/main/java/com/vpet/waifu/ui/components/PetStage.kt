@@ -20,8 +20,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.AnimatedPet
-import com.vpet.waifu.ui.character.SpritePack
-import com.vpet.waifu.ui.character.SpritePet
+import com.vpet.waifu.ui.character.PetFigure
+import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.Prop
 import com.vpet.waifu.ui.character.RoomDetail
@@ -32,6 +32,15 @@ import com.vpet.waifu.ui.character.drawPixelRoom
 import com.vpet.waifu.ui.character.pixelScale
 import com.vpet.waifu.ui.character.rememberPixelRoom
 import com.vpet.waifu.ui.theme.StageColors
+
+/**
+ * The band at the top of the stage kept clear for the speech bubble, and the
+ * margin under her feet. Public because the bubble has to know where the box
+ * it sits above begins, and two copies of the same number is how it ends up
+ * over her face on one character and in the sky on another.
+ */
+val STAGE_SKY_BAND = 48.dp
+val STAGE_FLOOR_INSET = 8.dp
 
 /**
  * The pet in her room.
@@ -59,19 +68,15 @@ fun PetStage(
     night: Boolean = state == PetState.SLEEPING,
     /** The room she is living in — bought in the shop, applied here. */
     theme: String = RoomTheme.DEFAULT_ID,
-    /**
-     * A sprite pack to draw instead of the vector rig.
-     *
-     * Null keeps the rig, which is the only character that can wear the shop's
-     * outfits or hold a job's prop — a sheet is a fixed set of pictures.
-     */
-    pack: SpritePack? = null,
+    /** Which of the three characters to draw. */
+    skin: PetSkin = PetSkin.Modern,
 ) {
     val room = StageColors.forTheme(theme)
     // A pixel room cuts between day and night rather than cross-fading: every
     // frame of a colour animation is a fresh offscreen render, and a dissolve
     // is not something pixel art does anyway.
-    val pixelated = pack != null && pack.pixelateRoom
+    val sheet = (skin as? PetSkin.Sheet)?.pack
+    val pixelated = sheet != null && sheet.pixelateRoom
     val top by animateColorAsState(
         if (night) room.nightTop else room.dayTop,
         label = "stage-top",
@@ -100,7 +105,7 @@ fun PetStage(
     // out — but the workplace scenery is drawn by the vector rig, and a sprite
     // pack has none. Stripping the room for a set that never arrives left her
     // working against a bare wall, which is worse than the ordinary room.
-    val detail = if (workProp != null && pack == null) RoomDetail.WALL else RoomDetail.FULL
+    val detail = if (workProp != null && sheet == null) RoomDetail.WALL else RoomDetail.FULL
 
     // BoxWithConstraints rather than the screen width: the stage sits inside
     // the screen's padding, and the pixel grid has to be computed from the box
@@ -118,8 +123,8 @@ fun PetStage(
         val density = LocalDensity.current
         val stageWidthPx = with(density) { maxWidth.toPx() }
         val stageHeightPx = with(density) { maxHeight.toPx() }
-        val charBoxHeightPx = with(density) { (maxHeight - 48.dp - 8.dp).toPx() }
-        val pixelScale = pack?.pixelScale(stageWidthPx, charBoxHeightPx) ?: 1f
+        val charBoxHeightPx = with(density) { (maxHeight - STAGE_SKY_BAND - STAGE_FLOOR_INSET).toPx() }
+        val pixelScale = sheet?.pixelScale(stageWidthPx, charBoxHeightPx) ?: 1f
 
         // Called unconditionally and told to stand down with a zero scale,
         // rather than wrapped in an `if`: switching characters mid-session
@@ -155,22 +160,19 @@ fun PetStage(
             .fillMaxSize()
             // The top band is reserved for the speech bubble; pushing her
             // start line down keeps the bubble in the sky and off her face.
-            .padding(bottom = 8.dp, top = 48.dp)
+            .padding(bottom = STAGE_FLOOR_INSET, top = STAGE_SKY_BAND)
             .graphicsLayer {
                 scaleX = characterScale
                 scaleY = characterScale
                 transformOrigin = TransformOrigin(0.5f, 0.95f)
             }
 
-        if (pack != null) {
-            SpritePet(pack = pack, state = state, modifier = characterModifier)
-        } else {
-            AnimatedPet(
-                state = state,
-                palette = palette,
-                workProp = workProp,
-                modifier = characterModifier,
-            )
-        }
+        PetFigure(
+            skin = skin,
+            state = state,
+            palette = palette,
+            workProp = workProp,
+            modifier = characterModifier,
+        )
     }
 }

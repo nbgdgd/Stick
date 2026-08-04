@@ -80,12 +80,13 @@ object PetRasterizer {
         room: RoomColors? = null,
         cornerRadiusPx: Float = 0f,
         workProp: Prop? = null,
+        classic: Boolean = false,
     ): List<ByteArray> = (0 until frameCount).map { index ->
         val pose = PetPoseFactory.widgetLoopFrame(state, index, frameCount, loopSeconds, workProp)
         png(
             draw(widthPx, heightPx, density) {
                 room?.let { drawPetRoom(it.top, it.bottom, it.floor, it.night, cornerRadiusPx) }
-                drawPet(pose, palette)
+                if (classic) drawClassicPet(pose, palette) else drawPet(pose, palette)
             },
         )
     }

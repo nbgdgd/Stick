@@ -407,7 +407,16 @@
     <!-- save file -->
     <string name="skin_title">Персонаж</string>
     <string name="skin_hint">Нарисованная героиня умеет носить наряды из магазина; спрайтовые наборы — нет.</string>
-    <string name="skin_drawn">Рисованная (по умолчанию)</string>
+    <string name="effect_running_haste">Работает вдвое быстрее</string>
+    <string name="effect_running_overtime">Оплата ×1.5</string>
+    <string name="effect_running_focus">Учёба ×1.5</string>
+    <string name="effect_running_second_wind">Энергия почти не тратится</string>
+    <string name="effect_running_good_vibes">Настроение не падает</string>
+    <string name="effect_running_hunger_surge">Голодает быстрее — аванс</string>
+    <string name="effect_running_exhaustion">Энергия тает — откат</string>
+    <string name="skin_modern">Рисованная</string>
+    <string name="skin_classic">Классическая</string>
+    <string name="skin_drawn_old">Рисованная (по умолчанию)</string>
     <string name="save_title">Сохранение</string>
     <string name="save_hint">Файл можно перенести на другой телефон</string>
     <string name="save_export">Сохранить в файл</string>

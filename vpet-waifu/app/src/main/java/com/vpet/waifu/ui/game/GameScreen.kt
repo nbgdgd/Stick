@@ -76,9 +76,8 @@ import com.vpet.waifu.R
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.domain.MiniGame
-import com.vpet.waifu.ui.character.AnimatedPet
-import com.vpet.waifu.ui.character.SpritePack
-import com.vpet.waifu.ui.character.SpritePet
+import com.vpet.waifu.ui.character.PetFigure
+import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.OutlineButton
@@ -140,7 +139,7 @@ fun GameScreen(
     onScored: () -> Unit = {},
     onMiss: () -> Unit = {},
     onRecord: () -> Unit = {},
-    pack: SpritePack? = null,
+    skin: PetSkin = PetSkin.Modern,
 ) {
     var game by rememberSaveable { mutableStateOf(MiniGame.CATCH) }
     var running by remember { mutableStateOf(false) }
@@ -263,15 +262,12 @@ fun GameScreen(
                     .height(boardHeight * 0.55f)
                     .fillMaxWidth()
                 val petState = if (running) PetState.PLAYING else snapshot.state(nowMillis)
-                if (pack != null) {
-                    SpritePet(pack = pack, state = petState, modifier = petModifier)
-                } else {
-                    AnimatedPet(
-                        state = petState,
-                        workProp = workPropFor(snapshot.occupation?.id),
-                        modifier = petModifier,
-                    )
-                }
+                PetFigure(
+                    skin = skin,
+                    state = petState,
+                    workProp = workPropFor(snapshot.occupation?.id),
+                    modifier = petModifier,
+                )
             }
 
             if (running) {

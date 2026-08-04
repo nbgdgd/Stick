@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -49,6 +50,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -83,6 +85,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
@@ -106,6 +109,7 @@ import com.vpet.waifu.domain.PetRequest
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.RequestKind
 import com.vpet.waifu.domain.BOOST_EFFECTS
+import com.vpet.waifu.domain.EffectKind
 import com.vpet.waifu.domain.Shop
 import com.vpet.waifu.domain.ShopItem
 import com.vpet.waifu.domain.Story
@@ -114,8 +118,12 @@ import com.vpet.waifu.domain.Progression
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.ui.components.ActionButton
 import com.vpet.waifu.ui.character.PetPalette
-import com.vpet.waifu.ui.character.SpritePack
+import com.vpet.waifu.ui.character.PetSkin
+import com.vpet.waifu.ui.character.headTopPx
+import com.vpet.waifu.ui.components.STAGE_FLOOR_INSET
+import com.vpet.waifu.ui.components.STAGE_SKY_BAND
 import com.vpet.waifu.ui.character.workPropFor
+import com.vpet.waifu.ui.components.EffectBar
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.EventCard
 import com.vpet.waifu.ui.components.GainPop
@@ -182,7 +190,7 @@ fun HomeScreen(
     onAcknowledgeStory: () -> Unit,
     onAcknowledgeDaily: () -> Unit,
     onSeen: () -> Unit,
-    pack: SpritePack? = null,
+    skin: PetSkin = PetSkin.Modern,
     modifier: Modifier = Modifier,
 ) {
     val state = snapshot.state(nowMillis, tuning)
@@ -255,19 +263,30 @@ fun HomeScreen(
             onOpenSettings = onOpenSettings,
         )
 
-        Box(
+        BoxWithConstraints(
             modifier = Modifier.onGloballyPositioned { stageBounds = it.boundsInRoot() },
         ) {
+            // Where this particular character's head ends up, so the bubble can
+            // sit just above it instead of at a fixed height that suits one of
+            // the three and looks detached on the other two.
+            val density = LocalDensity.current
+            val bubbleTop = with(density) {
+                val boxWidth = maxWidth.toPx()
+                val boxHeight = (STAGE_HEIGHT - STAGE_SKY_BAND - STAGE_FLOOR_INSET).toPx()
+                val head = skin.headTopPx(boxWidth, boxHeight)
+                (STAGE_SKY_BAND.toPx() + head).toDp()
+            }
+
             PetStage(
                 state = state,
-                height = 320.dp,
+                height = STAGE_HEIGHT,
                 palette = PetPalette.forOutfit(snapshot.outfit),
                 characterScale = petScale.value,
                 workProp = workPropFor(snapshot.occupation?.id),
                 decor = snapshot.owned,
                 night = state == PetState.SLEEPING || isRealNight(nowMillis),
                 theme = snapshot.theme,
-                pack = pack,
+                skin = skin,
             )
             // The tap layer sits over the room but under the chips and bubble.
             Box(
@@ -320,7 +339,15 @@ fun HomeScreen(
                 },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 8.dp, start = 16.dp, end = 16.dp),
+                    // Anchored to her head, then pulled up by the bubble's own
+                    // height so its tail lands just above her rather than
+                    // across her face. Floored at 6dp so a tall character
+                    // cannot push it off the top of the stage.
+                    .padding(
+                        top = (bubbleTop - BUBBLE_LIFT).coerceAtLeast(6.dp),
+                        start = 16.dp,
+                        end = 16.dp,
+                    ),
             )
             // Every minute she is on the clock, what she just earned floats up.
             // Top-right corner: visible, and never over her.
@@ -430,22 +457,49 @@ fun HomeScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ActiveBoosts(snapshot: PetSnapshot, nowMillis: Long) {
-    val running = snapshot.effects.filter { it.kind in BOOST_EFFECTS && it.isActive(nowMillis) }
+    // Penalties belong here as much as boosts do. The advance's hunger surge
+    // and the all-nighter's crash were invisible: her energy would fall off a
+    // cliff and the screen that could have explained it showed nothing.
+    val running = snapshot.effects.filter { it.isActive(nowMillis) }
     if (running.isEmpty()) return
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         running.forEach { effect ->
-            val item = Shop.BOOSTS.firstOrNull { it.effect == effect.kind } ?: return@forEach
+            val penalty = effect.kind !in BOOST_EFFECTS
+            val item = Shop.ALL.firstOrNull { it.effect == effect.kind }
             val minutesLeft = (((effect.expiresAt - nowMillis) + 59_999L) / 60_000L).toInt()
-            EffectChip(
-                icon = shopItemIcon(item.id),
-                text = "${stringResource(shopItemNameRes(item.id))} · ${formatMinutes(minutesLeft)}",
-                tint = shopItemTint(item.id),
+            // The record keeps only its expiry, so the full length comes from
+            // the item that grants it — which is where it is defined anyway,
+            // and avoids migrating a stored column to hold a constant.
+            val total = ((item?.effectMinutes ?: 0) * 60_000L).coerceAtLeast(1L)
+            EffectBar(
+                icon = if (penalty) Icons.Rounded.WarningAmber else shopItemIcon(item?.id ?: ""),
+                label = stringResource(effectLabelRes(effect.kind)),
+                remaining = formatMinutes(minutesLeft),
+                fraction = ((effect.expiresAt - nowMillis).toFloat() / total),
+                tint = if (penalty) Accents.Danger else shopItemTint(item?.id ?: ""),
+                penalty = penalty,
             )
         }
     }
+}
+
+/**
+ * What an effect is doing, in the player's words.
+ *
+ * The item's own name was what these used to say — "Сверхурочный пропуск",
+ * which is what you bought, not what is happening. What is happening is that
+ * the wages are half again as big, and that is the thing worth reading.
+ */
+@StringRes
+private fun effectLabelRes(kind: EffectKind): Int = when (kind) {
+    EffectKind.HASTE -> R.string.effect_running_haste
+    EffectKind.OVERTIME -> R.string.effect_running_overtime
+    EffectKind.FOCUS -> R.string.effect_running_focus
+    EffectKind.SECOND_WIND -> R.string.effect_running_second_wind
+    EffectKind.GOOD_VIBES -> R.string.effect_running_good_vibes
+    EffectKind.HUNGER_SURGE -> R.string.effect_running_hunger_surge
+    EffectKind.EXHAUSTION -> R.string.effect_running_exhaustion
 }
 
 private fun statusDot(state: PetState): Color = when (state) {
@@ -958,6 +1012,17 @@ private fun payChipTint(quality: OutcomeQuality): Color = when (quality) {
     OutcomeQuality.GOOD -> Accents.TextMuted
     else -> Accents.Danger
 }
+
+/** The stage's own height, shared with whatever has to line up inside it. */
+private val STAGE_HEIGHT = 320.dp
+
+/**
+ * How far above her head the bubble hangs.
+ *
+ * A two-line bubble is about sixty points tall, and its tail wants to be just
+ * clear of her hair rather than touching it.
+ */
+private val BUBBLE_LIFT = 66.dp
 
 /** One tap's worth of stars, at the finger. */
 private data class TapBurst(val id: Long, val center: Offset, val mood: Int, val exp: Int)

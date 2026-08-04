@@ -31,6 +31,7 @@ import com.vpet.waifu.R
 import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.feedback.Cue
 import com.vpet.waifu.feedback.PetSounds
+import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.di.ApplicationScope
@@ -192,7 +193,7 @@ class PetOverlayService :
                 val current = snapshot
                 if (current != null) {
                     PetBubble(
-                        pack = SpritePacks.load(this@PetOverlayService, skinId),
+                        skin = PetSkin.of(skinId, SpritePacks.load(this@PetOverlayService, skinId)),
                         snapshot = current,
                         tuning = tuning,
                         nowMillis = nowMillis,

@@ -24,6 +24,7 @@ import com.vpet.waifu.ui.home.HomeScreen
 import com.vpet.waifu.ui.profile.ProfileScreen
 import com.vpet.waifu.ui.shop.ShopScreen
 import com.vpet.waifu.ui.activities.ActivitiesScreen
+import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.ui.theme.VPetTheme
 import com.vpet.waifu.ui.theme.Surfaces
@@ -138,7 +139,31 @@ class StoreShotTest {
                     onCoinLanded = {}, onExpLanded = {}, onToggleSleep = {}, onCancelOccupation = {},
                     onDismissEvent = {}, onBuy = {}, onAcknowledgeStory = {}, onAcknowledgeDaily = {},
                     onSeen = {},
-                    pack = pack,
+                    skin = PetSkin.Sheet(pack),
+                )
+            }
+        }
+
+        // The three characters side by side, so the bubble's anchoring can be
+        // compared rather than assumed.
+        listOf(
+            "06-modern" to "",
+            "07-classic" to "classic",
+        ).forEach { (name, id) ->
+            shoot(name) {
+                HomeScreen(
+                    snapshot = snapshot,
+                    simulation = simulation,
+                    tuning = tuning,
+                    nowMillis = now,
+                    settings = PetSettings(petName = "Юки", lastSeenAt = now, petSkin = id),
+                    wallet = snapshot.progress.money,
+                    walletSettled = true,
+                    onOpenSettings = {}, onNameChange = {}, onFeed = {}, onPet = {}, onTapPet = {},
+                    onCoinLanded = {}, onExpLanded = {}, onToggleSleep = {}, onCancelOccupation = {},
+                    onDismissEvent = {}, onBuy = {}, onAcknowledgeStory = {}, onAcknowledgeDaily = {},
+                    onSeen = {},
+                    skin = PetSkin.of(id, null),
                 )
             }
         }

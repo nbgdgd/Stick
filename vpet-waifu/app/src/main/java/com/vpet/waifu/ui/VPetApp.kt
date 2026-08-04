@@ -77,6 +77,7 @@ import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.occupationArtRes
 import com.vpet.waifu.ui.components.HeartLayer
+import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.ui.components.LocalRefusal
 import com.vpet.waifu.ui.bondNameRes
@@ -131,8 +132,8 @@ fun VPetApp(
     // Decoding a sheet is a couple of megabytes of RGBA, so it happens once
     // per selected pack and is remembered for as long as the choice stands.
     val context = LocalContext.current
-    val pack = remember(state.settings.petSkin) {
-        SpritePacks.load(context, state.settings.petSkin)
+    val skin = remember(state.settings.petSkin) {
+        PetSkin.of(state.settings.petSkin, SpritePacks.load(context, state.settings.petSkin))
     }
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -237,7 +238,7 @@ fun VPetApp(
                     onBuy = viewModel::buy,
                     onAcknowledgeStory = viewModel::acknowledgeStory,
                     onAcknowledgeDaily = viewModel::acknowledgeDaily,
-                    pack = pack,
+                    skin = skin,
                     onSeen = viewModel::markSeen,
                 )
                 Tab.ACTIVITIES -> ActivitiesScreen(
@@ -270,7 +271,7 @@ fun VPetApp(
                     onScored = viewModel::scored,
                     onMiss = viewModel::missed,
                     onRecord = viewModel::recordSet,
-                    pack = pack,
+                    skin = skin,
                 )
                 Tab.HER -> ProfileScreen(
                     snapshot = snapshot,

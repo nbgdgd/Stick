@@ -14,8 +14,8 @@ android {
         applicationId = "com.vpet.waifu"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.3.0"
+        versionCode = 6
+        versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -39,6 +39,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Debug and release shared one applicationId, so the phone treated
+            // them as the same app signed by two different keys and refused the
+            // second install outright — "package conflicts with an existing
+            // package". Now a test build sits beside the real one instead of
+            // fighting it, and neither can overwrite the other's save.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

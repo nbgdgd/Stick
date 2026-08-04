@@ -407,7 +407,16 @@
     <!-- save file -->
     <string name="skin_title">Character</string>
     <string name="skin_hint">The drawn character can wear the outfits the shop sells; sprite packs cannot.</string>
-    <string name="skin_drawn">Drawn (default)</string>
+    <string name="effect_running_haste">Working at double speed</string>
+    <string name="effect_running_overtime">Wages ×1.5</string>
+    <string name="effect_running_focus">Study ×1.5</string>
+    <string name="effect_running_second_wind">Barely spending energy</string>
+    <string name="effect_running_good_vibes">Mood holding steady</string>
+    <string name="effect_running_hunger_surge">Hungry faster — the advance</string>
+    <string name="effect_running_exhaustion">Energy draining — the crash</string>
+    <string name="skin_modern">Drawn</string>
+    <string name="skin_classic">Classic</string>
+    <string name="skin_drawn_old">Drawn (default)</string>
     <string name="save_title">Save file</string>
     <string name="save_hint">The file can be moved to another phone</string>
     <string name="save_export">Save to a file</string>

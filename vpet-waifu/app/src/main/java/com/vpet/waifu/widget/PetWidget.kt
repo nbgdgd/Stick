@@ -35,6 +35,7 @@ import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.data.PetRepository
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.ui.character.ART_HEIGHT
+import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.SpritePacks
 import com.vpet.waifu.ui.character.pixelScale
 import com.vpet.waifu.ui.character.ART_WIDTH
@@ -117,6 +118,7 @@ class PetWidget : GlanceAppWidget() {
         // or switching characters would keep serving the old one's frames.
         val skin = preferencesOf(context).settings.first().petSkin
         val pack = SpritePacks.load(context, skin)
+        val classic = pack == null && skin == PetSkin.CLASSIC_ID
         val frames = FRAMES.getOrPut(
             "$state|$tempo|$workProp|${stageWidthDp.roundToInt()}x${stageHeightDp.roundToInt()}|$density|${snapshot.outfit}|$skin",
         ) {
@@ -129,7 +131,7 @@ class PetWidget : GlanceAppWidget() {
                     frameCount = FRAME_COUNT,
                 )
             } else {
-                renderFrames(state, tempo, stageWidthDp, stageHeightDp, density, snapshot.outfit, workProp)
+                renderFrames(state, tempo, stageWidthDp, stageHeightDp, density, snapshot.outfit, workProp, classic)
             }
         }
         val flipper = buildFlipper(context, tempo, frames)
@@ -206,6 +208,7 @@ class PetWidget : GlanceAppWidget() {
         density: Float,
         outfit: String,
         workProp: Prop?,
+        classic: Boolean,
     ): List<ByteArray> {
         // Transparent: the room is a separate layer underneath, so the frames
         // carry nothing but the character.
@@ -216,8 +219,9 @@ class PetWidget : GlanceAppWidget() {
             density = density,
             frameCount = FRAME_COUNT,
             loopSeconds = tempo.loopSeconds,
-            palette = PetPalette.forOutfit(outfit),
+            palette = PetPalette.forOutfit(outfit, classic),
             workProp = workProp,
+            classic = classic,
         )
 
         val full = render(1f)

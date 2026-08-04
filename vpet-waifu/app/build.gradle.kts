@@ -48,6 +48,25 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
+        /**
+         * A build to hand somebody, that will install whatever is already on
+         * their phone.
+         *
+         * Optimised exactly like release — same R8, same shrinking, so it is a
+         * fair thing to judge the app's smoothness by — but under its own
+         * applicationId and signed with the debug key. A different package id
+         * means the installer has nothing to compare signatures against, so it
+         * simply installs, beside anything else, with its own save.
+         */
+        create("preview") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".preview"
+            versionNameSuffix = "-preview"
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            matchingFallbacks += listOf("release")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

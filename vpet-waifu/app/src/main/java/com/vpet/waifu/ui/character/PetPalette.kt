@@ -143,6 +143,12 @@ data class PetPalette(
         fun forOutfit(outfitId: String?, classic: Boolean): PetPalette {
             val clothes = forOutfit(outfitId)
             if (!classic) return clothes
+            // Her starting outfit is her own dark sailor uniform, not the
+            // current character's cream sweater. Taking "uniform" from the
+            // modern default dressed the classic character in the new one's
+            // clothes and left only her hair to tell them apart.
+            val name = outfitId?.removePrefix("outfit_")
+            if (name == null || name == "uniform") return Classic
             return Classic.copy(
                 uniform = clothes.uniform,
                 uniformShade = clothes.uniformShade,

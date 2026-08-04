@@ -109,7 +109,10 @@ fun PetFigure(
     skin: PetSkin,
     state: PetState,
     modifier: Modifier = Modifier,
-    palette: PetPalette = PetPalette.Default,
+    // Defaulted per skin rather than to one palette: the classic rig in the
+    // current character's silver is a different character wearing her body,
+    // and a caller that forgets the argument should not be able to cause that.
+    palette: PetPalette = if (skin == PetSkin.Classic) PetPalette.Classic else PetPalette.Default,
     workProp: Prop? = null,
 ) {
     when (skin) {

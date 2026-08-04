@@ -77,6 +77,7 @@ import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.ui.character.PetFigure
+import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.components.EffectChip
@@ -265,6 +266,7 @@ fun GameScreen(
                 PetFigure(
                     skin = skin,
                     state = petState,
+                    palette = PetPalette.forOutfit(snapshot.outfit, classic = skin == PetSkin.Classic),
                     workProp = workPropFor(snapshot.occupation?.id),
                     modifier = petModifier,
                 )

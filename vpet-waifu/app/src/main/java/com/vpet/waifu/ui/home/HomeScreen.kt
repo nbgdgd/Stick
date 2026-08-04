@@ -280,7 +280,7 @@ fun HomeScreen(
             PetStage(
                 state = state,
                 height = STAGE_HEIGHT,
-                palette = PetPalette.forOutfit(snapshot.outfit),
+                palette = PetPalette.forOutfit(snapshot.outfit, classic = skin == PetSkin.Classic),
                 characterScale = petScale.value,
                 workProp = workPropFor(snapshot.occupation?.id),
                 decor = snapshot.owned,
@@ -344,7 +344,12 @@ fun HomeScreen(
                     // across her face. Floored at 6dp so a tall character
                     // cannot push it off the top of the stage.
                     .padding(
-                        top = (bubbleTop - BUBBLE_LIFT).coerceAtLeast(6.dp),
+                        // Floored so a tall character cannot push it off the
+                        // stage, and capped so a short one cannot drag it down
+                        // among the furniture: past a third of the way down it
+                        // stops reading as speech and starts reading as a card
+                        // lying on the floor.
+                        top = (bubbleTop - BUBBLE_LIFT).coerceIn(6.dp, STAGE_HEIGHT * 0.32f),
                         start = 16.dp,
                         end = 16.dp,
                     ),

@@ -205,7 +205,10 @@ fun SpritePet(
     state: PetState,
     modifier: Modifier = Modifier,
 ) {
-    val seconds = rememberPetPhaseSeconds()
+    // Unthrottled: a frame here is one blit of one crop, and the clip's own fps
+    // decides how often the picture actually changes. Throttling this only made
+    // the moment a frame flips land later than the panel could have shown it.
+    val seconds = rememberPetPhaseSeconds(intervalNanos = SPRITE_FRAME_INTERVAL_NANOS)
     val srcSize = remember(pack) { IntSize(pack.frameWidth, pack.frameHeight) }
 
     Canvas(modifier) {

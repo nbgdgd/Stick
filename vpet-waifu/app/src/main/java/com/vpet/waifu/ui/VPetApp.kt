@@ -70,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.ActivityOutcome
+import com.vpet.waifu.domain.BOOST_EFFECTS
 import com.vpet.waifu.feedback.MusicTrack
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.OutcomeQuality
@@ -92,6 +93,15 @@ import com.vpet.waifu.ui.settings.SettingsScreen
 import com.vpet.waifu.ui.shop.ShopScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+
+/**
+ * How often the shared clock moves when nothing is counting down.
+ *
+ * Five seconds because that is already the granularity of the coarsest thing
+ * that reads it — the dialogue line is remembered on `nowMillis / 5000`, so a
+ * faster tick could not change what it says anyway.
+ */
+private const val IDLE_TICK_MILLIS = 5_000L
 
 private enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
     HOME(R.string.tab_home, Icons.Rounded.Home),
@@ -137,14 +147,27 @@ fun VPetApp(
     )
     val walletSettled = walletShown == snapshot.progress.money
 
-    // Once a second, not twice: this drives every countdown and emote timeout in
-    // the app, and a change here recomposes the whole visible tab. The shortest
-    // thing it has to expire is a three-and-a-half-second emote.
+    // This clock is handed to every tab by value, so each move of it recomposes
+    // the whole visible screen — thirty-odd read sites on Home alone. At one
+    // second flat that is a full recomposition every second forever, which is
+    // felt as a hitch once a second whatever the panel's refresh rate.
+    //
+    // Only three things actually need second resolution, and all three are
+    // countdowns that are usually not running: a shift, a wish with a deadline,
+    // and a boost with time left on it. Everything else that reads the clock is
+    // coarser than that by a wide margin — the dialogue line is keyed to five
+    // seconds, morning and night to the hour, the anniversary to the day. So
+    // the clock ticks fast only while something is actually counting down.
+    val counting = snapshot.isBusy ||
+        snapshot.request != null ||
+        snapshot.effects.any { it.kind in BOOST_EFFECTS && it.isActive(System.currentTimeMillis()) }
+    val tickMillis = if (counting) 1_000L else IDLE_TICK_MILLIS
+
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(tickMillis) {
         while (true) {
             nowMillis = System.currentTimeMillis()
-            delay(1_000)
+            delay(tickMillis)
         }
     }
 

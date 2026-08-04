@@ -10,8 +10,24 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import com.vpet.waifu.domain.PetState
 
-/** ~30 animated frames a second. */
-private const val FRAME_INTERVAL_NANOS = 1_000_000_000L / 30
+/**
+ * How often the pose clock is allowed to move, in nanoseconds.
+ *
+ * This is a throttle on *state writes*, not on the display: `withFrameNanos`
+ * fires every frame the panel draws either way, and this decides how many of
+ * those frames actually invalidate the character.
+ *
+ * It used to be a flat 30 a second for everything, which on a 120 Hz phone
+ * meant the entire interface moved smoothly while the character — the one
+ * thing anybody looks at — visibly did not. It reads as the app being locked.
+ *
+ * The number that justified it was the vector rig's cost per frame, and that
+ * cost is now much lower (see the limb outline in PetArt: it used to run four
+ * Skia boolean path unions per frame). A sprite costs a single blit and has no
+ * business being throttled at all.
+ */
+private const val RIG_FRAME_INTERVAL_NANOS = 1_000_000_000L / 60
+internal const val SPRITE_FRAME_INTERVAL_NANOS = 0L
 
 /**
  * Seconds since this composable appeared, advanced about thirty times a second.
@@ -22,10 +38,13 @@ private const val FRAME_INTERVAL_NANOS = 1_000_000_000L / 30
  * being able to test on its own.
  */
 @Composable
-internal fun rememberPetPhaseSeconds(): FloatState {
+internal fun rememberPetPhaseSeconds(
+    /** Nanoseconds between pose updates; 0 follows the display exactly. */
+    intervalNanos: Long = RIG_FRAME_INTERVAL_NANOS,
+): FloatState {
     val seconds = remember { mutableFloatStateOf(0f) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(intervalNanos) {
         val start = withFrameNanos { it }
         // Seeded from `start`, not from a sentinel. `Long.MIN_VALUE` looks like
         // the obvious "nothing yet", but `now - Long.MIN_VALUE` overflows for
@@ -34,7 +53,7 @@ internal fun rememberPetPhaseSeconds(): FloatState {
         var lastFrame = start
         while (true) {
             withFrameNanos { now ->
-                if (now - lastFrame >= FRAME_INTERVAL_NANOS) {
+                if (now - lastFrame >= intervalNanos) {
                     lastFrame = now
                     seconds.floatValue = (now - start) / 1_000_000_000f
                 }

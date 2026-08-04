@@ -9,7 +9,6 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -206,9 +205,119 @@ private fun capsulePath(from: Offset, to: Offset, width: Float): Path {
     }
 }
 
-/** The real union of two shapes, so a limb inks as one outline, not as parts. */
-private fun union(vararg parts: Path): Path =
-    parts.reduce { acc, next -> Path().apply { op(acc, next, PathOperation.Union) } }
+/**
+ * The outline of a chain of round-capped segments, as one closed path.
+ *
+ * Replaces a Skia boolean union of one capsule per segment. The union was
+ * correct and cost four `Path.op` calls on every single frame — running a
+ * general-purpose polygon-clipping algorithm sixty times a second to draw an
+ * arm. That is what forced the character's clock down to thirty frames while
+ * the rest of the interface ran at the panel's rate.
+ *
+ * The chain here is convex at every joint and the segments always overlap
+ * (each joint's cap is wider than the gap), so the silhouette is simply the
+ * left-hand side down, a cap, and the right-hand side back — walked directly.
+ * No clipping, no allocation beyond the one path.
+ *
+ * [points] are the joints in order; [widths] the diameter at each, so a limb
+ * can taper from a sleeve to a wrist.
+ */
+private fun limbOutline(points: List<Offset>, widths: List<Float>): Path {
+    val path = Path()
+    walkSide(path, points, widths, side = 1f, start = true)
+    arcCap(path, points.last(), direction(points[points.size - 2], points.last()), widths.last() / 2f)
+    walkSide(path, points.asReversed(), widths.asReversed(), side = 1f, start = false)
+    arcCap(path, points.first(), direction(points[1], points.first()), widths.first() / 2f)
+    path.close()
+    return path
+}
+
+/**
+ * One side of the chain, from the first joint to the last.
+ *
+ * The joints are where a naive offset goes wrong: on the outside of a bend the
+ * two offset edges leave a wedge open, and on the inside they cross each other
+ * and cut a notch out of the limb. A sharply bent elbow — eating, or arms
+ * folded while she is ill — showed both at once.
+ *
+ * So the outer side gets a short fan of segments around the joint, and the
+ * inner side collapses to the joint's own centre, which is inside the limb by
+ * construction and cannot cross anything. This is what a stroker does; it is
+ * written out here because the alternative was asking Skia to run a boolean
+ * union of three capsules on every frame.
+ */
+private fun walkSide(
+    path: Path,
+    points: List<Offset>,
+    widths: List<Float>,
+    side: Float,
+    start: Boolean,
+) {
+    for (i in 0 until points.size - 1) {
+        val n = normal(points[i], points[i + 1], 1f)
+        val ax = points[i].x + n.x * side * widths[i] / 2f
+        val ay = points[i].y + n.y * side * widths[i] / 2f
+        if (i == 0 && start) path.moveTo(ax, ay) else path.lineTo(ax, ay)
+        path.lineTo(
+            points[i + 1].x + n.x * side * widths[i + 1] / 2f,
+            points[i + 1].y + n.y * side * widths[i + 1] / 2f,
+        )
+
+        val j = i + 1
+        if (j >= points.size - 1) continue
+
+        val d1 = direction(points[i], points[j])
+        val d2 = direction(points[j], points[j + 1])
+        // Positive means this side is on the outside of the bend.
+        val cross = (d1.x * d2.y - d1.y * d2.x) * side
+        if (cross < 0f) {
+            // Outside: fan round the joint so the wedge is filled.
+            val r = widths[j] / 2f
+            val n2 = normal(points[j], points[j + 1], 1f)
+            repeat(FAN_STEPS) { step ->
+                val t = (step + 1f) / (FAN_STEPS + 1f)
+                val mx = n.x + (n2.x - n.x) * t
+                val my = n.y + (n2.y - n.y) * t
+                val len = hypot(mx, my).coerceAtLeast(0.001f)
+                path.lineTo(
+                    points[j].x + mx / len * side * r,
+                    points[j].y + my / len * side * r,
+                )
+            }
+        } else {
+            // Inside: collapse to the joint, which is always within the limb.
+            path.lineTo(points[j].x, points[j].y)
+        }
+    }
+}
+
+/** Segments used to round the outside of a joint. Three is invisible from two. */
+private const val FAN_STEPS = 3
+
+/** A semicircular cap at [at], bulging along [dir], as two cubics. */
+private fun arcCap(path: Path, at: Offset, dir: Offset, r: Float) {
+    val k = 0.5523f * r
+    val nx = -dir.y * r
+    val ny = dir.x * r
+    path.cubicTo(
+        at.x + nx + dir.x * k, at.y + ny + dir.y * k,
+        at.x + dir.x * r + nx * 0.5523f, at.y + dir.y * r + ny * 0.5523f,
+        at.x + dir.x * r, at.y + dir.y * r,
+    )
+    path.cubicTo(
+        at.x + dir.x * r - nx * 0.5523f, at.y + dir.y * r - ny * 0.5523f,
+        at.x - nx + dir.x * k, at.y - ny + dir.y * k,
+        at.x - nx, at.y - ny,
+    )
+}
+
+/** The unit vector from [from] to [to]. */
+private fun direction(from: Offset, to: Offset): Offset {
+    val dx = to.x - from.x
+    val dy = to.y - from.y
+    val len = hypot(dx, dy).coerceAtLeast(0.001f)
+    return Offset(dx / len, dy / len)
+}
 
 private const val PI_F = 3.1415927f
 
@@ -325,7 +434,7 @@ private fun DrawScope.drawLegs(pose: PetPose, palette: PetPalette) {
 
         // One silhouette for the whole leg, inked once — the sock is painted
         // inside it rather than being a second outlined tube over the thigh.
-        val leg = union(capsulePath(hip, knee, 15f), capsulePath(knee, ankle, 13f))
+        val leg = limbOutline(listOf(hip, knee, ankle), listOf(15f, 14f, 13f))
         drawPath(leg, palette.skin)
         drawPath(leg, palette.line, style = Stroke(width = LINE, join = StrokeJoin.Round, cap = StrokeCap.Round))
 
@@ -492,13 +601,13 @@ private fun DrawScope.drawArm(pose: PetPose, palette: PetPalette, left: Boolean)
     // The whole limb as ONE silhouette, inked once. Stacking a separately
     // outlined capsule per segment is what made the arms read as a doll's,
     // with a visible seam at every joint.
-    val sleeve = capsulePath(shoulder, elbow, 13f)
-    val forearm = capsulePath(elbow, wrist, 9.5f)
-    val hand = capsulePath(wrist, fingertip, 11f)
-    val whole = union(sleeve, forearm, hand)
+    val whole = limbOutline(
+        points = listOf(shoulder, elbow, wrist, fingertip),
+        widths = listOf(13f, 11f, 9.5f, 11f),
+    )
     drawPath(whole, palette.skin)
     // Fill the sleeve back over the skin, then ink the outer edge only.
-    drawPath(sleeve, palette.uniform)
+    drawPath(capsulePath(shoulder, elbow, 13f), palette.uniform)
     drawPath(whole, palette.line, style = Stroke(width = LINE, join = StrokeJoin.Round, cap = StrokeCap.Round))
 
     // The cuff line, where the sleeve ends — an interior line, not a seam.

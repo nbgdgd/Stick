@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A painter's palette. Redecorating the room. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#8E7BF5"
+        android:pathData="M24,7 C33.4,7 41,13.6 41,22.4 C41,29.4 36,32.4 31.6,32.4 L28.6,32.4 C26.8,32.4 25.4,33.8 25.4,35.6 C25.4,36.4 25.7,37 26.2,37.6 C26.7,38.2 27,38.8 27,39.6 C27,41.4 25.6,42.4 24,42.4 C14.6,42.4 7,34.6 7,24.7 C7,14.8 14.6,7 24,7 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#4A3A9E"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M24,7 C33.4,7 41,13.6 41,22.4 C41,29.4 36,32.4 31.6,32.4 L28.6,32.4 C26.8,32.4 25.4,33.8 25.4,35.6 C25.4,36.4 25.7,37 26.2,37.6 C26.7,38.2 27,38.8 27,39.6 C27,41.4 25.6,42.4 24,42.4 C14.6,42.4 7,34.6 7,24.7 C7,14.8 14.6,7 24,7 Z" />
+    <path
+        android:fillColor="#446B57D6"
+        android:pathData="M24,7 C33.4,7 41,13.6 41,22.4 C41,29.4 36,32.4 31.6,32.4 L28.6,32.4 C26.8,32.4 25.4,33.8 25.4,35.6 L25.4,42.4 C25.6,42.4 24,42.4 24,42.4 Z" />
+    <path
+        android:fillColor="#F86FB2"
+        android:pathData="M12.5,17.5 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" />
+    <path
+        android:fillColor="#F0C860"
+        android:pathData="M21,13.5 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" />
+    <path
+        android:fillColor="#7FD1E8"
+        android:pathData="M29.5,18.5 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" />
+    <path
+        android:fillColor="#54E070"
+        android:pathData="M12.5,27.5 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" />
+</vector>

@@ -1,7 +1,9 @@
 package com.vpet.waifu.ui.shop
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -144,6 +146,21 @@ enum class ShopShelf(
             OUTFITS -> Upgrades.OUTFITS
             THEMES -> Upgrades.THEMES
             else -> null
+        }
+
+    /** The drawn version, shown on the chip. */
+    @get:DrawableRes
+    val artRes: Int
+        get() = when (this) {
+            FOOD -> R.drawable.art_shelf_food
+            BOOSTS -> R.drawable.art_haste_shot
+            GIFTS -> R.drawable.art_shelf_gifts
+            PILLS -> R.drawable.art_medicine
+            CARE -> R.drawable.art_shelf_care
+            ROOM -> R.drawable.art_shelf_room
+            GEAR -> R.drawable.art_shelf_gear
+            OUTFITS -> R.drawable.art_shelf_outfits
+            THEMES -> R.drawable.art_shelf_themes
         }
 
     companion object {
@@ -561,11 +578,13 @@ private fun ShelfChips(selected: ShopShelf, onSelect: (ShopShelf) -> Unit) {
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = shelf.icon,
+                // The drawing rather than a glyph, and full colour whether or
+                // not the chip is chosen: a row of nine grey pictures is worse
+                // than a row of nine grey glyphs.
+                Image(
+                    painter = painterResource(shelf.artRes),
                     contentDescription = null,
-                    tint = if (chosen) shelf.tint else Accents.TextDim,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(20.dp).alpha(if (chosen) 1f else 0.72f),
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(

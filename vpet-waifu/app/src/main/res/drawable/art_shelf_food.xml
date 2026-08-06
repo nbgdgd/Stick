@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An apple. The food shelf. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#F2913F"
+        android:pathData="M10.5,25 a12.5,12.5 0 1,0 25.0,0 a12.5,12.5 0 1,0 -25.0,0 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#9E5416"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M10.5,25 a12.5,12.5 0 1,0 25.0,0 a12.5,12.5 0 1,0 -25.0,0 Z" />
+    <path
+        android:fillColor="#99D2762A"
+        android:pathData="M23,12.5 A12.5,12.5 0 0,1 23,37.5 A12.5,12.5 0 0,0 23,12.5 Z" />
+    <path
+        android:fillColor="#54E070"
+        android:strokeColor="#1F8438"
+        android:strokeWidth="1.1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M23,12.6 C23,9.6 25,7.4 28,7 C27,9.6 25.6,11.6 23,12.6 Z" />
+    <path
+        android:fillColor="#AAFFC98A"
+        android:pathData="M14,19.5 a4,2.8 0 1,0 8,0 a4,2.8 0 1,0 -8,0 Z" />
+</vector>

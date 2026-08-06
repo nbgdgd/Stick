@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The cup for the achievement toast. One of the few icons that gets sparkles, because that is the moment it is for. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#F0C860"
+        android:pathData="M15,8 L33,8 L33,20 C33,25.5 29,29.5 24,29.5 C19,29.5 15,25.5 15,20 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#A67C1E"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M15,8 L33,8 L33,20 C33,25.5 29,29.5 24,29.5 C19,29.5 15,25.5 15,20 Z" />
+    <path
+        android:fillColor="#99D9A93E"
+        android:pathData="M24,29.5 C29,29.5 33,25.5 33,20 L33,8 L26,8 L26,20 C26,25 25,28.4 24,29.5 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#A67C1E"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M15,10 C10,10 8.5,13 9.4,16.4 C10.2,19.4 12.6,21 15.4,21" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#A67C1E"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M33,10 C38,10 39.5,13 38.6,16.4 C37.8,19.4 35.4,21 32.6,21" />
+    <path
+        android:fillColor="#F0C860"
+        android:pathData="M22.6,29 L25.400000000000002,29 A1,1 0 0,1 26.400000000000002,30 L26.400000000000002,34 A1,1 0 0,1 25.400000000000002,35 L22.6,35 A1,1 0 0,1 21.6,34 L21.6,30 A1,1 0 0,1 22.6,29 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#A67C1E"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M22.6,29 L25.400000000000002,29 A1,1 0 0,1 26.400000000000002,30 L26.400000000000002,34 A1,1 0 0,1 25.400000000000002,35 L22.6,35 A1,1 0 0,1 21.6,34 L21.6,30 A1,1 0 0,1 22.6,29 Z" />
+    <path
+        android:fillColor="#F0C860"
+        android:pathData="M17.3,35 L30.7,35 A1.8,1.8 0 0,1 32.5,36.8 L32.5,38.2 A1.8,1.8 0 0,1 30.7,40 L17.3,40 A1.8,1.8 0 0,1 15.5,38.2 L15.5,36.8 A1.8,1.8 0 0,1 17.3,35 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#A67C1E"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M17.3,35 L30.7,35 A1.8,1.8 0 0,1 32.5,36.8 L32.5,38.2 A1.8,1.8 0 0,1 30.7,40 L17.3,40 A1.8,1.8 0 0,1 15.5,38.2 L15.5,36.8 A1.8,1.8 0 0,1 17.3,35 Z" />
+    <path
+        android:fillColor="#AAFFE9A8"
+        android:pathData="M18.3,10 L18.3,10 A1.3,1.3 0 0,1 19.6,11.3 L19.6,20.7 A1.3,1.3 0 0,1 18.3,22 L18.3,22 A1.3,1.3 0 0,1 17,20.7 L17,11.3 A1.3,1.3 0 0,1 18.3,10 Z" />
+    <path
+        android:fillColor="#FFE9A8"
+        android:pathData="M37,23.8 C37.512,26.488 37.512,26.488 40.2,27 C37.512,27.512 37.512,27.512 37,30.2 C36.488,27.512 36.488,27.512 33.8,27 C36.488,26.488 36.488,26.488 37,23.8 Z" />
+    <path
+        android:fillColor="#FFE9A8"
+        android:pathData="M11.5,26.1 C11.884,28.116 11.884,28.116 13.9,28.5 C11.884,28.884 11.884,28.884 11.5,30.9 C11.116,28.884 11.116,28.884 9.1,28.5 C11.116,28.116 11.116,28.116 11.5,26.1 Z" />
+</vector>

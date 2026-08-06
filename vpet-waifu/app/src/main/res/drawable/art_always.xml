@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The things that pay without being asked: the jar and the streak. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#B39CE8"
+        android:strokeColor="#5E4A8C"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M24,8 C26.08,18.92 26.08,18.92 37,21 C26.08,23.08 26.08,23.08 24,34 C21.92,23.08 21.92,23.08 11,21 C21.92,18.92 21.92,18.92 24,8 Z" />
+    <path
+        android:fillColor="#77DCD0F7"
+        android:pathData="M24,10 C25.6,17.4 25.6,17.4 33,19 C25.6,20.6 25.6,20.6 24,28 Z" />
+    <path
+        android:fillColor="#B39CE8"
+        android:strokeColor="#5E4A8C"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M36,28.4 C36.736,32.264 36.736,32.264 40.6,33 C36.736,33.736 36.736,33.736 36,37.6 C35.264,33.736 35.264,33.736 31.4,33 C35.264,32.264 35.264,32.264 36,28.4 Z" />
+    <path
+        android:fillColor="#DCD0F7"
+        android:pathData="M12,28.6 C12.544,31.456 12.544,31.456 15.4,32 C12.544,32.544 12.544,32.544 12,35.4 C11.456,32.544 11.456,32.544 8.6,32 C11.456,31.456 11.456,31.456 12,28.6 Z" />
+</vector>

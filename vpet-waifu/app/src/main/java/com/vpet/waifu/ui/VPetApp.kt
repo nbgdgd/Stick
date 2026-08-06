@@ -31,6 +31,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Savings
+import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material.icons.rounded.CurrencyYen
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Home
@@ -110,13 +116,26 @@ import kotlinx.coroutines.delay
  */
 private const val IDLE_TICK_MILLIS = 5_000L
 
-private enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
-    HOME(R.string.tab_home, Icons.Rounded.Home),
-    ACTIVITIES(R.string.tab_activities, Icons.Rounded.Work),
-    EARN(R.string.tab_earn, Icons.Rounded.Savings),
-    SHOP(R.string.tab_shop, Icons.Rounded.Storefront),
-    GAME(R.string.tab_game, Icons.Rounded.SportsEsports),
-    HER(R.string.tab_her, Icons.Rounded.Favorite),
+/**
+ * A tab, in two weights.
+ *
+ * The bar used to draw one outline icon and mark the selected tab with a well
+ * and a bar above it — so the *icon itself* never changed, and the only thing
+ * saying "you are here" was a wash of colour behind it. Two weights fixes that
+ * without turning the bar into a row of badges: the selected tab fills in, the
+ * rest stay thin. That is the whole convention every phone already teaches.
+ */
+private enum class Tab(
+    @StringRes val labelRes: Int,
+    val icon: ImageVector,
+    val iconSelected: ImageVector,
+) {
+    HOME(R.string.tab_home, Icons.Outlined.Home, Icons.Rounded.Home),
+    ACTIVITIES(R.string.tab_activities, Icons.Outlined.Work, Icons.Rounded.Work),
+    EARN(R.string.tab_earn, Icons.Outlined.Savings, Icons.Rounded.Savings),
+    SHOP(R.string.tab_shop, Icons.Outlined.Storefront, Icons.Rounded.Storefront),
+    GAME(R.string.tab_game, Icons.Outlined.SportsEsports, Icons.Rounded.SportsEsports),
+    HER(R.string.tab_her, Icons.Outlined.FavoriteBorder, Icons.Rounded.Favorite),
 }
 
 /**
@@ -496,6 +515,12 @@ private fun NavItem(
         targetValue = if (selected) Accents.Primary.copy(alpha = 0.16f) else Color.Transparent,
         label = "nav-well",
     )
+    // How filled-in the icon is: 0 is the thin outline, 1 the solid one.
+    val fill by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = tween(180),
+        label = "nav-fill",
+    )
     val markerWidth by animateDpAsState(
         targetValue = if (selected) 22.dp else 0.dp,
         animationSpec = tween(150),
@@ -517,7 +542,22 @@ private fun NavItem(
                 .background(Accents.Bright),
         )
         Spacer(Modifier.height(6.dp))
-        Icon(entry.icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+        // Cross-faded rather than swapped: the two weights differ enough that a
+        // hard cut reads as a flicker at the moment the tab is already sliding.
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                entry.icon,
+                contentDescription = null,
+                tint = tint.copy(alpha = 1f - fill),
+                modifier = Modifier.size(22.dp),
+            )
+            Icon(
+                entry.iconSelected,
+                contentDescription = null,
+                tint = Accents.Bright.copy(alpha = fill),
+                modifier = Modifier.size(22.dp),
+            )
+        }
         Spacer(Modifier.height(3.dp))
         Text(
             text = stringResource(entry.labelRes),

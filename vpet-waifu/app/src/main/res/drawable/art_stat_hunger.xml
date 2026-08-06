@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fork and knife. Appetite, not a meal — a full plate reads as the opposite of an empty bar. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#F2913F"
+        android:pathData="M12.6,8 L12.6,17.5 L14.1,17.5 L14.1,8 L15.9,8 L15.9,17.5 L17.4,17.5 L17.4,8 L19.2,8 C19.2,15.5 18.4,19.6 16.6,20.8 L17.4,40 C17.4,41 14.6,41 14.6,40 L15.4,20.8 C13.6,19.6 12.8,15.5 12.8,8 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#9E5416"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12.6,8 L12.6,17.5 L14.1,17.5 L14.1,8 L15.9,8 L15.9,17.5 L17.4,17.5 L17.4,8 L19.2,8 C19.2,15.5 18.4,19.6 16.6,20.8 L17.4,40 C17.4,41 14.6,41 14.6,40 L15.4,20.8 C13.6,19.6 12.8,15.5 12.8,8 Z" />
+    <path
+        android:fillColor="#F2913F"
+        android:pathData="M31.4,8 C35,10 36.8,14 36.8,18.6 C36.8,22 35.4,24 33.6,24.8 L34.2,40 C34.2,41 31.4,41 31.4,40 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#9E5416"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M31.4,8 C35,10 36.8,14 36.8,18.6 C36.8,22 35.4,24 33.6,24.8 L34.2,40 C34.2,41 31.4,41 31.4,40 Z" />
+    <path
+        android:fillColor="#99D2762A"
+        android:pathData="M33.6,24.8 L34.2,40 C34.2,41 32.8,41 32.8,40.5 L32.6,24.9 Z" />
+    <path
+        android:fillColor="#AAFFC98A"
+        android:pathData="M32.2,10 C34.4,12.4 35.2,15.4 35.2,18.6 L33.8,18.6 C33.8,15.4 33.2,12.6 32.2,10.6 Z" />
+    <path
+        android:fillColor="#AAFFC98A"
+        android:pathData="M13.4,9 L13.4,16.6 L14.4,16.6 L14.4,9 Z" />
+</vector>

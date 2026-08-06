@@ -338,7 +338,19 @@ fun GameScreen(
 
             StartOverlay(
                 visible = !running,
-                canPlay = snapshot.acceptsInteraction && !snapshot.isSick,
+                // Not acceptsInteraction: the arcade is the *player's* game.
+                // The domain opened this door — see PetSimulation.startPlaying
+                // — and this button stayed locked behind the old rule, which
+                // meant the change shipped and nothing about it was reachable.
+                // Sleep and illness are the only real stops: one is a different
+                // action with its own button, the other wants medicine.
+                canPlay = !snapshot.isSleeping && !snapshot.isSick,
+                busyReason = when {
+                    snapshot.isSick -> R.string.game_sick
+                    snapshot.isSleeping -> R.string.game_asleep
+                    else -> null
+                },
+                onShift = snapshot.isBusy,
                 played = lastScore != null,
                 onStart = {
                     seed = nowMillis
@@ -481,6 +493,9 @@ private fun StartOverlay(
     played: Boolean,
     onStart: () -> Unit,
     modifier: Modifier = Modifier,
+    @StringRes busyReason: Int? = null,
+    /** She is out, and this is a round played without her. */
+    onShift: Boolean = false,
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -498,9 +513,17 @@ private fun StartOverlay(
                 onClick = onStart,
                 enabled = canPlay,
             )
-            if (!canPlay) {
-                Text(
-                    text = stringResource(R.string.game_busy),
+            when {
+                busyReason != null -> Text(
+                    text = stringResource(busyReason),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Accents.TextMuted,
+                )
+                // Said out loud rather than left to be discovered: the whole
+                // point of the change is that the wait is no longer empty, and
+                // a player who assumes the arcade is shut never finds out.
+                onShift -> Text(
+                    text = stringResource(R.string.game_while_she_works),
                     style = MaterialTheme.typography.bodySmall,
                     color = Accents.TextMuted,
                 )

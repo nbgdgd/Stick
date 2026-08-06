@@ -559,4 +559,7 @@
     <string name="narr_uni_3">Рука болит. Почти всё.</string>
     <string name="stake_offer">Поставить на то, что смена пройдёт хорошо?</string>
     <string name="stake_riding">На кону %1$d ¥ — +%2$d, если всё хорошо, −%3$d, если нет</string>
+    <string name="game_sick">Она болеет — сначала лекарство.</string>
+    <string name="game_asleep">Она спит.</string>
+    <string name="game_while_she_works">Её нет дома — сыграй, пока ждёшь.</string>
 </resources>

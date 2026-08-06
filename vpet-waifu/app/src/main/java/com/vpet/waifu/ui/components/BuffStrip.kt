@@ -31,6 +31,8 @@ import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Sell
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.WarningAmber
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,11 +44,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vpet.waifu.R
 import com.vpet.waifu.domain.ActiveEffect
 import com.vpet.waifu.domain.BOOST_EFFECTS
 import com.vpet.waifu.domain.EffectKind
@@ -145,12 +149,11 @@ private fun BuffPill(effect: ActiveEffect, nowMillis: Long, onTap: () -> Unit) {
             .padding(horizontal = 7.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = effect.kind.pillIcon(),
+        Image(
+            painter = painterResource(effect.kind.artRes()),
             contentDescription = null,
-            tint = tint,
             modifier = Modifier
-                .size(13.dp)
+                .size(15.dp)
                 .graphicsLayer { scaleX = pulse; scaleY = pulse },
         )
         Spacer(Modifier.width(4.dp))
@@ -173,11 +176,10 @@ private fun LuckyPill(rounds: Int) {
             .padding(horizontal = 7.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = Icons.Rounded.Casino,
+        Image(
+            painter = painterResource(R.drawable.art_buff_lucky),
             contentDescription = null,
-            tint = Accents.Bright,
-            modifier = Modifier.size(13.dp),
+            modifier = Modifier.size(15.dp),
         )
         Spacer(Modifier.width(4.dp))
         Text(
@@ -187,6 +189,22 @@ private fun LuckyPill(rounds: Int) {
             fontWeight = FontWeight.SemiBold,
         )
     }
+}
+
+/** The drawing for each effect — the shop item's own where it has one. */
+@DrawableRes
+private fun EffectKind.artRes(): Int = when (this) {
+    EffectKind.HASTE -> R.drawable.art_haste_shot
+    EffectKind.OVERTIME -> R.drawable.art_overtime_pass
+    EffectKind.FOCUS -> R.drawable.art_focus_tea
+    EffectKind.SECOND_WIND -> R.drawable.art_second_wind
+    EffectKind.GOOD_VIBES -> R.drawable.art_good_vibes
+    EffectKind.DISCOUNT -> R.drawable.art_buff_discount
+    EffectKind.STASIS -> R.drawable.art_buff_stasis
+    // The two penalties have no item of their own: they are what other items
+    // leave behind, so they keep the warning glyph.
+    EffectKind.HUNGER_SURGE -> R.drawable.art_advance
+    EffectKind.EXHAUSTION -> R.drawable.art_exp_pill
 }
 
 private fun EffectKind.pillIcon(): ImageVector = when (this) {

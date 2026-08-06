@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A mug. The chore everybody's flat has. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#7FD1E8"
+        android:pathData="M11,20 L37,20 C37,31 33,35 24,35 C15,35 11,31 11,20 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#33788C"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M11,20 L37,20 C37,31 33,35 24,35 C15,35 11,31 11,20 Z" />
+    <path
+        android:fillColor="#9957B0CA"
+        android:pathData="M24,35 C33,35 37,31 37,20 L30,20 C30,30 28,35 24,35 Z" />
+    <path
+        android:fillColor="#AAC2ECF7"
+        android:pathData="M14,22 C14,29 16,32 19,33.6 C15,31.4 14,27 14,22 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#33788C"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M37,23 C41.5,23 42,29 37.5,30" />
+</vector>

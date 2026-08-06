@@ -150,13 +150,15 @@ fun SectionHeader(
     tint: Color = Accents.Bright,
     onTap: (() -> Unit)? = null,
     tapEnabled: Boolean = true,
+    /** The drawn version, where one exists. */
+    art: Painter? = null,
 ) {
     if (onTap != null) {
         HeartTap(onTap = onTap, modifier = modifier, enabled = tapEnabled) {
-            SectionHeaderRow(icon, title, tint)
+            SectionHeaderRow(icon, title, tint, art = art)
         }
     } else {
-        SectionHeaderRow(icon, title, tint, modifier)
+        SectionHeaderRow(icon, title, tint, modifier, art)
     }
 }
 
@@ -166,6 +168,7 @@ private fun SectionHeaderRow(
     title: String,
     tint: Color,
     modifier: Modifier = Modifier,
+    art: Painter? = null,
 ) {
     Row(
         modifier = modifier.padding(top = 8.dp, bottom = 2.dp),
@@ -174,12 +177,33 @@ private fun SectionHeaderRow(
         Box(
             modifier = Modifier
                 .size(34.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(tint.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(34.dp * BADGE_CORNER))
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            tint.copy(alpha = 0.26f),
+                            tint.copy(alpha = 0.13f),
+                            tint.copy(alpha = 0.07f),
+                        ),
+                    ),
+                )
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(Color.Transparent, Color.Transparent, Color(0x2E000000)),
+                    ),
+                )
                 .border(1.dp, tint.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            if (art != null) {
+                Image(
+                    painter = art,
+                    contentDescription = null,
+                    modifier = Modifier.size(34.dp * ART_SHARE),
+                )
+            } else {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            }
         }
         Spacer(Modifier.width(10.dp))
         Text(
@@ -282,10 +306,93 @@ fun EffectChip(
 }
 
 /**
- * The flat rounded tile a shop item's picture sits in.
+ * A drawn icon on its badge, at row size.
  *
- * With [art] set the tile shows the item's drawn illustration at full colour;
- * the [icon]+[tint] pair is the fallback for things that have no portrait.
+ * [IconTile] is the big version — a shop card's portrait. This is the same
+ * plinth at the scale a list row wants, and it exists because the alternative
+ * was every row drawing a bare Material glyph on nothing. Two icons in the app
+ * had a badge and thirty did not, which is not a style, it is an accident that
+ * happened twice.
+ */
+@Composable
+fun ArtBadge(
+    art: Painter,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 34.dp,
+) {
+    val shape = RoundedCornerShape(size * BADGE_CORNER)
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        tint.copy(alpha = 0.26f),
+                        tint.copy(alpha = 0.13f),
+                        tint.copy(alpha = 0.07f),
+                    ),
+                ),
+            )
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(Color.Transparent, Color.Transparent, Color(0x2E000000)),
+                ),
+            )
+            .border(1.dp, tint.copy(alpha = 0.34f), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(painter = art, contentDescription = null, modifier = Modifier.size(size * ART_SHARE))
+    }
+}
+
+/** The same plinth, carrying a glyph instead of a drawing. */
+@Composable
+fun IconBadge(
+    icon: ImageVector,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 34.dp,
+) {
+    val shape = RoundedCornerShape(size * BADGE_CORNER)
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        tint.copy(alpha = 0.26f),
+                        tint.copy(alpha = 0.13f),
+                        tint.copy(alpha = 0.07f),
+                    ),
+                ),
+            )
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(Color.Transparent, Color.Transparent, Color(0x2E000000)),
+                ),
+            )
+            .border(1.dp, tint.copy(alpha = 0.34f), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(size * 0.5f))
+    }
+}
+
+/** Badge corner radius as a share of the side — the style gate's 20–24%. */
+private const val BADGE_CORNER = 0.22f
+
+/** How much of the badge the art fills, leaving an even margin all round. */
+private const val ART_SHARE = 0.64f
+
+/**
+ * The rounded tile a drawn icon sits in — the badge every picture in the app
+ * shares.
+ *
+ * With [art] set the tile shows the illustration at full colour; the
+ * [icon]+[tint] pair is the fallback for things that have no portrait yet.
  */
 @Composable
 fun IconTile(
@@ -314,19 +421,47 @@ private fun IconTileFace(
     tint: Color = Accents.Primary,
     art: Painter? = null,
 ) {
+    // The plinth every icon in the app stands on.
+    //
+    // It used to be a flat 12% wash of the category colour, which on a dark
+    // card is nearly nothing: the two best-drawn icons looked like they had a
+    // badge and the rest looked like they were floating, when in fact every one
+    // of them had the same invisible one. So it is a real object now — brighter
+    // at the top-left where the light in every icon comes from, darker at the
+    // far corner, with a rim that catches along the lit edge and fades away
+    // round the back. Nothing here is per-icon: one plinth, one light source,
+    // and the category colour is the only thing that varies.
+    val shape = RoundedCornerShape(size * BADGE_CORNER)
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(12.dp))
-            .background(tint.copy(alpha = 0.12f))
-            .border(1.dp, tint.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        tint.copy(alpha = 0.26f),
+                        tint.copy(alpha = 0.13f),
+                        tint.copy(alpha = 0.07f),
+                    ),
+                ),
+            )
+            // The inner shadow: a second gradient laid over the first, dark at
+            // the bottom-right only. Drawn rather than composed from a blur
+            // because a blur on every tile in a scrolling list is a real cost
+            // for an effect two pixels wide.
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(Color.Transparent, Color.Transparent, Color(0x33000000)),
+                ),
+            )
+            .border(1.dp, tint.copy(alpha = 0.38f), shape),
         contentAlignment = Alignment.Center,
     ) {
         if (art != null) {
             Image(
                 painter = art,
                 contentDescription = null,
-                modifier = Modifier.size(size * 0.72f),
+                modifier = Modifier.size(size * ART_SHARE),
             )
         } else {
             Icon(
@@ -350,6 +485,8 @@ fun StatRow(
     color: Color,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    /** The drawn version. Falls back to [icon] where nothing is drawn yet. */
+    art: Painter? = null,
 ) {
     val fraction by animateFloatAsState(
         targetValue = (value / PetStats.MAX).coerceIn(0f, 1f),
@@ -358,17 +495,11 @@ fun StatRow(
 
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (!compact) {
-            // The same tile grammar as IconTile and SectionHeader — one icon
-            // container style across the app instead of three.
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(color.copy(alpha = 0.12f))
-                    .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+            // One badge for the whole app — see [ArtBadge].
+            if (art != null) {
+                ArtBadge(art = art, tint = color, size = 38.dp)
+            } else {
+                IconBadge(icon = icon, tint = color, size = 38.dp)
             }
             Spacer(Modifier.width(12.dp))
         } else {

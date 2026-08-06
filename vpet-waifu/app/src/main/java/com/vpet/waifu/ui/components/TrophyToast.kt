@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,6 +39,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -129,11 +131,12 @@ private fun TrophyCard(trophy: Achievement, onDismiss: () -> Unit) {
                 .border(1.dp, trophy.tint.copy(alpha = 0.7f), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = trophy.icon,
+            // The cup, not the trophy's own subject glyph: the card is about
+            // *winning something*, and the subject is already in the title.
+            Image(
+                painter = painterResource(R.drawable.art_trophy),
                 contentDescription = null,
-                tint = trophy.tint,
-                modifier = Modifier.size(21.dp),
+                modifier = Modifier.size(26.dp),
             )
         }
         Spacer(Modifier.width(14.dp))

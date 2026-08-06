@@ -1,5 +1,6 @@
 package com.vpet.waifu.ui.earn
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -54,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,6 +69,7 @@ import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.QuestKind
 import com.vpet.waifu.domain.Quests
+import com.vpet.waifu.ui.components.ArtBadge
 import com.vpet.waifu.ui.components.BuffStrip
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.PanelCard
@@ -133,6 +136,7 @@ fun EarnScreen(
         item {
             SectionHeader(
                 icon = Icons.Rounded.Today,
+                art = painterResource(R.drawable.art_quests),
                 title = stringResource(R.string.section_quests),
                 tint = Color(0xFFF0C860),
                 onTap = onCategoryTap,
@@ -152,6 +156,7 @@ fun EarnScreen(
         item {
             SectionHeader(
                 icon = Icons.Rounded.CleaningServices,
+                art = painterResource(R.drawable.art_chore_tidy),
                 title = stringResource(R.string.section_chores),
                 tint = Color(0xFF7FD1E8),
                 onTap = onCategoryTap,
@@ -180,6 +185,7 @@ fun EarnScreen(
         item {
             SectionHeader(
                 icon = Icons.Rounded.AutoAwesome,
+                art = painterResource(R.drawable.art_always),
                 title = stringResource(R.string.section_always),
                 tint = Color(0xFFB39CE8),
                 onTap = onCategoryTap,
@@ -209,11 +215,9 @@ private fun QuestCard(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = quest.kind.icon(),
-                contentDescription = null,
+            ArtBadge(
+                art = painterResource(quest.kind.artRes()),
                 tint = if (claimed) Accents.TextDim else StatColors.Money,
-                modifier = Modifier.size(22.dp),
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -269,11 +273,9 @@ private fun ChoreCard(chore: Chore, ready: Boolean, readyIn: Int, onDo: () -> Un
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = chore.icon(),
-                contentDescription = null,
+            ArtBadge(
+                art = painterResource(chore.artRes()),
                 tint = if (ready) Color(0xFF7FD1E8) else Accents.TextDim,
-                modifier = Modifier.size(22.dp),
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -335,13 +337,11 @@ private fun FindCard(snapshot: PetSnapshot, nowMillis: Long, onClaim: () -> Unit
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = kind.icon(),
-                contentDescription = null,
+            ArtBadge(
+                art = painterResource(kind.artRes()),
                 tint = StatColors.Money,
-                modifier = Modifier
-                    .size(24.dp)
-                    .graphicsLayer { scaleX = pulse; scaleY = pulse },
+                size = 38.dp,
+                modifier = Modifier.graphicsLayer { scaleX = pulse; scaleY = pulse },
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -475,6 +475,41 @@ private fun Reward(money: Int, exp: Int) {
 }
 
 // --- names and icons, kept out of the domain ---------------------------------
+
+/**
+ * The drawing for each quest kind.
+ *
+ * Points at the *shared* files: the pat quest and the mood stat are the same
+ * heart, and the food quest and the food shelf are the same apple. Two
+ * near-identical drawings of one subject is the drift this whole pass was
+ * about.
+ */
+@DrawableRes
+private fun QuestKind.artRes(): Int = when (this) {
+    QuestKind.FEED -> R.drawable.art_shelf_food
+    QuestKind.SHIFT -> R.drawable.art_cafe
+    QuestKind.LESSON -> R.drawable.art_school
+    QuestKind.GAME -> R.drawable.art_console
+    QuestKind.GIFT -> R.drawable.art_shelf_gifts
+    QuestKind.EARN -> R.drawable.art_find_coin
+    QuestKind.PAT -> R.drawable.art_stat_mood
+}
+
+@DrawableRes
+private fun Chore.artRes(): Int = when (id) {
+    "dishes" -> R.drawable.art_chore_dishes
+    "tidy" -> R.drawable.art_chore_tidy
+    "laundry" -> R.drawable.art_chore_laundry
+    "plant" -> R.drawable.art_chore_plant
+    else -> R.drawable.art_chore_cat
+}
+
+@DrawableRes
+private fun FindKind.artRes(): Int = when (this) {
+    FindKind.COIN -> R.drawable.art_find_coin
+    FindKind.BOOK -> R.drawable.art_find_book
+    FindKind.SNACK -> R.drawable.art_find_snack
+}
 
 private fun QuestKind.icon(): ImageVector = when (this) {
     QuestKind.FEED -> Icons.Rounded.RamenDining

@@ -1076,18 +1076,21 @@ private fun StatsCard(snapshot: PetSnapshot) {
                 label = stringResource(R.string.stat_hunger),
                 value = snapshot.stats.hunger,
                 color = StatColors.Hunger,
+                art = painterResource(R.drawable.art_stat_hunger),
             )
             StatRow(
                 icon = Icons.Rounded.Bolt,
                 label = stringResource(R.string.stat_energy),
                 value = snapshot.stats.energy,
                 color = StatColors.Energy,
+                art = painterResource(R.drawable.art_stat_energy),
             )
             StatRow(
                 icon = Icons.Rounded.Favorite,
                 label = stringResource(R.string.stat_mood),
                 value = snapshot.stats.mood,
                 color = StatColors.Mood,
+                art = painterResource(R.drawable.art_stat_mood),
             )
         }
     }

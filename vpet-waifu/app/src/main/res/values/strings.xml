@@ -559,4 +559,7 @@
     <string name="narr_uni_3">Her hand hurts. She is nearly through.</string>
     <string name="stake_offer">Put money on this shift going well?</string>
     <string name="stake_riding">%1$d ¥ riding on it — +%2$d if it goes well, −%3$d if not</string>
+    <string name="game_sick">She is ill — medicine first.</string>
+    <string name="game_asleep">She is asleep.</string>
+    <string name="game_while_she_works">She is out — play a round while you wait.</string>
 </resources>

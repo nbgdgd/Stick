@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one heart. Mood, the pat quest and the arcade's catch target all point at this file rather than at three near-identical ones. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#F86FB2"
+        android:pathData="M24,35.35 C6.449999999999999,21.05 14.25,9.35 24,18.45 C33.75,9.35 41.55,21.05 24,35.35 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#9E2E64"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M24,35.35 C6.449999999999999,21.05 14.25,9.35 24,18.45 C33.75,9.35 41.55,21.05 24,35.35 Z" />
+    <path
+        android:fillColor="#66D64C92"
+        android:pathData="M24,35.35 C41.55,21.05 33.75,9.35 24,18.45 Z" />
+    <path
+        android:fillColor="#AAFFB4D8"
+        android:pathData="M16.3,18.5 a3.2,4.6 0 1,0 6.4,0 a3.2,4.6 0 1,0 -6.4,0 Z" />
+</vector>

@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.Upgrades
 
-@Database(entities = [PetStateEntity::class], version = 8, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 9, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
@@ -184,6 +184,35 @@ abstract class PetDatabase : RoomDatabase() {
         }
 
         /**
+         * The day's odd jobs, the arcade's bookkeeping, and money on a shift.
+         *
+         * Every column defaults to 0 or empty, and each of those reads as
+         * "not started yet": an upgrading save gets its quests rolled on the
+         * next tick from *today's* counters, an arcade day that has played
+         * nothing, and a find scheduled from now. No upgrading player is
+         * credited with progress they did not make, and none is charged for a
+         * cooldown they never triggered.
+         */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "patsGiven INTEGER NOT NULL DEFAULT 0",
+                    "arcadeDay INTEGER NOT NULL DEFAULT 0",
+                    "arcadePlayed INTEGER NOT NULL DEFAULT 0",
+                    "arcadeStreak INTEGER NOT NULL DEFAULT 0",
+                    "luckyGames INTEGER NOT NULL DEFAULT 0",
+                    "questDay INTEGER NOT NULL DEFAULT 0",
+                    "questBaselines TEXT NOT NULL DEFAULT ''",
+                    "questClaimed INTEGER NOT NULL DEFAULT 0",
+                    "findReadyAt INTEGER NOT NULL DEFAULT 0",
+                    "choreDoneAt TEXT NOT NULL DEFAULT ''",
+                    "sessionCheckpointsPaid INTEGER NOT NULL DEFAULT 0",
+                    "sessionStake INTEGER NOT NULL DEFAULT 0",
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+            }
+        }
+
+        /**
          * The chain, in order, as one value.
          *
          * A migration that exists but is never handed to the builder is worse
@@ -200,6 +229,7 @@ abstract class PetDatabase : RoomDatabase() {
             MIGRATION_5_6,
             MIGRATION_6_7,
             MIGRATION_7_8,
+            MIGRATION_8_9,
         )
     }
 }

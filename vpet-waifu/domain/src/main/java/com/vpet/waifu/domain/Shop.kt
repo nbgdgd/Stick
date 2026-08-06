@@ -34,16 +34,63 @@ enum class EffectKind {
 
     /** Mood climbs a little every minute while it runs. */
     GOOD_VIBES,
+
+    // --- earned, not sold ---------------------------------------------------
+    //
+    // The three below cannot be bought at any price. A shop that sells every
+    // buff is a shop that sells the answer to every problem, and the money to
+    // buy it comes from the same place every time — so the boosts stop being
+    // decisions and become a tax on not opening the shop. These arrive from
+    // quests, from a run of good rounds in the arcade, and from what turns up
+    // around the flat, which are all things you have to actually do.
+
+    /** Shop prices cut by a fifth while it runs. */
+    DISCOUNT,
+
+    /**
+     * Hunger and energy stop moving entirely.
+     *
+     * The buff for leaving: twenty minutes where nothing decays is worth most
+     * when you are about to put the phone down, which is the one moment the
+     * game previously had nothing to offer.
+     */
+    STASIS,
 }
 
 /** The boosts, as a set — several rules ask "is this a boost" at once. */
 val BOOST_EFFECTS: Set<EffectKind> = setOf(
     EffectKind.HASTE, EffectKind.OVERTIME, EffectKind.FOCUS,
     EffectKind.SECOND_WIND, EffectKind.GOOD_VIBES,
+    EffectKind.DISCOUNT, EffectKind.STASIS,
 )
 
-data class ActiveEffect(val kind: EffectKind, val expiresAt: Long) {
+/** The ones no amount of money can buy — see [EffectKind.DISCOUNT]. */
+val EARNED_EFFECTS: Set<EffectKind> = setOf(EffectKind.DISCOUNT, EffectKind.STASIS)
+
+/**
+ * [startedAt] exists so the bar can be drawn.
+ *
+ * The record used to keep only its expiry, and the UI recovered the full length
+ * by searching the shop for whatever item granted this kind. That worked only
+ * while every effect came from an item — the earned buffs have no item, so the
+ * lookup found nothing and the drain bar had no denominator. Storing the start
+ * is a byte in the save and removes a search that was never really correct: two
+ * items granting the same kind at different lengths would have found the wrong
+ * one all along.
+ */
+data class ActiveEffect(
+    val kind: EffectKind,
+    val expiresAt: Long,
+    val startedAt: Long = 0L,
+) {
     fun isActive(nowMillis: Long): Boolean = nowMillis < expiresAt
+
+    /** How much of it is left, 1 at the start and 0 as it expires. */
+    fun fractionLeft(nowMillis: Long): Float {
+        val total = (expiresAt - startedAt).toFloat()
+        if (startedAt <= 0L || total <= 0f) return 1f
+        return ((expiresAt - nowMillis) / total).coerceIn(0f, 1f)
+    }
 }
 
 /**
@@ -177,6 +224,9 @@ object Shop {
 
     /** The one item gated on the calendar rather than on level or wallet. */
     const val DAY_OFF_ID = "day_off"
+
+    /** What [EffectKind.DISCOUNT] takes off every price in here. */
+    const val DISCOUNT_RATE = 0.20f
 
     val ALL: List<ShopItem> = FOOD + GIFTS + PILLS + BOOSTS + CARE
 

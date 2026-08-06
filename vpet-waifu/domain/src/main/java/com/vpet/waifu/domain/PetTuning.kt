@@ -107,6 +107,15 @@ data class PetTuning(
      * nowhere near enough to replace sending her to work.
      */
     val passiveMinutesPerDay: Int = 60,
+    /**
+     * What each bond level adds to the jar, as a fraction.
+     *
+     * At the cap of ten that is +80%, which is the largest single multiplier in
+     * the game and deliberately so: it takes weeks of daily care to get there,
+     * it cannot be bought, and the jar is the one income the player earns by
+     * simply being present — the same thing bond measures.
+     */
+    val passiveBondShare: Float = 0.08f,
 
     /** Mood at clock-out decides the payout. */
     val greatMoodThreshold: Float = 75f,

@@ -3,7 +3,9 @@ package com.vpet.waifu.ui.game
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -75,6 +77,7 @@ import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetState
+import com.vpet.waifu.domain.Arcade
 import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.ui.character.PetFigure
 import com.vpet.waifu.ui.character.PetPalette
@@ -148,6 +151,12 @@ fun GameScreen(
     var secondsLeft by remember { mutableIntStateOf(game.durationSeconds) }
     var lastScore by remember { mutableStateOf<Int?>(null) }
     var lastGame by remember { mutableStateOf(game) }
+    // What the round paid, worked out where the round ends rather than
+    // re-derived while drawing: the first-of-day bonus is gone from the
+    // snapshot the instant it is banked, so a card that recomputed it would
+    // show the un-bonused figure a frame later.
+    var lastPayout by remember { mutableStateOf(Arcade.Payout(0, 0)) }
+    var lastBonus by remember { mutableStateOf(false) }
     // The best score as it stood when the round began, so beating it is
     // detected against the *old* record, not the one this round just wrote.
     var bestAtStart by remember { mutableIntStateOf(0) }
@@ -203,6 +212,12 @@ fun GameScreen(
             targets.clear()
             lastScore = score
             lastGame = game
+            lastBonus = score > 0 && !snapshot.playedToday(game)
+            lastPayout = Arcade.payout(
+                game, score,
+                firstOfDay = lastBonus,
+                lucky = score > 0 && snapshot.luckyGames > 0,
+            )
             // Any positive score beating what stood when the round began.
             newRecord = score > 0 && score > bestAtStart
             if (newRecord) onRecord()
@@ -232,6 +247,8 @@ fun GameScreen(
             secondsLeft = secondsLeft,
             lastScore = lastScore,
             lastGame = lastGame,
+            lastPayout = lastPayout,
+            lastBonus = lastBonus,
             newRecord = newRecord,
             best = snapshot.bestScores[game] ?: 0,
             onStop = { running = false },
@@ -423,6 +440,8 @@ private fun GameHeader(
     secondsLeft: Int,
     lastScore: Int?,
     lastGame: MiniGame,
+    lastPayout: Arcade.Payout,
+    lastBonus: Boolean,
     newRecord: Boolean,
     best: Int,
     onStop: () -> Unit,
@@ -442,6 +461,8 @@ private fun GameHeader(
                 game = game,
                 lastScore = lastScore,
                 lastGame = lastGame,
+                lastPayout = lastPayout,
+                lastBonus = lastBonus,
                 newRecord = newRecord,
                 best = best,
             )
@@ -547,6 +568,8 @@ private fun IdleHeader(
     game: MiniGame,
     lastScore: Int?,
     lastGame: MiniGame,
+    lastPayout: Arcade.Payout,
+    lastBonus: Boolean,
     newRecord: Boolean,
     best: Int,
 ) {
@@ -608,16 +631,34 @@ private fun IdleHeader(
                         )
                     }
                     Spacer(Modifier.height(6.dp))
+                    // The breakdown, not a total: three things happened, and a
+                    // single number told the player about one of them.
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         EffectChip(
                             icon = Icons.Rounded.Favorite,
                             text = "+${lastGame.moodGain(lastScore).roundToInt()}",
                             tint = StatColors.Mood,
                         )
-                        EffectChip(
+                        CountUpChip(
                             icon = Icons.Rounded.CurrencyYen,
-                            text = "+${lastGame.coins(lastScore)} ¥",
+                            value = lastPayout.money,
+                            suffix = " ¥",
                             tint = StatColors.Money,
+                        )
+                        CountUpChip(
+                            icon = Icons.Rounded.Star,
+                            value = lastPayout.exp,
+                            suffix = " EXP",
+                            tint = StatColors.Exp,
+                        )
+                    }
+                    if (lastBonus) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = stringResource(R.string.game_first_today),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = StatColors.Money,
+                            fontWeight = FontWeight.SemiBold,
                         )
                     }
                 }
@@ -625,6 +666,32 @@ private fun IdleHeader(
         }
     }
 }
+
+/**
+ * A reward that counts itself up.
+ *
+ * The number arriving instantly is information; the number climbing to it is
+ * the reward — it is the half-second where the player watches something good
+ * happen, and it is why an arcade result screen has one at all. Held to
+ * [COUNT_UP_MILLIS] because past about half a second a counter stops being a
+ * flourish and starts being a wait.
+ */
+@Composable
+private fun CountUpChip(
+    icon: ImageVector,
+    value: Int,
+    suffix: String,
+    tint: Color,
+) {
+    val shown by animateIntAsState(
+        targetValue = value,
+        animationSpec = tween(COUNT_UP_MILLIS, easing = FastOutSlowInEasing),
+        label = "count",
+    )
+    EffectChip(icon = icon, text = "+$shown$suffix", tint = tint)
+}
+
+private const val COUNT_UP_MILLIS = 520
 
 @Composable
 private fun TargetBubble(

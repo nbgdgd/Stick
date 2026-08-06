@@ -4,6 +4,7 @@ import com.vpet.waifu.data.db.PetStateDao
 import com.vpet.waifu.data.db.PetStateEntity
 import com.vpet.waifu.data.db.toEntity
 import com.vpet.waifu.data.db.toSnapshot
+import com.vpet.waifu.domain.Chore
 import com.vpet.waifu.domain.Focus
 import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.Occupation
@@ -93,6 +94,21 @@ class PetRepository @Inject constructor(
 
     suspend fun acknowledgeEvent(): PetSnapshot = mutate { current, now ->
         simulation.acknowledgeEvent(current, now)
+    }
+
+    /** The day's odd jobs — see [com.vpet.waifu.domain.Quests] and [Chores]. */
+    suspend fun claimQuest(index: Int): PetSnapshot = mutate { current, now ->
+        simulation.claimQuest(current, index, now)
+    }
+
+    suspend fun doChore(chore: Chore): PetSnapshot = mutate { current, now ->
+        simulation.doChore(current, chore, now)
+    }
+
+    suspend fun claimFind(): PetSnapshot = mutate(simulation::claimFind)
+
+    suspend fun stake(amount: Int): PetSnapshot = mutate { current, now ->
+        simulation.stake(current, amount, now)
     }
 
     suspend fun startPlaying(): PetSnapshot = mutate(simulation::startPlaying)

@@ -463,4 +463,7 @@
     <!-- pull-back notification -->
     <string name="notify_missed_title">Она скучает</string>
     <string name="notify_missed_body">Вы не виделись %1$d дн.</string>
+    <string name="game_first_today">Первый раунд за день — бонус ×1,5</string>
+    <string name="effect_running_discount">Всё в магазине на 20% дешевле</string>
+    <string name="effect_running_stasis">Голод и энергия заморожены</string>
 </resources>

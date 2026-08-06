@@ -134,6 +134,24 @@ data class PetSnapshot(
     val dayOffDay: Long = 0L,
     /** What the check-in just paid, until the player has been told. */
     val pendingDaily: Int = 0,
+    /** Pats, counted so a daily quest can ask for them. */
+    val patsGiven: Int = 0,
+    /** The arcade's day: which games have been played, and the clean-round run. */
+    val arcadeDay: Long = 0L,
+    /** One bit per [MiniGame] ordinal, set by the first round of it today. */
+    val arcadePlayed: Int = 0,
+    val arcadeStreak: Int = 0,
+    /** Rounds still paying double — see [Arcade.LUCKY_MULTIPLIER]. */
+    val luckyGames: Int = 0,
+    /** Today's quests: the day they belong to, where each started, what is paid. */
+    val questDay: Long = 0L,
+    val questBaselines: List<Int> = emptyList(),
+    /** One bit per quest index, set when its reward is taken. */
+    val questClaimed: Int = 0,
+    /** When the next thing turns up around the flat — see [Finds]. */
+    val findReadyAt: Long = 0L,
+    /** When each chore was last done, by id. */
+    val choreDoneAt: Map<String, Long> = emptyMap(),
 ) {
     val isSleeping: Boolean get() = activity == PetActivity.SLEEPING
 
@@ -183,6 +201,34 @@ data class PetSnapshot(
     fun hasEffect(kind: EffectKind, nowMillis: Long): Boolean =
         effects.any { it.kind == kind && it.isActive(nowMillis) }
 
+    /** Today's three jobs — see [Quests]. Derived from the day, never stored. */
+    fun questsToday(): List<DailyQuest> = Quests.forDay(questDay, level)
+
+    /** Whether [game] has already been played today, for the first-round bonus. */
+    fun playedToday(game: MiniGame): Boolean = arcadePlayed and (1 shl game.ordinal) != 0
+
+    /**
+     * What [item] costs her right now.
+     *
+     * The one place a price is allowed to come from. A discount that only the
+     * shop screen knew about would be a discount the purchase itself never
+     * applied — the card would say 88 and the wallet would lose 110.
+     */
+    fun priceOf(item: ShopItem, nowMillis: Long): Int =
+        if (hasEffect(EffectKind.DISCOUNT, nowMillis)) {
+            (item.price * (1f - Shop.DISCOUNT_RATE)).toInt()
+        } else {
+            item.price
+        }
+
+    /** Same, for the permanent purchases — the discount applies to those too. */
+    fun priceOf(upgrade: Upgrade, nowMillis: Long): Int =
+        if (upgrade.price > 0 && hasEffect(EffectKind.DISCOUNT, nowMillis)) {
+            (upgrade.price * (1f - Shop.DISCOUNT_RATE)).toInt()
+        } else {
+            upgrade.price
+        }
+
     fun canFeed(tuning: PetTuning = PetTuning()): Boolean =
         acceptsInteraction && stats.hunger < tuning.fullThreshold
 
@@ -205,7 +251,7 @@ data class PetSnapshot(
      * the next one, so the price is now unavoidably real.
      */
     fun canBuy(item: ShopItem, nowMillis: Long = 0L): Boolean =
-        item.isUnlocked(level) && progress.canAfford(item.price) &&
+        item.isUnlocked(level) && progress.canAfford(priceOf(item, nowMillis)) &&
             servable(item) &&
             (item.effect == null || !hasEffect(item.effect, nowMillis)) &&
             // Medicine is for the sick; sold to the healthy it is a coin sink
@@ -232,7 +278,7 @@ data class PetSnapshot(
     /** Why [item] cannot be bought, for the shop card to explain. */
     fun blockedBy(item: ShopItem, nowMillis: Long): PurchaseBlock? = when {
         !item.isUnlocked(level) -> PurchaseBlock.LEVEL
-        !progress.canAfford(item.price) -> PurchaseBlock.MONEY
+        !progress.canAfford(priceOf(item, nowMillis)) -> PurchaseBlock.MONEY
         !servable(item) -> PurchaseBlock.BUSY
         item.effect != null && hasEffect(item.effect, nowMillis) -> PurchaseBlock.STILL_PAYING
         item.id == Shop.MEDICINE_ID && !isSick -> PurchaseBlock.NOT_SICK
@@ -253,8 +299,9 @@ data class PetSnapshot(
 
     fun owns(upgradeId: String): Boolean = upgradeId in owned
 
-    fun canBuy(upgrade: Upgrade): Boolean =
-        !owns(upgrade.id) && upgrade.isUnlocked(level) && progress.canAfford(upgrade.price)
+    fun canBuy(upgrade: Upgrade, nowMillis: Long = 0L): Boolean =
+        !owns(upgrade.id) && upgrade.isUnlocked(level) &&
+            progress.canAfford(priceOf(upgrade, nowMillis))
 
     /** Everything her purchases, today's event, her path and your history add up to. */
     fun modifiers(): UpgradeEffect =

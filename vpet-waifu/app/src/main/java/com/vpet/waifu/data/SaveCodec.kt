@@ -148,6 +148,18 @@ object SaveCodec {
         put("lastLoginDay", entity.lastLoginDay)
         put("dayOffDay", entity.dayOffDay)
         put("pendingDaily", entity.pendingDaily)
+        put("patsGiven", entity.patsGiven)
+        put("arcadeDay", entity.arcadeDay)
+        put("arcadePlayed", entity.arcadePlayed)
+        put("arcadeStreak", entity.arcadeStreak)
+        put("luckyGames", entity.luckyGames)
+        put("questDay", entity.questDay)
+        put("questBaselines", entity.questBaselines)
+        put("questClaimed", entity.questClaimed)
+        put("findReadyAt", entity.findReadyAt)
+        put("choreDoneAt", entity.choreDoneAt)
+        put("sessionCheckpointsPaid", entity.sessionCheckpointsPaid)
+        put("sessionStake", entity.sessionStake)
     }
 
     private fun entityOf(save: JSONObject): PetStateEntity = PetStateEntity(
@@ -225,6 +237,18 @@ object SaveCodec {
         lastLoginDay = save.optLong("lastLoginDay"),
         dayOffDay = save.optLong("dayOffDay"),
         pendingDaily = save.optInt("pendingDaily"),
+        patsGiven = save.optInt("patsGiven"),
+        arcadeDay = save.optLong("arcadeDay"),
+        arcadePlayed = save.optInt("arcadePlayed"),
+        arcadeStreak = save.optInt("arcadeStreak"),
+        luckyGames = save.optInt("luckyGames"),
+        questDay = save.optLong("questDay"),
+        questBaselines = save.optString("questBaselines"),
+        questClaimed = save.optInt("questClaimed"),
+        findReadyAt = save.optLong("findReadyAt"),
+        choreDoneAt = save.optString("choreDoneAt"),
+        sessionCheckpointsPaid = save.optInt("sessionCheckpointsPaid"),
+        sessionStake = save.optInt("sessionStake"),
     )
 
     /**

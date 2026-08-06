@@ -35,9 +35,17 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             advanceMinutes(settled, nowMillis, owedMinutes)
         }
         // Her own life, on top of the clockwork: wishes voiced and expired,
-        // chapters, the week's goal and the calendar. All run on every advance,
-        // so no path through the simulation can miss them.
-        return advanceStory(tendAnniversary(tendGoal(tendRequest(advanced, nowMillis), nowMillis), nowMillis))
+        // chapters, the week's goal, the day's jobs and the calendar. All run on
+        // every advance, so no path through the simulation can miss them.
+        val tended = advanceStory(
+            tendAnniversary(tendGoal(tendRequest(advanced, nowMillis), nowMillis), nowMillis),
+        )
+        // …except on a clock that has run backwards. Rolling the day's quests
+        // off a timestamp from before the last tick would re-roll them and wipe
+        // the morning's progress, which is a real thing a phone crossing a
+        // timezone can do to somebody halfway through their three jobs.
+        if (nowMillis < snapshot.lastTickAt) return tended
+        return tendFinds(tendQuests(tended, nowMillis), nowMillis)
     }
 
     /**
@@ -274,10 +282,20 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     private val ticksPerMinute: Float
         get() = MS_PER_MINUTE.toFloat() / tuning.passiveTickMillis
 
-    /** What one tick of the tip jar is worth. Grows with her level and her gear. */
+    /**
+     * What one tick of the tip jar is worth.
+     *
+     * Grows with her level, her gear — and now with how attached she is. Bond
+     * had exactly one mechanical tooth, and it was a *defensive* one: neglect
+     * hurt less. Nothing rewarded the number for going up, which made ten
+     * levels of attachment a trophy shelf. Tying the jar to it gives the one
+     * gauge that never falls something to pay for, and it pays it in the idle
+     * half of the game, where a player who mostly just watches her lives.
+     */
     fun passivePerTick(snapshot: PetSnapshot): Float =
         (tuning.passiveCoinsPerTick + tuning.passiveCoinsPerLevel * (snapshot.level - 1)) *
-            snapshot.modifiers().pay
+            snapshot.modifiers().pay *
+            (1f + tuning.passiveBondShare * snapshot.bondLevel)
 
     /** Coins per minute of watching, which is the number worth showing a player. */
     fun passivePerMinute(snapshot: PetSnapshot): Int =
@@ -310,9 +328,19 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         val busy = occupation != null
         val mods = snapshot.modifiers()
 
-        val hungerRate = tuning.hungerDecayPerMinute * mods.hungerDecay *
-            (if (busy) tuning.busyHungerMultiplier else 1f) *
-            (if (snapshot.hasEffect(EffectKind.HUNGER_SURGE, clock)) tuning.hungerSurgeMultiplier else 1f)
+        // Stasis holds hunger and energy exactly where they are. It is applied
+        // as a gate on the two rates rather than by skipping the step, because
+        // everything else in a minute — mood, wages, the run-down counter, the
+        // session clock — must go on running while it is up. A buff that froze
+        // the whole simulation would be a pause button, which is a different
+        // and much worse item.
+        val frozen = snapshot.hasEffect(EffectKind.STASIS, clock)
+
+        val hungerRate = if (frozen) 0f else {
+            tuning.hungerDecayPerMinute * mods.hungerDecay *
+                (if (busy) tuning.busyHungerMultiplier else 1f) *
+                (if (snapshot.hasEffect(EffectKind.HUNGER_SURGE, clock)) tuning.hungerSurgeMultiplier else 1f)
+        }
 
         val exhaustion =
             (if (snapshot.hasEffect(EffectKind.EXHAUSTION, clock)) tuning.exhaustionMultiplier else 1f) *
@@ -327,7 +355,9 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             // not per minute, so idling on the game screen is not a drain.
             PetActivity.PLAYING, PetActivity.AWAKE ->
                 -tuning.energyDecayPerMinute * exhaustion * mods.energyDecay
-        }
+            // Stasis stops the *drain*, not the recovery: a buff that also
+            // suspended sleep would punish the one sensible way to use it.
+        }.let { if (frozen) it.coerceAtLeast(0f) else it }
 
         // Per job, not per kind: the whole point of the catalog is that a shift
         // at the cafe leaves her cheerful and one at the office does not.
@@ -625,14 +655,27 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
 
         val payDue = pay.toInt() - session.paidOut
         val expDue = exp.toInt() - session.paidExp
+
+        // A checkpoint crossed this minute lands here. It pays in mood and
+        // attachment, never in wages — see [Shifts] for why holding back a
+        // slice of the wage was the wrong shape entirely.
+        val newMarks = (Shifts.passed(session.progress(clock)) - session.checkpointsPaid)
+            .coerceAtLeast(0)
+
         return snapshot.copy(
             progress = snapshot.progress.plus(money = payDue, exp = expDue),
             totalEarned = snapshot.totalEarned + payDue,
+            stats = if (newMarks > 0) {
+                snapshot.stats.adjusted(moodBy = Shifts.MOOD * newMarks)
+            } else {
+                snapshot.stats
+            },
             session = session.copy(
                 accruedPay = pay,
                 paidOut = session.paidOut + payDue,
                 accruedExp = exp,
                 paidExp = session.paidExp + expDue,
+                checkpointsPaid = session.checkpointsPaid + newMarks,
             ),
         )
     }
@@ -665,6 +708,9 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         return current.copy(
             stats = current.stats.adjusted(moodBy = patMood(current, nowMillis)),
             progress = current.progress.plus(exp = patExp(current, nowMillis)),
+            // Counted on the same test that bonds, so the daily quest asks for
+            // eight *pats* and cannot be cleared by eight taps in four seconds.
+            patsGiven = current.patsGiven + (if (considered) 1 else 0),
             lastInteractionAt = nowMillis,
         ).let { if (considered) it.plusBond(Bond.PAT, nowMillis) else it }
             .withEmote(Emote.LOVED, nowMillis, tuning.lovedEmoteMillis)
@@ -783,9 +829,16 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         val exp = (session?.paidExp ?: 0) + remainderExp
         val finished = !cancelled
         val isWork = occupation.kind == OccupationKind.WORK
+        val quality = if (cancelled) OutcomeQuality.POOR else qualityFor(snapshot.stats.mood)
+
+        // The stake comes back, up or down, on the same verdict that decided
+        // the wage. Walking out early counts as a bad shift: otherwise the
+        // stake would be a free option you could cancel out of the moment her
+        // mood dipped.
+        val returned = (session?.stake ?: 0).let { if (it > 0) Stakes.settle(it, quality) else 0 }
 
         return snapshot.copy(
-            progress = snapshot.progress.plus(money = remainderPay, exp = remainderExp),
+            progress = snapshot.progress.plus(money = remainderPay + returned, exp = remainderExp),
             totalEarned = snapshot.totalEarned + remainderPay,
             activity = PetActivity.AWAKE,
             session = null,
@@ -797,7 +850,7 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 kind = occupation.kind,
                 money = money,
                 exp = exp,
-                quality = if (cancelled) OutcomeQuality.POOR else qualityFor(snapshot.stats.mood),
+                quality = quality,
                 cancelled = cancelled,
                 completedAt = atMillis,
             ),
@@ -896,35 +949,80 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
 
     // --- mini-game -----------------------------------------------------------
 
+    /**
+     * Opens the arcade.
+     *
+     * Deliberately **not** gated on her being free. The arcade is the player's
+     * game, not hers: she is at the café, and the person holding the phone is
+     * sitting on a bus with fifteen minutes to fill. Locking the only thing
+     * there is to do behind the thing being waited for is what made a shift
+     * feel like a punishment. Sickness still closes it — the one state where
+     * the right answer is medicine and nothing else.
+     *
+     * While she is out the activity is left alone: PLAYING would overwrite the
+     * shift and lose the session. It only takes hold when she is actually there
+     * to play along.
+     */
     fun startPlaying(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
-        // A sick pet does not go to the arcade — rest and medicine first.
-        if (!current.acceptsInteraction || current.isSick) return current
+        if (current.isSick || current.isSleeping) return current
+        if (!current.acceptsInteraction) return current.copy(lastInteractionAt = nowMillis)
         return current.copy(activity = PetActivity.PLAYING, lastInteractionAt = nowMillis)
     }
 
-    /** Ends the mini-game and applies its score. Playing lifts mood but costs energy. */
+    /**
+     * Ends the mini-game and applies its score.
+     *
+     * The payout is [Arcade]'s curve rather than the flat `score / n` this used
+     * to be, and it now pays EXP as well as money. Two bonuses ride on top: the
+     * first round of each game each day is worth half again as much, and a run
+     * of [Arcade.COMBO_LENGTH] clean rounds hands over a buff — which is the
+     * only way some of the buffs can be got at all.
+     */
     fun finishPlaying(
         snapshot: PetSnapshot,
         score: Int,
         nowMillis: Long,
         game: MiniGame = MiniGame.CATCH,
     ): PetSnapshot {
-        val current = advanceTo(snapshot, nowMillis)
+        val current = rollArcadeDay(advanceTo(snapshot, nowMillis), nowMillis)
         // Not gated on still being PLAYING: a round can outlive the screen that
         // started it, and the score should still count when it comes back.
         if (score <= 0 && current.activity != PetActivity.PLAYING) return current
         val mods = current.modifiers()
         val played = score > 0
-        return current.copy(
-            activity = PetActivity.AWAKE,
+
+        val firstOfDay = played && !current.playedToday(game)
+        val lucky = played && current.luckyGames > 0
+        val payout = if (played) {
+            Arcade.payout(game, score, firstOfDay = firstOfDay, lucky = lucky)
+        } else {
+            Arcade.Payout(0, 0)
+        }
+
+        // The streak counts clean rounds in a row and resets on a poor one, so
+        // the reward is for a run of form rather than for turning up often.
+        val streak = when {
+            !played -> current.arcadeStreak
+            Arcade.isCleanRound(game, score) -> current.arcadeStreak + 1
+            else -> 0
+        }
+        val comboEarned = streak >= Arcade.COMBO_LENGTH
+
+        val withRound = current.copy(
+            // Only clear PLAYING if that is what she was doing: a round played
+            // while she is on a shift must not clock her off.
+            activity = if (current.activity == PetActivity.PLAYING) PetActivity.AWAKE else current.activity,
             stats = current.stats.adjusted(
                 energyBy = -game.energyCost(score),
                 moodBy = game.moodGain(score) * mods.play,
             ),
-            progress = current.progress.plus(money = game.coins(score)),
-            totalEarned = current.totalEarned + game.coins(score),
+            progress = current.progress.plus(money = payout.money, exp = payout.exp),
+            totalEarned = current.totalEarned + payout.money,
             gamesPlayed = current.gamesPlayed + (if (played) 1 else 0),
+            arcadePlayed = if (played) current.arcadePlayed or (1 shl game.ordinal) else current.arcadePlayed,
+            arcadeStreak = if (comboEarned) 0 else streak,
+            luckyGames = (current.luckyGames - if (lucky) 1 else 0).coerceAtLeast(0),
             // The best round is remembered per game, and only ever climbs.
             bestScores = if (score > (current.bestScores[game] ?: 0)) {
                 current.bestScores + (game to score)
@@ -932,10 +1030,164 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 current.bestScores
             },
             lastInteractionAt = nowMillis,
-        ).let { if (played) it.plusBond(Bond.GAME, nowMillis) else it }
+        )
+
+        return withRound
+            .let { if (comboEarned) grantComboReward(it, nowMillis) else it }
+            .let { if (played) it.plusBond(Bond.GAME, nowMillis) else it }
             // "Поиграй со мной!" — a round actually played grants the wish.
             .let { if (played) grantRequestIf(it, nowMillis) { r -> r.kind == RequestKind.PLAY } else it }
             .withEmote(Emote.CELEBRATING, nowMillis, tuning.celebrateEmoteMillis)
+    }
+
+    /** Resets the per-day arcade bookkeeping when the date rolls over. */
+    private fun rollArcadeDay(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        val day = Events.dayOf(nowMillis)
+        if (day == snapshot.arcadeDay) return snapshot
+        return snapshot.copy(arcadeDay = day, arcadePlayed = 0)
+    }
+
+    /**
+     * What three clean rounds in a row are worth.
+     *
+     * A buff, not coins: the combo is the game teaching that playing well is
+     * worth more than playing often, and paying it in money would just be a
+     * bigger version of the round you already got paid for.
+     */
+    private fun grantComboReward(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot =
+        grantEffect(snapshot, EffectKind.GOOD_VIBES, minutes = 45, nowMillis)
+            .copy(luckyGames = snapshot.luckyGames + 2)
+
+    /**
+     * Starts [kind] running, extending rather than replacing an existing one.
+     *
+     * The single door every earned buff comes through. Extending from where the
+     * old one ends is the same rule [buy] uses, and for the same reason: a
+     * second dose that silently restarts the clock is how a timed cost becomes
+     * free.
+     */
+    fun grantEffect(
+        snapshot: PetSnapshot,
+        kind: EffectKind,
+        minutes: Int,
+        nowMillis: Long,
+    ): PetSnapshot {
+        val running = snapshot.effects.firstOrNull { it.kind == kind && it.isActive(nowMillis) }
+        val from = max(nowMillis, running?.expiresAt ?: nowMillis)
+        return snapshot.copy(
+            effects = snapshot.effects.filterNot { it.kind == kind } +
+                ActiveEffect(kind, from + minutes * MS_PER_MINUTE, startedAt = nowMillis),
+        )
+    }
+
+    // --- the day's odd jobs --------------------------------------------------
+
+    /**
+     * Rolls the day over: new quests, and the counters they measure from.
+     *
+     * Called from [advanceTo], so nothing has to remember to call it. The
+     * baselines are captured at the moment the day turns, which is what makes
+     * "feed her twice" mean twice *today* — and, importantly, they are captured
+     * from the counters as they stand, so a quest can never be completed by
+     * work done yesterday.
+     */
+    private fun tendQuests(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        val day = Events.dayOf(nowMillis)
+        if (day == snapshot.questDay && snapshot.questBaselines.size == Quests.PER_DAY) return snapshot
+        val rolled = snapshot.copy(questDay = day, questClaimed = 0)
+        return rolled.copy(
+            questBaselines = rolled.questsToday().map { Quests.counterFor(rolled, it.kind) },
+        )
+    }
+
+    /** Takes the reward for a finished quest. Silently does nothing otherwise. */
+    fun claimQuest(snapshot: PetSnapshot, index: Int, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        if (!Quests.isDone(current, index) || Quests.isClaimed(current, index)) return current
+        val quest = current.questsToday().getOrNull(index) ?: return current
+        val claimed = current.copy(
+            progress = current.progress.plus(money = quest.money, exp = quest.exp),
+            totalEarned = current.totalEarned + quest.money,
+            questClaimed = current.questClaimed or (1 shl index),
+            lastInteractionAt = nowMillis,
+        ).withEmote(Emote.CELEBRATING, nowMillis, tuning.celebrateEmoteMillis)
+
+        // The last of the three carries a buff on top. Finishing a whole day is
+        // the achievement; the individual quests are just the way there.
+        return if (Quests.claimable(claimed).isEmpty() && allQuestsClaimed(claimed)) {
+            grantEffect(claimed, EffectKind.DISCOUNT, minutes = 30, nowMillis)
+        } else {
+            claimed
+        }
+    }
+
+    private fun allQuestsClaimed(snapshot: PetSnapshot): Boolean =
+        (0 until Quests.PER_DAY).all { Quests.isClaimed(snapshot, it) }
+
+    /**
+     * Does a chore. Works while she is out, which is the entire point.
+     *
+     * Pays money and EXP but costs nothing except the cooldown, so it is the
+     * one activity that is always safe — the reason a player who has ten spare
+     * minutes and a pet on a shift has something to open the app for.
+     */
+    fun doChore(snapshot: PetSnapshot, chore: Chore, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        if (!Chores.isReady(chore, current, nowMillis)) return current
+        return current.copy(
+            progress = current.progress.plus(money = chore.money, exp = chore.exp),
+            totalEarned = current.totalEarned + chore.money,
+            stats = current.stats.adjusted(moodBy = chore.mood),
+            choreDoneAt = current.choreDoneAt + (chore.id to nowMillis),
+            lastInteractionAt = nowMillis,
+        )
+    }
+
+    /** Schedules the first find, and re-arms one that has been missed. */
+    private fun tendFinds(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        val at = snapshot.findReadyAt
+        if (at <= 0L) return snapshot.copy(findReadyAt = Finds.nextAfter(nowMillis))
+        // Gone unnoticed for its whole window: roll the next one rather than
+        // leaving a find that can never be collected sitting in the save.
+        val expired = nowMillis >= at + Finds.LINGER_MINUTES * 60_000L
+        return if (expired) snapshot.copy(findReadyAt = Finds.nextAfter(nowMillis)) else snapshot
+    }
+
+    /** Picks up whatever turned up around the flat. */
+    fun claimFind(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        if (!Finds.isWaiting(current, nowMillis)) return current
+        val kind = Finds.kindOf(current.findReadyAt)
+        val reward = Finds.rewardFor(kind, current.level)
+        return current.copy(
+            progress = current.progress.plus(money = reward.money, exp = reward.exp),
+            totalEarned = current.totalEarned + reward.money,
+            stats = current.stats.adjusted(moodBy = Finds.moodFor(kind)),
+            findReadyAt = Finds.nextAfter(nowMillis),
+            lastInteractionAt = nowMillis,
+        ).let {
+            // A snack found is a snack eaten; the others are simply pocketed.
+            if (kind == FindKind.SNACK) it.withEmote(Emote.EATING, nowMillis, tuning.eatingEmoteMillis) else it
+        }
+    }
+
+    /**
+     * Puts money aside on the shift going well.
+     *
+     * Taken out of the wallet immediately — that is the cost, and it has to be
+     * felt at the moment of the decision rather than at the end of the shift.
+     */
+    fun stake(snapshot: PetSnapshot, amount: Int, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        val session = current.session ?: return current
+        if (!current.isBusy || session.stake > 0) return current
+        val staked = amount.coerceIn(0, Stakes.maxStake(current))
+        if (staked <= 0) return current
+        return current.copy(
+            progress = current.progress.plus(money = -staked),
+            session = session.copy(stake = staked),
+            lastInteractionAt = nowMillis,
+        )
     }
 
     // --- shop ----------------------------------------------------------------
@@ -955,7 +1207,7 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             val running = current.effects.firstOrNull { it.kind == item.effect && it.isActive(nowMillis) }
             val from = max(nowMillis, running?.expiresAt ?: nowMillis)
             current.effects.filterNot { it.kind == item.effect } +
-                ActiveEffect(item.effect, from + item.effectMinutes * MS_PER_MINUTE)
+                ActiveEffect(item.effect, from + item.effectMinutes * MS_PER_MINUTE, startedAt = nowMillis)
         } else {
             current.effects
         }
@@ -988,7 +1240,12 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 energyBy = item.energy,
                 moodBy = item.mood,
             ),
-            progress = current.progress.plus(money = item.money - item.price, exp = item.exp),
+            // The discount is charged here, not just displayed: the price the
+            // card shows and the price the wallet pays are the same number.
+            progress = current.progress.plus(
+                money = item.money - current.priceOf(item, nowMillis),
+                exp = item.exp,
+            ),
             totalEarned = current.totalEarned + item.money.coerceAtLeast(0),
             effects = effects,
             lastInteractionAt = nowMillis,
@@ -1045,9 +1302,9 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
      */
     fun buyUpgrade(snapshot: PetSnapshot, upgrade: Upgrade, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
-        if (!current.canBuy(upgrade)) return current
+        if (!current.canBuy(upgrade, nowMillis)) return current
         return current.copy(
-            progress = current.progress.plus(money = -upgrade.price),
+            progress = current.progress.plus(money = -current.priceOf(upgrade, nowMillis)),
             owned = current.owned + upgrade.id,
             // Buying an outfit puts it on; there is no reason to make the
             // player then find it in a list and tap it again. A theme is the
@@ -1156,24 +1413,56 @@ enum class MiniGame(
     val durationSeconds: Int,
     private val moodPerPoint: Float,
     private val energyPerPoint: Float,
-    private val pointsPerCoin: Int,
+    /**
+     * What a *good* round scores. The reward curve is expressed as a fraction
+     * of this, which is what lets three games on wildly different scales — a
+     * rhythm round runs to a couple of hundred, a catch round to twenty-five —
+     * share one formula and one set of exponents.
+     */
+    val targetScore: Int,
+    /**
+     * Money a good round pays, before bonuses.
+     *
+     * These are **not** meant to match each other. A round of catch is twenty
+     * seconds and a round of memory is thirty, so paying the same for both
+     * would make catch half again as good per minute — and a player who works
+     * that out has two decorative games and one real one. What is held equal is
+     * money-plus-EXP *per second of play*; the split between the two currencies
+     * is what gives each game its character. See the arcade balance test, which
+     * is the thing that actually enforces it.
+     */
+    val baseReward: Int,
+    /** EXP a good round pays, before bonuses. */
+    val baseExp: Int,
 ) {
-    /** Tap the things that pop up. Reflex, aimed. */
-    CATCH(20, moodPerPoint = 0.9f, energyPerPoint = 0.15f, pointsPerCoin = 3),
+    /**
+     * Tap the things that pop up. Reflex, aimed. The money game.
+     *
+     * Pays the least of the three per round and is over in twenty seconds,
+     * which is what makes it the fastest — see the note on [baseReward] about
+     * why the three have to be compared per second rather than per round.
+     */
+    CATCH(
+        20, moodPerPoint = 0.9f, energyPerPoint = 0.15f,
+        targetScore = 24, baseReward = 38, baseExp = 8,
+    ),
 
     /** Tap on the beat as the rings close. Timing, no aim at all. */
-    RHYTHM(28, moodPerPoint = 0.26f, energyPerPoint = 0.045f, pointsPerCoin = 12),
+    RHYTHM(
+        28, moodPerPoint = 0.26f, energyPerPoint = 0.045f,
+        targetScore = 170, baseReward = 48, baseExp = 15,
+    ),
 
-    /** Watch the order, repeat the order. Recall, no reflex at all. */
-    MEMORY(30, moodPerPoint = 0.8f, energyPerPoint = 0.13f, pointsPerCoin = 3),
+    /** Watch the order, repeat the order. Recall, no reflex at all. The EXP game. */
+    MEMORY(
+        30, moodPerPoint = 0.8f, energyPerPoint = 0.13f,
+        targetScore = 24, baseReward = 38, baseExp = 24,
+    ),
     ;
 
     fun moodGain(score: Int): Float = min(MAX_MOOD, BASE_MOOD + score * moodPerPoint)
 
     fun energyCost(score: Int): Float = BASE_ENERGY + score * energyPerPoint
-
-    /** A few coins so an empty wallet is never a dead end. */
-    fun coins(score: Int): Int = score / pointsPerCoin
 
     companion object {
         /** Turning up is worth something, even on a round you fluff. */

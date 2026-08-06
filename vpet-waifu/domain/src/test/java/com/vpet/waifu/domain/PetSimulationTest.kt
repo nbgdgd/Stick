@@ -393,14 +393,23 @@ class PetSimulationTest {
 
     @Test
     fun `running out of energy on the clock ends the shift early`() {
-        // Just enough to start, not enough to see it through.
+        // Needs a job that costs more energy than she has. The café no longer
+        // does — it is fifteen minutes and eight points, less than the twelve
+        // required to clock on at all — so this uses the longest job, which is
+        // where running dry mid-shift is a real risk rather than an impossible
+        // one.
+        val long = Occupations.byId("idol")!!
         val barely = tuning.minimumEnergyToWork + 1f
-        val working = sim.startOccupation(snapshot(energy = barely, mood = 50f), cafe, T0)
-        val after = sim.advanceTo(working, T0 + cafe.durationMinutes * MINUTE)
+        assertTrue("the job must be able to exhaust her", long.energyCost > barely)
+
+        val start = snapshot(energy = barely, mood = 50f, exp = 40_000)
+        val working = sim.startOccupation(start, long, T0)
+        assertEquals(PetActivity.WORKING, working.activity)
+        val after = sim.advanceTo(working, T0 + long.durationMinutes * MINUTE)
 
         assertEquals(PetActivity.AWAKE, after.activity)
         assertTrue(after.lastOutcome?.cancelled == true)
-        assertTrue("partial pay only", after.progress.money < cafe.payout)
+        assertTrue("partial pay only", after.progress.money < long.payout)
         assertTrue("but she is paid for the time she did put in", after.progress.money > 0)
     }
 
@@ -597,16 +606,67 @@ class PetSimulationTest {
 
     @Test
     fun `no game in the arcade is the one worth grinding`() {
-        // Three games only stay three games while none of them pays best. A
-        // strong round is roughly a third of each one's theoretical maximum;
-        // what they pay for that has to land within a hair of each other, or
-        // the other two become decoration.
+        // Three games only stay three games while none of them pays best, and
+        // "best" is per *second*: a round of catch is twenty seconds and a
+        // round of memory thirty, so equal pay per round would quietly make
+        // catch half again as good and turn the other two into decoration.
+        //
+        // Money and EXP are weighted the way the rest of the game values them
+        // — see AdvisorWeights, which is where those two constants are used to
+        // compare a shift against a lesson.
+        val weights = AdvisorWeights()
+        fun valuePerSecond(game: MiniGame): Float {
+            val payout = Arcade.payout(game, game.targetScore, firstOfDay = false)
+            val value = payout.money / weights.moneyPerPoint + payout.exp / weights.expPerPoint
+            return value / game.durationSeconds
+        }
+
+        val rates = MiniGame.entries.map { valuePerSecond(it) }
+        val spread = (rates.max() - rates.min()) / rates.min()
+        assertTrue("value per second spread ${spread * 100}%: $rates", spread < 0.08f)
+
+        // The split between the two currencies is what makes them different
+        // games: catch is where the money is, memory is where the EXP is.
+        val catch = Arcade.payout(MiniGame.CATCH, MiniGame.CATCH.targetScore, firstOfDay = false)
+        val memory = Arcade.payout(MiniGame.MEMORY, MiniGame.MEMORY.targetScore, firstOfDay = false)
+        assertTrue("catch should out-earn memory in EXP terms", catch.exp < memory.exp)
+
+        // Mood, which no bonus touches, still has to land in the same place.
         val strong = mapOf(MiniGame.CATCH to 26, MiniGame.RHYTHM to 110, MiniGame.MEMORY to 32)
         val moods = strong.map { (game, score) -> game.moodGain(score) }
-        val coins = strong.map { (game, score) -> game.coins(score) }
-
         assertTrue("mood spread: $moods", moods.max() - moods.min() < 4f)
-        assertTrue("coin spread: $coins", coins.max() - coins.min() <= 2)
+    }
+
+    @Test
+    fun `the arcade curve rewards the attempt and the result differently`() {
+        val game = MiniGame.CATCH
+        val half = Arcade.payout(game, game.targetScore / 2, firstOfDay = false)
+        val full = Arcade.payout(game, game.targetScore, firstOfDay = false)
+
+        // A half-score round pays more than half the money — that is the
+        // sub-linear exponent, and it is what makes a bad round worth playing.
+        assertTrue("half round money ${half.money} of ${full.money}", half.money > full.money / 2)
+        // …and EXP is flatter still, so the ratio is higher than money's.
+        val moneyShare = half.money.toFloat() / full.money
+        val expShare = half.exp.toFloat() / full.exp
+        assertTrue("exp $expShare should be flatter than money $moneyShare", expShare > moneyShare)
+    }
+
+    @Test
+    fun `the soft cap stops one huge round from being the economy`() {
+        val game = MiniGame.CATCH
+        val good = Arcade.payout(game, game.targetScore, firstOfDay = false)
+        val absurd = Arcade.payout(game, game.targetScore * 10, firstOfDay = false)
+
+        // Ten times the score is nowhere near ten times the money.
+        assertTrue("absurd ${absurd.money} vs good ${good.money}", absurd.money < good.money * 2.5f)
+        // But it is still more: the cap is soft, not a wall.
+        assertTrue(absurd.money > good.money)
+
+        // And the curve has no step in it where the two halves meet.
+        val below = Arcade.shape(Arcade.SOFT_CAP - 0.001f, Arcade.MONEY_EXPONENT)
+        val above = Arcade.shape(Arcade.SOFT_CAP + 0.001f, Arcade.MONEY_EXPONENT)
+        assertEquals(below, above, 0.01f)
     }
 
     // --- progression ---------------------------------------------------------

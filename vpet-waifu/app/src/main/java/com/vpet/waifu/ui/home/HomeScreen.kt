@@ -50,6 +50,8 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.AcUnit
+import androidx.compose.material.icons.rounded.Sell
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.AlertDialog
@@ -471,18 +473,25 @@ private fun ActiveBoosts(snapshot: PetSnapshot, nowMillis: Long) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         running.forEach { effect ->
             val penalty = effect.kind !in BOOST_EFFECTS
+            // Only for the icon and the colour now: the length comes from the
+            // record itself, so an earned buff with no item behind it draws a
+            // bar like everything else instead of a full one that never moves.
             val item = Shop.ALL.firstOrNull { it.effect == effect.kind }
             val minutesLeft = (((effect.expiresAt - nowMillis) + 59_999L) / 60_000L).toInt()
-            // The record keeps only its expiry, so the full length comes from
-            // the item that grants it — which is where it is defined anyway,
-            // and avoids migrating a stored column to hold a constant.
-            val total = ((item?.effectMinutes ?: 0) * 60_000L).coerceAtLeast(1L)
             EffectBar(
-                icon = if (penalty) Icons.Rounded.WarningAmber else shopItemIcon(item?.id ?: ""),
+                icon = when {
+                    penalty -> Icons.Rounded.WarningAmber
+                    item != null -> shopItemIcon(item.id)
+                    else -> earnedEffectIcon(effect.kind)
+                },
                 label = stringResource(effectLabelRes(effect.kind)),
                 remaining = formatMinutes(minutesLeft),
-                fraction = ((effect.expiresAt - nowMillis).toFloat() / total),
-                tint = if (penalty) Accents.Danger else shopItemTint(item?.id ?: ""),
+                fraction = effect.fractionLeft(nowMillis),
+                tint = when {
+                    penalty -> Accents.Danger
+                    item != null -> shopItemTint(item.id)
+                    else -> Accents.Bright
+                },
                 penalty = penalty,
             )
         }
@@ -505,6 +514,14 @@ private fun effectLabelRes(kind: EffectKind): Int = when (kind) {
     EffectKind.GOOD_VIBES -> R.string.effect_running_good_vibes
     EffectKind.HUNGER_SURGE -> R.string.effect_running_hunger_surge
     EffectKind.EXHAUSTION -> R.string.effect_running_exhaustion
+    EffectKind.DISCOUNT -> R.string.effect_running_discount
+    EffectKind.STASIS -> R.string.effect_running_stasis
+}
+
+/** The two that have no shop item to borrow an icon from. */
+private fun earnedEffectIcon(kind: EffectKind): ImageVector = when (kind) {
+    EffectKind.DISCOUNT -> Icons.Rounded.Sell
+    else -> Icons.Rounded.AcUnit
 }
 
 private fun statusDot(state: PetState): Color = when (state) {

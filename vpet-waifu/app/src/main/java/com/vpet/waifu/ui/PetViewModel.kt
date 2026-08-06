@@ -10,6 +10,7 @@ import com.vpet.waifu.feedback.Cue
 import com.vpet.waifu.feedback.MusicTrack
 import com.vpet.waifu.feedback.PetMusic
 import com.vpet.waifu.feedback.PetSounds
+import com.vpet.waifu.domain.Chore
 import com.vpet.waifu.domain.Focus
 import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.Occupation
@@ -155,6 +156,15 @@ class PetViewModel @Inject constructor(
     fun cancelOccupation() = act(Cue.TAP) { repository.cancelOccupation() }
 
     fun buy(item: ShopItem) = act(Cue.COIN) { repository.buy(item) }
+
+    /** The day's odd jobs: three quests, the chores, and what turns up. */
+    fun claimQuest(index: Int) = act(Cue.FANFARE) { repository.claimQuest(index) }
+
+    fun doChore(chore: Chore) = act(Cue.COIN) { repository.doChore(chore) }
+
+    fun claimFind() = act(Cue.COIN) { repository.claimFind() }
+
+    fun stake(amount: Int) = act(Cue.TAP) { repository.stake(amount) }
 
     /** The one purchase worth a fanfare: it is kept. */
     fun buyUpgrade(upgrade: Upgrade) = act(Cue.FANFARE) { repository.buyUpgrade(upgrade) }

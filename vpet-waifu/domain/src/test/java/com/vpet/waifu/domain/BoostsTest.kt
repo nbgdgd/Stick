@@ -144,16 +144,21 @@ class BoostsTest {
         val baseline = sim.startOccupation(snapshot(), shift, T0)
         val hasted = sim.buy(baseline, haste, T0)
 
-        // A 60-minute shift under a 30-minute haste: every covered minute
-        // counts double, so the bell rings at the 30-minute mark.
-        val doneAt = firstFreeMinute(hasted, limit = 70)
-        assertTrue("finished at minute $doneAt", doneAt in 29..31)
-        assertEquals(shift.durationMinutes.toLong(), 60L)
+        // Every minute the haste covers counts double, so a shift finishes in
+        // half its length — expressed against the catalogue rather than a
+        // hard-coded 30, because the durations are balance and move.
+        val half = shift.durationMinutes / 2
+        val doneAt = firstFreeMinute(hasted, limit = shift.durationMinutes + 10)
+        assertTrue("finished at minute $doneAt, expected about $half", doneAt in (half - 1)..(half + 1))
+        // The boost has to outlast the run it is shortening, or this is
+        // measuring the haste expiring rather than the shift ending.
+        assertTrue("haste must cover the whole hasted run", haste.effectMinutes >= half)
 
         // …and at the full shift's pay, not half of it. The haste run spent
         // its price up front, so compare what the shift itself brought in.
-        val baselineEnd = runFor(baseline, 65)
-        val hastedEnd = runFor(hasted, 65)
+        val fullRun = shift.durationMinutes + 5
+        val baselineEnd = runFor(baseline, fullRun)
+        val hastedEnd = runFor(hasted, fullRun)
         val earnedBaseline = baselineEnd.progress.money - 2_000
         val earnedHasted = hastedEnd.progress.money - (2_000 - haste.price)
         assertTrue(

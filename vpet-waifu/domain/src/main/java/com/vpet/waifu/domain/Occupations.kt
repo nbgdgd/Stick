@@ -52,6 +52,17 @@ data class Occupation(
  *
  * The same idea in study: school is the efficient one, university the one that
  * gets a lot done at once while making her miserable.
+ *
+ * **Every duration here is half what it was**, and so is every payout, energy
+ * cost and mood cost — the rate per hour is untouched, only the granularity
+ * changed. The old shortest job was half an hour and the longest three, which
+ * assumed a player who opens the app twice a day; the actual rhythm is a glance
+ * every twenty minutes, and a game whose shortest commitment outlasts the
+ * session is a game you close mid-task. Cutting the grain in half without
+ * touching the wage means the same money for the same hour, arriving at a pace
+ * somebody is present for. The relative shape survives intact: the café is
+ * still the best rate, the office still the one you set going and forget, the
+ * idol stage still an evening committed.
  */
 object Occupations {
 
@@ -61,40 +72,81 @@ object Occupations {
         // and the office the gentlest energy drain, so no tier obsoletes another.
         Occupation(
             "cafe", OccupationKind.WORK, requiredLevel = 1,
-            durationMinutes = 30, energyCost = 15f, payout = 105, moodCost = -5f,
+            durationMinutes = 15, energyCost = 8f, payout = 53, moodCost = -3f,
         ),
         Occupation(
             "shop", OccupationKind.WORK, requiredLevel = 3,
-            durationMinutes = 60, energyCost = 24f, payout = 195, moodCost = -15f,
+            durationMinutes = 30, energyCost = 12f, payout = 98, moodCost = -8f,
         ),
         Occupation(
             "office", OccupationKind.WORK, requiredLevel = 6,
-            durationMinutes = 120, energyCost = 46f, payout = 360, moodCost = -55f,
+            durationMinutes = 60, energyCost = 23f, payout = 180, moodCost = -28f,
         ),
         Occupation(
             "idol", OccupationKind.WORK, requiredLevel = 10,
-            durationMinutes = 180, energyCost = 88f, payout = 620, moodCost = -100f,
+            durationMinutes = 90, energyCost = 44f, payout = 310, moodCost = -50f,
         ),
     )
 
     val STUDY: List<Occupation> = listOf(
         Occupation(
             "school", OccupationKind.STUDY, requiredLevel = 1,
-            durationMinutes = 30, energyCost = 12f, payout = 62, moodCost = 3f,
+            durationMinutes = 15, energyCost = 6f, payout = 31, moodCost = 2f,
         ),
         Occupation(
             "course", OccupationKind.STUDY, requiredLevel = 4,
-            durationMinutes = 60, energyCost = 22f, payout = 115, moodCost = 7f,
+            durationMinutes = 30, energyCost = 11f, payout = 58, moodCost = 4f,
         ),
         Occupation(
             "university", OccupationKind.STUDY, requiredLevel = 8,
-            durationMinutes = 120, energyCost = 40f, payout = 215, moodCost = 20f,
+            durationMinutes = 60, energyCost = 20f, payout = 108, moodCost = 10f,
         ),
     )
 
     val ALL: List<Occupation> = WORK + STUDY
 
     fun byId(id: String?): Occupation? = ALL.firstOrNull { it.id == id }
+}
+
+/**
+ * The milestones inside a shift.
+ *
+ * Wages already accrue every simulated minute, which is the right arithmetic
+ * and an invisible one: a number in a corner creeping up by ones is not an
+ * event, and a shift with no events is a progress bar you watch. A checkpoint
+ * is the event — a third of the way, two thirds of the way, something happens.
+ *
+ * What it pays is **mood, and only mood**. Two other designs were tried and
+ * both were quietly wrong:
+ *
+ *  - *A slice of the wage, held back and handed over in lumps.* Rounding a
+ *    slice off an integer payout loses coins, so the shift stops being worth
+ *    what the catalogue says it is; and a flat lump on a shift whose wage
+ *    scales with her mood pays full rate at the milestones of a miserable
+ *    shift.
+ *  - *A point of attachment.* A shift already grants [Bond.SHIFT] at the end,
+ *    so this was paying twice for one shift — and bond is the gauge that is
+ *    supposed to take weeks. Worse, it was load-bearing elsewhere: the extra
+ *    points tipped her over the first story chapter's threshold, and the two
+ *    chapters that then fired put 150 coins in the wallet that no shift had
+ *    earned. A reward that silently accelerates a different system is not a
+ *    small reward, it is a bug with a friendly name.
+ *
+ * Mood has neither problem, and it is not a token either: it feeds straight
+ * into [PetSimulation.qualityFor], so on a long shift — where mood drains far
+ * enough to threaten the tier the wage is multiplied by — two nudges are a real
+ * defence of the payout rather than a decoration.
+ */
+object Shifts {
+
+    /** How far through the shift each checkpoint lands. */
+    val MARKS: List<Float> = listOf(1f / 3f, 2f / 3f)
+
+    /** What crossing one is worth, in mood. */
+    const val MOOD = 4f
+
+    /** How many checkpoints a session at [progress] has passed. */
+    fun passed(progress: Float): Int = MARKS.count { progress >= it }
 }
 
 /** How well a finished session went — drives the payout and the result card. */
@@ -121,6 +173,10 @@ data class ActivitySession(
     val paidOut: Int = 0,
     val accruedExp: Float = 0f,
     val paidExp: Int = 0,
+    /** How many of [Shifts.MARKS] have already been handed over. */
+    val checkpointsPaid: Int = 0,
+    /** Money staked on this shift going well — see [Stakes]. */
+    val stake: Int = 0,
 ) {
     fun remainingMillis(nowMillis: Long): Long = (endsAt - nowMillis).coerceAtLeast(0)
 

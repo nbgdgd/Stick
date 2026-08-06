@@ -123,6 +123,25 @@ data class PetStateEntity(
     val dayOffDay: Long = 0,
     /** What the check-in paid, until the player has been shown it. */
     val pendingDaily: Int = 0,
+    /** Considered pats, counted for the daily quest that asks for them. */
+    val patsGiven: Int = 0,
+    /** The arcade's day, the games played in it, and the clean-round run. */
+    val arcadeDay: Long = 0,
+    val arcadePlayed: Int = 0,
+    val arcadeStreak: Int = 0,
+    val luckyGames: Int = 0,
+    /** Today's quests: the day, the three baselines, the claimed bitmask. */
+    val questDay: Long = 0,
+    /** Comma-separated, one per quest — flat like every other list here. */
+    val questBaselines: String = "",
+    val questClaimed: Int = 0,
+    /** When the next thing turns up around the flat. */
+    val findReadyAt: Long = 0,
+    /** `id:at` pairs, comma separated — when each chore was last done. */
+    val choreDoneAt: String = "",
+    /** The checkpoints already handed over, and the money riding on the shift. */
+    val sessionCheckpointsPaid: Int = 0,
+    val sessionStake: Int = 0,
 ) {
     companion object {
         const val SINGLETON_ID = 0
@@ -145,6 +164,8 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
             paidOut = sessionPaidOut,
             accruedExp = sessionAccruedExp,
             paidExp = sessionPaidExp,
+            checkpointsPaid = sessionCheckpointsPaid.coerceAtLeast(0),
+            stake = sessionStake.coerceAtLeast(0),
         )
     },
     effects = decodeEffects(effects),
@@ -208,6 +229,16 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
     lastLoginDay = lastLoginDay.coerceAtLeast(0),
     dayOffDay = dayOffDay.coerceAtLeast(0),
     pendingDaily = pendingDaily.coerceAtLeast(0),
+    patsGiven = patsGiven.coerceAtLeast(0),
+    arcadeDay = arcadeDay.coerceAtLeast(0),
+    arcadePlayed = arcadePlayed.coerceAtLeast(0),
+    arcadeStreak = arcadeStreak.coerceAtLeast(0),
+    luckyGames = luckyGames.coerceAtLeast(0),
+    questDay = questDay.coerceAtLeast(0),
+    questBaselines = decodeInts(questBaselines),
+    questClaimed = questClaimed.coerceAtLeast(0),
+    findReadyAt = findReadyAt.coerceAtLeast(0),
+    choreDoneAt = decodeChores(choreDoneAt),
 )
 
 fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
@@ -226,6 +257,8 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     sessionPaidOut = session?.paidOut ?: 0,
     sessionAccruedExp = session?.accruedExp ?: 0f,
     sessionPaidExp = session?.paidExp ?: 0,
+    sessionCheckpointsPaid = session?.checkpointsPaid ?: 0,
+    sessionStake = session?.stake ?: 0,
     effects = encodeEffects(effects),
     outcomeOccupationId = lastOutcome?.occupationId,
     outcomeKind = lastOutcome?.kind?.name,
@@ -281,7 +314,37 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     lastLoginDay = lastLoginDay,
     dayOffDay = dayOffDay,
     pendingDaily = pendingDaily,
+    patsGiven = patsGiven,
+    arcadeDay = arcadeDay,
+    arcadePlayed = arcadePlayed,
+    arcadeStreak = arcadeStreak,
+    luckyGames = luckyGames,
+    questDay = questDay,
+    questBaselines = questBaselines.joinToString(","),
+    questClaimed = questClaimed,
+    findReadyAt = findReadyAt,
+    choreDoneAt = choreDoneAt.entries.joinToString(",") { "${it.key}:${it.value}" },
 )
+
+/** Flat integer list, like every other list in this table. Bad entries vanish. */
+private fun decodeInts(raw: String): List<Int> =
+    raw.split(',').filter { it.isNotBlank() }.mapNotNull { it.trim().toIntOrNull() }
+
+/**
+ * `id:at` pairs. Chore ids are hand-written constants with no punctuation in
+ * them, so the separators cannot appear inside a field — the same assumption
+ * the journal column makes, and the same reason it is safe.
+ */
+private fun decodeChores(raw: String): Map<String, Long> =
+    raw.split(',')
+        .filter { it.isNotBlank() }
+        .mapNotNull { entry ->
+            val parts = entry.split(':')
+            if (parts.size != 2) return@mapNotNull null
+            val at = parts[1].toLongOrNull() ?: return@mapNotNull null
+            parts[0] to at
+        }
+        .toMap()
 
 // The diary rides in one text column, like the effects: `kind:detail:amount:at`
 // entries joined by `|`. Details are plain ids and enum names, so the
@@ -309,15 +372,25 @@ private fun decodeIds(raw: String): Set<String> =
     raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
 
 private fun encodeEffects(effects: List<ActiveEffect>): String =
-    effects.joinToString(",") { "${it.kind.name}:${it.expiresAt}" }
+    effects.joinToString(",") { "${it.kind.name}:${it.expiresAt}:${it.startedAt}" }
 
+/**
+ * Reads both shapes.
+ *
+ * `KIND:expiresAt` is what every build before the earned buffs wrote, and a row
+ * upgraded from one of those still has effects mid-flight. They decode with a
+ * start of zero, which [ActiveEffect.fractionLeft] reads as "unknown" and draws
+ * full rather than as a bar that has somehow already run out.
+ */
 private fun decodeEffects(raw: String): List<ActiveEffect> =
     raw.split(',')
         .filter { it.isNotBlank() }
         .mapNotNull { entry ->
-            val kind = enumOrNull<EffectKind>(entry.substringBefore(':')) ?: return@mapNotNull null
-            val expiry = entry.substringAfter(':', "").toLongOrNull() ?: return@mapNotNull null
-            ActiveEffect(kind, expiry)
+            val parts = entry.split(':')
+            if (parts.size < 2) return@mapNotNull null
+            val kind = enumOrNull<EffectKind>(parts[0]) ?: return@mapNotNull null
+            val expiry = parts[1].toLongOrNull() ?: return@mapNotNull null
+            ActiveEffect(kind, expiry, parts.getOrNull(2)?.toLongOrNull() ?: 0L)
         }
 
 private inline fun <reified T : Enum<T>> enumOr(name: String?, fallback: T): T =

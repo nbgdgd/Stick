@@ -506,6 +506,10 @@ private fun EffectChips(item: ShopItem) {
             EffectKind.GOOD_VIBES -> add(
                 Triple(Icons.Rounded.Favorite, label(R.string.effect_good_vibes, formatMinutes(item.effectMinutes)), shopItemTint(item.id)),
             )
+            // Earned, never sold — see EARNED_EFFECTS. Listed so the compiler
+            // keeps this exhaustive: the day one of them does go on sale, this
+            // is the line that has to be written rather than a silent gap.
+            EffectKind.DISCOUNT, EffectKind.STASIS -> Unit
             null -> Unit
         }
     }

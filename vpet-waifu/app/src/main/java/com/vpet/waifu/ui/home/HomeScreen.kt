@@ -97,6 +97,28 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Medication
+import androidx.compose.material.icons.rounded.NightsStay
+import androidx.compose.material.icons.rounded.RamenDining
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Today
+import androidx.compose.material.icons.rounded.Work
+import com.vpet.waifu.domain.Advice
+import com.vpet.waifu.domain.AdviceKind
+import com.vpet.waifu.domain.AdviceReason
+import com.vpet.waifu.domain.Advisor
+import com.vpet.waifu.domain.StatKind
 import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.domain.Dialogue
@@ -408,6 +430,10 @@ fun HomeScreen(
         }
 
         ActiveBoosts(snapshot, nowMillis)
+
+        // One suggestion, or none. Below the things that are *happening* and
+        // above the gauges, because it is a reading of those gauges.
+        AdviceCard(snapshot, nowMillis, tuning)
 
         StatsCard(snapshot)
         ProgressCard(snapshot, simulation, tuning)
@@ -1008,6 +1034,145 @@ private fun ValuePop(trigger: Int, text: String, tint: Color) {
  * The cheapest retention mechanic in the genre and the game had none of it:
  * a missed day cost nothing and a kept one gave nothing.
  */
+
+/**
+ * The single next thing worth doing.
+ *
+ * Recomputed from the stats on every recomposition rather than on a timer, so
+ * it answers the board as it is now — feed her and the card changes under your
+ * thumb, which is the only way a suggestion earns any trust.
+ *
+ * Two rules it exists to keep. **One card or none**: an interface where three
+ * things glow has recommended nothing, so [Advisor] returns a single winner and
+ * this draws exactly it. And **it always says why**: a game that highlights a
+ * button without explaining is steering rather than helping, and a player who
+ * works that out stops believing every highlight it ever shows. The reason line
+ * is not a nicety, it is the thing that makes the badge honest.
+ *
+ * The glow breathes instead of blinking. A blinking border on a screen you are
+ * meant to sit and watch is an alarm.
+ */
+@Composable
+private fun AdviceCard(snapshot: PetSnapshot, nowMillis: Long, tuning: PetTuning) {
+    val advice = remember(snapshot, nowMillis) { Advisor.best(snapshot, nowMillis, tuning) }
+    var explaining by remember { mutableStateOf(false) }
+
+    AnimatedVisibility(
+        visible = advice != null,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+    ) {
+        val shown = advice ?: return@AnimatedVisibility
+        val tint = if (shown.reason == AdviceReason.CRITICAL || shown.reason == AdviceReason.SICK) {
+            Accents.Danger
+        } else {
+            Accents.Bright
+        }
+        val glow by rememberInfiniteTransition(label = "advice").animateFloat(
+            initialValue = 0.22f,
+            targetValue = 0.55f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1_800, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "glow",
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(tint.copy(alpha = 0.08f))
+                .border(1.dp, tint.copy(alpha = glow), RoundedCornerShape(14.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { explaining = !explaining },
+                )
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = shown.kind.icon(),
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.advice_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = tint,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = stringResource(shown.kind.titleRes()),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Accents.Text,
+                    )
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
+                    contentDescription = stringResource(R.string.advice_why),
+                    tint = Accents.TextDim,
+                    modifier = Modifier.size(17.dp),
+                )
+            }
+            AnimatedVisibility(visible = explaining) {
+                Column {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(shown.explanationRes()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Accents.TextDim,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun AdviceKind.icon(): ImageVector = when (this) {
+    AdviceKind.MEDICINE -> Icons.Rounded.Medication
+    AdviceKind.FEED -> Icons.Rounded.RamenDining
+    AdviceKind.SLEEP -> Icons.Rounded.NightsStay
+    AdviceKind.PAT -> Icons.Rounded.Favorite
+    AdviceKind.PLAY -> Icons.Rounded.SportsEsports
+    AdviceKind.WORK -> Icons.Rounded.Work
+    AdviceKind.STUDY -> Icons.Rounded.School
+    AdviceKind.QUEST -> Icons.Rounded.Today
+    AdviceKind.CHORE -> Icons.Rounded.CleaningServices
+    AdviceKind.FIND -> Icons.Rounded.AutoAwesome
+}
+
+@StringRes
+private fun AdviceKind.titleRes(): Int = when (this) {
+    AdviceKind.MEDICINE -> R.string.advice_medicine
+    AdviceKind.FEED -> R.string.advice_feed
+    AdviceKind.SLEEP -> R.string.advice_sleep
+    AdviceKind.PAT -> R.string.advice_pat
+    AdviceKind.PLAY -> R.string.advice_play
+    AdviceKind.WORK -> R.string.advice_work
+    AdviceKind.STUDY -> R.string.advice_study
+    AdviceKind.QUEST -> R.string.advice_quest
+    AdviceKind.CHORE -> R.string.advice_chore
+    AdviceKind.FIND -> R.string.advice_find
+}
+
+/** Why this one won — the half of the badge that makes it advice. */
+@StringRes
+private fun Advice.explanationRes(): Int = when (reason) {
+    AdviceReason.SICK -> R.string.advice_why_sick
+    AdviceReason.UNCOLLECTED -> R.string.advice_why_uncollected
+    AdviceReason.CRITICAL -> when (stat) {
+        StatKind.HUNGER -> R.string.advice_why_hunger
+        StatKind.ENERGY -> R.string.advice_why_energy
+        else -> R.string.advice_why_mood
+    }
+    AdviceReason.EFFICIENT -> R.string.advice_why_efficient
+}
+
 @Composable
 private fun DailyCard(snapshot: PetSnapshot, onDismiss: () -> Unit) {
     val comeback = snapshot.journal.lastOrNull()?.kind == JournalKind.COMEBACK

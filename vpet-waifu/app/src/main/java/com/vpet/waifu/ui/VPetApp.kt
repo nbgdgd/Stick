@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.AlertDialog
@@ -83,6 +84,7 @@ import com.vpet.waifu.ui.components.LocalRefusal
 import com.vpet.waifu.ui.bondNameRes
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PrimaryButton
+import com.vpet.waifu.ui.components.TrophyToast
 import com.vpet.waifu.ui.components.rememberHeartTapState
 import com.vpet.waifu.ui.theme.Accents
 import com.vpet.waifu.ui.theme.StatColors
@@ -92,6 +94,7 @@ import com.vpet.waifu.ui.game.GameScreen
 import com.vpet.waifu.ui.home.HomeScreen
 import com.vpet.waifu.ui.profile.ProfileScreen
 import com.vpet.waifu.ui.settings.SettingsScreen
+import com.vpet.waifu.ui.earn.EarnScreen
 import com.vpet.waifu.ui.shop.ShopScreen
 import com.vpet.waifu.ui.shop.ShopShelf
 import com.vpet.waifu.ui.shop.ShopSort
@@ -110,6 +113,7 @@ private const val IDLE_TICK_MILLIS = 5_000L
 private enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
     HOME(R.string.tab_home, Icons.Rounded.Home),
     ACTIVITIES(R.string.tab_activities, Icons.Rounded.Work),
+    EARN(R.string.tab_earn, Icons.Rounded.Savings),
     SHOP(R.string.tab_shop, Icons.Rounded.Storefront),
     GAME(R.string.tab_game, Icons.Rounded.SportsEsports),
     HER(R.string.tab_her, Icons.Rounded.Favorite),
@@ -131,6 +135,21 @@ fun VPetApp(
 ) {
     val snapshot = state.snapshot ?: return
     val milestone by viewModel.milestone.collectAsStateWithLifecycle()
+
+    /**
+     * The oldest trophy earned but never announced.
+     *
+     * One at a time and in cabinet order, so unlocking three at once — which a
+     * long absence really can do — is a short procession rather than three
+     * cards fighting for the same strip of screen. The next one appears as soon
+     * as the last is marked, because marking it changes `announcedTrophies` and
+     * this recomputes.
+     */
+    val pendingTrophy = remember(snapshot, state.settings.announcedTrophies) {
+        achievementsFor(snapshot).firstOrNull {
+            it.earned && it.titleRes.toString() !in state.settings.announcedTrophies
+        }
+    }
 
     // Decoding a sheet is a couple of megabytes of RGBA, so it happens once
     // per selected pack and is remembered for as long as the choice stands.
@@ -201,6 +220,7 @@ fun VPetApp(
             )
         },
     ) { insets ->
+      Box(Modifier.fillMaxSize()) {
         // Tabs slide in the direction they sit in the bar, so the four screens
         // feel like places rather than a single view swapping its contents.
         AnimatedContent(
@@ -255,6 +275,17 @@ fun VPetApp(
                     onCancel = viewModel::cancelOccupation,
                     onCategoryTap = viewModel::categoryTap,
                 )
+                Tab.EARN -> EarnScreen(
+                    snapshot = snapshot,
+                    simulation = viewModel.simulation,
+                    nowMillis = nowMillis,
+                    wallet = walletShown,
+                    walletSettled = walletSettled,
+                    onClaimQuest = viewModel::claimQuest,
+                    onDoChore = viewModel::doChore,
+                    onClaimFind = viewModel::claimFind,
+                    onCategoryTap = viewModel::categoryTap,
+                )
                 Tab.SHOP -> ShopScreen(
                     snapshot = snapshot,
                     nowMillis = nowMillis,
@@ -290,6 +321,18 @@ fun VPetApp(
                 )
             }
         }
+
+        // Over everything, pinned to the top: the trophy that just landed.
+        // Inside the Box rather than the Scaffold so it floats above whichever
+        // tab is on screen without any of them having to know about it.
+        TrophyToast(
+            trophy = pendingTrophy,
+            onDismiss = {
+                pendingTrophy?.let { viewModel.markTrophiesAnnounced(setOf(it.titleRes.toString())) }
+            },
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
+        )
+      }
 
         snapshot.lastOutcome?.let { outcome ->
             OutcomeDialog(outcome, viewModel::acknowledgeOutcome)

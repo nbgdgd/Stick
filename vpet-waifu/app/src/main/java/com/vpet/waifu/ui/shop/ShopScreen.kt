@@ -72,6 +72,7 @@ import com.vpet.waifu.domain.ShopItem
 import com.vpet.waifu.domain.Upgrade
 import com.vpet.waifu.domain.UpgradeKind
 import com.vpet.waifu.domain.Upgrades
+import com.vpet.waifu.ui.components.BuffStrip
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.IconTile
 import com.vpet.waifu.ui.components.LevelBadge
@@ -213,6 +214,14 @@ fun ShopScreen(
                 MoneyPill(amount = wallet, settled = walletSettled)
             }
         }
+
+        // Right under the title on the shop especially: a discount that is
+        // running is the single most useful thing to know before spending.
+        BuffStrip(
+            snapshot = snapshot,
+            nowMillis = nowMillis,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+        )
 
         ShelfChips(selected = shelf, onSelect = onSelectShelf)
 

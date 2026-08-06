@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -43,6 +44,16 @@ data class PetSettings(
     val shopCategory: String = "",
     /** …and how that shelf is sorted. */
     val shopSort: String = "",
+    /**
+     * Trophies the player has already been congratulated for.
+     *
+     * A preference and not part of the save: the cabinet itself is derived
+     * from the counters and can never be lost, so this is only about whether a
+     * card has been *shown* — which is a fact about this phone, not about her.
+     * Names rather than indices, so reordering the list or inserting one in the
+     * middle cannot re-announce a trophy earned months ago.
+     */
+    val announcedTrophies: Set<String> = emptySet(),
 )
 
 /**
@@ -68,6 +79,7 @@ class PetPreferences @Inject constructor(
             lastSeenAt = it[LAST_SEEN_AT] ?: 0L,
             shopCategory = it[SHOP_CATEGORY] ?: "",
             shopSort = it[SHOP_SORT] ?: "",
+            announcedTrophies = it[TROPHIES] ?: emptySet(),
         )
     }
 
@@ -117,6 +129,12 @@ class PetPreferences @Inject constructor(
         context.dataStore.edit { it[SHOP_SORT] = id }
     }
 
+    /** Remembers that [ids] have been celebrated, so they are not again. */
+    suspend fun markTrophiesAnnounced(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        context.dataStore.edit { it[TROPHIES] = (it[TROPHIES] ?: emptySet()) + ids }
+    }
+
     companion object {
         const val MAX_NAME_LENGTH = 16
 
@@ -130,5 +148,6 @@ class PetPreferences @Inject constructor(
         private val LAST_SEEN_AT = longPreferencesKey("last_seen_at")
         private val SHOP_CATEGORY = stringPreferencesKey("shop_category")
         private val SHOP_SORT = stringPreferencesKey("shop_sort")
+        private val TROPHIES = stringSetPreferencesKey("announced_trophies")
     }
 }

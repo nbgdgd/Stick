@@ -83,6 +83,7 @@ import com.vpet.waifu.ui.character.PetFigure
 import com.vpet.waifu.ui.character.PetPalette
 import com.vpet.waifu.ui.character.PetSkin
 import com.vpet.waifu.ui.character.workPropFor
+import com.vpet.waifu.ui.components.BuffStrip
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PanelCard
@@ -239,6 +240,8 @@ fun GameScreen(
                 tint = StatColors.Mood,
             )
         }
+
+        BuffStrip(snapshot = snapshot, nowMillis = nowMillis)
 
         GameHeader(
             running = running,

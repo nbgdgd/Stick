@@ -260,6 +260,14 @@ class PetViewModel @Inject constructor(
     fun setShopSort(id: String) = act(Cue.TAP) { preferences.setShopSort(id) }
 
     /**
+     * Marks trophies as celebrated.
+     *
+     * Silent — no sound cue: the toast that triggers this already plays one,
+     * and [act] would fire a second the moment the card is dismissed.
+     */
+    fun markTrophiesAnnounced(ids: Set<String>) = act { preferences.markTrophiesAnnounced(ids) }
+
+    /**
      * Writes the off-app copy of the save.
      *
      * Called when the app goes to the background, which is both the moment the

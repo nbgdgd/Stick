@@ -53,6 +53,7 @@ import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.IconTile
 import com.vpet.waifu.ui.components.GainPop
 import com.vpet.waifu.ui.components.LevelBadge
+import com.vpet.waifu.ui.components.BuffStrip
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PanelCard
@@ -102,6 +103,8 @@ fun ActivitiesScreen(
                 MoneyPill(amount = wallet, settled = walletSettled)
             }
         }
+
+        item { BuffStrip(snapshot = snapshot, nowMillis = nowMillis) }
 
         if (snapshot.isBusy) {
             stickyHeader {

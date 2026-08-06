@@ -160,6 +160,8 @@ object SaveCodec {
         put("choreDoneAt", entity.choreDoneAt)
         put("sessionCheckpointsPaid", entity.sessionCheckpointsPaid)
         put("sessionStake", entity.sessionStake)
+        put("sceneDay", entity.sceneDay)
+        put("sceneAnswered", entity.sceneAnswered)
     }
 
     private fun entityOf(save: JSONObject): PetStateEntity = PetStateEntity(
@@ -249,6 +251,8 @@ object SaveCodec {
         choreDoneAt = save.optString("choreDoneAt"),
         sessionCheckpointsPaid = save.optInt("sessionCheckpointsPaid"),
         sessionStake = save.optInt("sessionStake"),
+        sceneDay = save.optLong("sceneDay"),
+        sceneAnswered = save.optInt("sceneAnswered"),
     )
 
     /**

@@ -19,6 +19,14 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        // The launcher name comes from here rather than straight from
+        // strings.xml, so a build type can override it. Two builds that install
+        // side by side under different applicationIds still looked identical in
+        // the launcher — same name, same icon — which is how somebody ends up
+        // testing yesterday's build and reporting that nothing was fixed.
+        manifestPlaceholders["appLabel"] = "@string/app_name"
+
     }
 
     // The store key never lives in the repo: the four RELEASE_* values arrive
@@ -47,6 +55,7 @@ android {
             // fighting it, and neither can overwrite the other's save.
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            manifestPlaceholders["appLabel"] = "Вайфу DEBUG"
         }
         /**
          * A build to hand somebody, that will install whatever is already on
@@ -63,6 +72,7 @@ android {
             applicationIdSuffix = ".preview"
             versionNameSuffix = "-preview"
             signingConfig = signingConfigs.getByName("debug")
+            manifestPlaceholders["appLabel"] = "Вайфу TEST"
             isMinifyEnabled = true
             isShrinkResources = true
             matchingFallbacks += listOf("release")

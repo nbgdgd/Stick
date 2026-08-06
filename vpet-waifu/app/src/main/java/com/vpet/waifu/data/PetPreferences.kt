@@ -54,6 +54,15 @@ data class PetSettings(
      * middle cannot re-announce a trophy earned months ago.
      */
     val announcedTrophies: Set<String> = emptySet(),
+    /**
+     * When each trophy was first seen earned, as `id:millis` pairs.
+     *
+     * Best-effort by construction and honestly so: the cabinet is derived from
+     * counters, so a trophy earned on a build that did not record dates has no
+     * date to recover. The list shows what it knows and stays quiet about the
+     * rest rather than inventing a plausible day.
+     */
+    val trophyDates: Map<String, Long> = emptyMap(),
 )
 
 /**
@@ -80,6 +89,7 @@ class PetPreferences @Inject constructor(
             shopCategory = it[SHOP_CATEGORY] ?: "",
             shopSort = it[SHOP_SORT] ?: "",
             announcedTrophies = it[TROPHIES] ?: emptySet(),
+            trophyDates = decodeDates(it[TROPHY_DATES] ?: ""),
         )
     }
 
@@ -129,10 +139,18 @@ class PetPreferences @Inject constructor(
         context.dataStore.edit { it[SHOP_SORT] = id }
     }
 
-    /** Remembers that [ids] have been celebrated, so they are not again. */
-    suspend fun markTrophiesAnnounced(ids: Set<String>) {
+    /** Remembers that [ids] have been celebrated, and when, so they are not again. */
+    suspend fun markTrophiesAnnounced(ids: Set<String>, atMillis: Long) {
         if (ids.isEmpty()) return
-        context.dataStore.edit { it[TROPHIES] = (it[TROPHIES] ?: emptySet()) + ids }
+        context.dataStore.edit { prefs ->
+            prefs[TROPHIES] = (prefs[TROPHIES] ?: emptySet()) + ids
+            // First sighting wins: re-announcing can never happen, but a
+            // corrupted preference file re-running this must not rewrite a date
+            // that is already the truth.
+            val known = decodeDates(prefs[TROPHY_DATES] ?: "")
+            val merged = known + ids.filter { it !in known }.associateWith { atMillis }
+            prefs[TROPHY_DATES] = merged.entries.joinToString(",") { "${it.key}:${it.value}" }
+        }
     }
 
     companion object {
@@ -149,5 +167,18 @@ class PetPreferences @Inject constructor(
         private val SHOP_CATEGORY = stringPreferencesKey("shop_category")
         private val SHOP_SORT = stringPreferencesKey("shop_sort")
         private val TROPHIES = stringSetPreferencesKey("announced_trophies")
+        private val TROPHY_DATES = stringPreferencesKey("trophy_dates")
+
+        /** `id:millis` pairs. Ids are resource ints, so no separator can appear in one. */
+        private fun decodeDates(raw: String): Map<String, Long> =
+            raw.split(',')
+                .filter { it.isNotBlank() }
+                .mapNotNull { entry ->
+                    val parts = entry.split(':')
+                    if (parts.size != 2) return@mapNotNull null
+                    val at = parts[1].toLongOrNull() ?: return@mapNotNull null
+                    parts[0] to at
+                }
+                .toMap()
     }
 }

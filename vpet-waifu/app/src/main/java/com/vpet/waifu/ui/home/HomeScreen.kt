@@ -97,6 +97,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
+import com.vpet.waifu.domain.Stakes
+import androidx.compose.material.icons.rounded.Casino
+import com.vpet.waifu.domain.Shifts
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -125,6 +128,7 @@ import com.vpet.waifu.domain.Dialogue
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.domain.PetSnapshot
+import com.vpet.waifu.domain.SceneOption
 import com.vpet.waifu.domain.Anniversaries
 import com.vpet.waifu.domain.JournalEntry
 import com.vpet.waifu.domain.JournalKind
@@ -150,6 +154,7 @@ import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.components.EffectBar
 import com.vpet.waifu.ui.components.EffectChip
 import com.vpet.waifu.ui.components.EventCard
+import com.vpet.waifu.ui.components.SceneCard
 import com.vpet.waifu.ui.components.GainPop
 import com.vpet.waifu.ui.components.LevelRing
 import com.vpet.waifu.ui.components.MoneyPill
@@ -214,6 +219,8 @@ fun HomeScreen(
     onAcknowledgeStory: () -> Unit,
     onAcknowledgeDaily: () -> Unit,
     onSeen: () -> Unit,
+    onAnswerScene: (SceneOption) -> Unit = {},
+    onStake: (Int) -> Unit = {},
     skin: PetSkin = PetSkin.Modern,
     modifier: Modifier = Modifier,
 ) {
@@ -425,8 +432,14 @@ fun HomeScreen(
             EventCard(event, onDismissEvent)
         }
 
+        // The day's question. Above the shift card because it is the one thing
+        // on this screen that is waiting on the player rather than on a clock.
+        snapshot.sceneToday?.let { scene ->
+            SceneCard(scene = scene, level = snapshot.level, onAnswer = onAnswerScene)
+        }
+
         AnimatedVisibility(visible = snapshot.isBusy) {
-            SessionCard(snapshot, simulation, nowMillis, onCancelOccupation)
+            SessionCard(snapshot, simulation, nowMillis, onCancelOccupation, onStake)
         }
 
         ActiveBoosts(snapshot, nowMillis)
@@ -665,6 +678,91 @@ private fun NameDialog(
     )
 }
 
+/**
+ * What she is doing out there, right now.
+ *
+ * Three lines per job, picked by how far through she is, so tapping the bar at
+ * the start and again near the end says two different things. This is the whole
+ * answer to "the wait is an empty timer": the timer is the same, but there is
+ * something behind it to ask.
+ */
+@StringRes
+private fun shiftNarrationRes(occupationId: String, progress: Float): Int {
+    val third = when {
+        progress < 1f / 3f -> 0
+        progress < 2f / 3f -> 1
+        else -> 2
+    }
+    return when (occupationId) {
+        "cafe" -> listOf(R.string.narr_cafe_1, R.string.narr_cafe_2, R.string.narr_cafe_3)
+        "shop" -> listOf(R.string.narr_shop_1, R.string.narr_shop_2, R.string.narr_shop_3)
+        "office" -> listOf(R.string.narr_office_1, R.string.narr_office_2, R.string.narr_office_3)
+        "idol" -> listOf(R.string.narr_idol_1, R.string.narr_idol_2, R.string.narr_idol_3)
+        "school" -> listOf(R.string.narr_school_1, R.string.narr_school_2, R.string.narr_school_3)
+        "course" -> listOf(R.string.narr_course_1, R.string.narr_course_2, R.string.narr_course_3)
+        else -> listOf(R.string.narr_uni_1, R.string.narr_uni_2, R.string.narr_uni_3)
+    }[third]
+}
+
+
+/**
+ * Money on the shift going well.
+ *
+ * Offered once, at the start, and then replaced by what is riding on it. It has
+ * to be a decision made *before* the outcome is knowable, or it is not a bet —
+ * so the row disappears the moment it is taken, and there is no way to add to
+ * it or pull out.
+ *
+ * Three fixed amounts rather than a slider: a slider invites optimising a
+ * number, and the interesting question here is "how confident am I", not "what
+ * is the exact right stake".
+ */
+@Composable
+private fun StakeRow(snapshot: PetSnapshot, onStake: (Int) -> Unit) {
+    val session = snapshot.session ?: return
+    val cap = Stakes.maxStake(snapshot)
+
+    if (session.stake > 0) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Rounded.Casino,
+                contentDescription = null,
+                tint = StatColors.Money,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(
+                    R.string.stake_riding,
+                    session.stake,
+                    (session.stake * Stakes.WIN_RATE).toInt(),
+                    (session.stake * Stakes.LOSS_RATE).toInt(),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = Accents.TextDim,
+            )
+        }
+        return
+    }
+    if (cap <= 0) return
+
+    Column {
+        Text(
+            text = stringResource(R.string.stake_offer),
+            style = MaterialTheme.typography.bodySmall,
+            color = Accents.TextDim,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Quarter, half, the lot — of what she is allowed to stake, not of
+            // the wallet, so the cap is what the buttons are a fraction of.
+            listOf(cap / 4, cap / 2, cap).distinct().filter { it > 0 }.forEach { amount ->
+                OutlineButton(text = "$amount ¥", onClick = { onStake(amount) })
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SessionCard(
@@ -672,6 +770,7 @@ private fun SessionCard(
     simulation: PetSimulation,
     nowMillis: Long,
     onCancel: () -> Unit,
+    onStake: (Int) -> Unit,
 ) {
     val session = snapshot.session ?: return
     val occupation = snapshot.occupation ?: return
@@ -724,7 +823,43 @@ private fun SessionCard(
                 )
             }
             Spacer(Modifier.height(14.dp))
-            StatBarTrack(fraction = session.progress(nowMillis), color = Accents.Bright, height = 7.dp)
+            // The bar, with its checkpoints marked and a tap that says what is
+            // happening. A shift used to be a plain fill: no way to see that
+            // anything happens between clocking on and clocking off, and no way
+            // to ask what she is even doing out there.
+            var narrating by remember { mutableStateOf(false) }
+            val progress = session.progress(nowMillis)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { narrating = !narrating },
+                    ),
+            ) {
+                StatBarTrack(fraction = progress, color = Accents.Bright, height = 7.dp)
+                Canvas(modifier = Modifier.fillMaxWidth().height(7.dp)) {
+                    Shifts.MARKS.forEach { mark ->
+                        val passed = progress >= mark
+                        drawCircle(
+                            color = if (passed) Color.White else Accents.TextDim,
+                            radius = size.height * 0.28f,
+                            center = Offset(size.width * mark, size.height / 2f),
+                        )
+                    }
+                }
+            }
+            AnimatedVisibility(visible = narrating) {
+                Column {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(shiftNarrationRes(occupation.id, progress)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Accents.TextDim,
+                    )
+                }
+            }
             Spacer(Modifier.height(12.dp))
             // Wages are recomputed from her CURRENT mood every simulated
             // minute, so a pat mid-shift is worth real money for every minute
@@ -778,6 +913,8 @@ private fun SessionCard(
                     color = Accents.TextDim,
                 )
             }
+            Spacer(Modifier.height(10.dp))
+            StakeRow(snapshot, onStake)
             Spacer(Modifier.height(14.dp))
             // Full width and on its own line: beside the title it fought the
             // job name for space and both ended up truncated.

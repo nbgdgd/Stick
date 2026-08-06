@@ -53,6 +53,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
+import java.util.Locale
+import java.util.Date
+import java.text.SimpleDateFormat
 import com.vpet.waifu.domain.Bond
 import com.vpet.waifu.domain.Focus
 import com.vpet.waifu.domain.GoalKind
@@ -97,6 +100,8 @@ fun ProfileScreen(
     onWear: (String) -> Unit,
     onCategoryTap: () -> Unit,
     modifier: Modifier = Modifier,
+    /** When each trophy landed, where the app was running to see it. */
+    trophyDates: Map<String, Long> = emptyMap(),
 ) {
     val patting = snapshot.acceptsPat
     LazyColumn(
@@ -152,7 +157,7 @@ fun ProfileScreen(
                 tapEnabled = patting,
             )
         }
-        item { AchievementsCard(snapshot) }
+        item { AchievementsCard(snapshot, trophyDates) }
 
         // The wardrobe earns its place on the page only once there is a
         // choice to make — one default outfit is not a wardrobe.
@@ -527,8 +532,17 @@ private fun StoryCard(snapshot: PetSnapshot) {
  * The full cabinet unfolds on demand instead of wallpapering the screen.
  */
 @OptIn(ExperimentalLayoutApi::class)
+
+/** A trophy's date, short enough to sit on a chip. */
 @Composable
-private fun AchievementsCard(snapshot: PetSnapshot) {
+private fun shortDate(millis: Long): String {
+    val format = remember { SimpleDateFormat("d MMM", Locale.getDefault()) }
+    return remember(millis) { format.format(Date(millis)) }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AchievementsCard(snapshot: PetSnapshot, trophyDates: Map<String, Long>) {
     val trophies = achievementsFor(snapshot)
     val earnedCount = trophies.count { it.earned }
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -577,10 +591,21 @@ private fun AchievementsCard(snapshot: PetSnapshot) {
                     Box(modifier = Modifier.alpha(if (trophy.earned) 1f else 0.55f)) {
                         EffectChip(
                             icon = trophy.icon,
-                            text = if (trophy.earned) {
-                                stringResource(trophy.titleRes)
-                            } else {
-                                "${stringResource(trophy.titleRes)} · ${trophy.current}/${trophy.target}"
+                            text = when {
+                                // The day it landed, when the app was there to
+                                // see it. Silence rather than a guess for the
+                                // ones earned before dates were recorded — an
+                                // invented day in somebody's history is worse
+                                // than an absent one.
+                                trophy.earned -> {
+                                    val at = trophyDates[trophy.titleRes.toString()]
+                                    if (at != null) {
+                                        "${stringResource(trophy.titleRes)} · ${shortDate(at)}"
+                                    } else {
+                                        stringResource(trophy.titleRes)
+                                    }
+                                }
+                                else -> "${stringResource(trophy.titleRes)} · ${trophy.current}/${trophy.target}"
                             },
                             tint = if (trophy.earned) trophy.tint else Accents.TextMuted,
                         )

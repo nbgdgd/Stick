@@ -10,6 +10,7 @@ import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
+import com.vpet.waifu.domain.SceneOption
 import com.vpet.waifu.domain.ShopItem
 import com.vpet.waifu.domain.Upgrade
 import kotlinx.coroutines.flow.Flow
@@ -106,6 +107,10 @@ class PetRepository @Inject constructor(
     }
 
     suspend fun claimFind(): PetSnapshot = mutate(simulation::claimFind)
+
+    suspend fun answerScene(option: SceneOption): PetSnapshot = mutate { current, now ->
+        simulation.answerScene(current, option, now)
+    }
 
     suspend fun stake(amount: Int): PetSnapshot = mutate { current, now ->
         simulation.stake(current, amount, now)

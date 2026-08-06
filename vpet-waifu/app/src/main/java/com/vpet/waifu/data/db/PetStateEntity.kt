@@ -142,6 +142,9 @@ data class PetStateEntity(
     /** The checkpoints already handed over, and the money riding on the shift. */
     val sessionCheckpointsPaid: Int = 0,
     val sessionStake: Int = 0,
+    /** The day today's scene belongs to, and which reply was given. */
+    val sceneDay: Long = 0,
+    val sceneAnswered: Int = 0,
 ) {
     companion object {
         const val SINGLETON_ID = 0
@@ -239,6 +242,8 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
     questClaimed = questClaimed.coerceAtLeast(0),
     findReadyAt = findReadyAt.coerceAtLeast(0),
     choreDoneAt = decodeChores(choreDoneAt),
+    sceneDay = sceneDay.coerceAtLeast(0),
+    sceneAnswered = sceneAnswered.coerceIn(0, 2),
 )
 
 fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
@@ -324,6 +329,8 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     questClaimed = questClaimed,
     findReadyAt = findReadyAt,
     choreDoneAt = choreDoneAt.entries.joinToString(",") { "${it.key}:${it.value}" },
+    sceneDay = sceneDay,
+    sceneAnswered = sceneAnswered,
 )
 
 /** Flat integer list, like every other list in this table. Bad entries vanish. */

@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.Upgrades
 
-@Database(entities = [PetStateEntity::class], version = 9, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 10, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
@@ -213,6 +213,22 @@ abstract class PetDatabase : RoomDatabase() {
         }
 
         /**
+         * The day's scene — one small moment with two ways to answer.
+         *
+         * Both default to 0, which reads as "a day that has not been asked
+         * yet": the next tick rolls today's scene and it arrives unanswered,
+         * which is exactly right for a save upgrading mid-afternoon.
+         */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "sceneDay INTEGER NOT NULL DEFAULT 0",
+                    "sceneAnswered INTEGER NOT NULL DEFAULT 0",
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+            }
+        }
+
+        /**
          * The chain, in order, as one value.
          *
          * A migration that exists but is never handed to the builder is worse
@@ -230,6 +246,7 @@ abstract class PetDatabase : RoomDatabase() {
             MIGRATION_6_7,
             MIGRATION_7_8,
             MIGRATION_8_9,
+            MIGRATION_9_10,
         )
     }
 }

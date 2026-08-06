@@ -260,6 +260,8 @@ fun VPetApp(
                     onDismissEvent = viewModel::acknowledgeEvent,
                     onBuy = viewModel::buy,
                     onAcknowledgeStory = viewModel::acknowledgeStory,
+                    onAnswerScene = viewModel::answerScene,
+                    onStake = viewModel::stake,
                     onAcknowledgeDaily = viewModel::acknowledgeDaily,
                     skin = skin,
                     onSeen = viewModel::markSeen,
@@ -318,6 +320,7 @@ fun VPetApp(
                     onChooseFocus = viewModel::chooseFocus,
                     onWear = viewModel::wear,
                     onCategoryTap = viewModel::categoryTap,
+                    trophyDates = state.settings.trophyDates,
                 )
             }
         }

@@ -16,6 +16,7 @@ import com.vpet.waifu.domain.MiniGame
 import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
+import com.vpet.waifu.domain.SceneOption
 import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.domain.ShopItem
 import com.vpet.waifu.domain.Upgrade
@@ -164,6 +165,8 @@ class PetViewModel @Inject constructor(
 
     fun claimFind() = act(Cue.COIN) { repository.claimFind() }
 
+    fun answerScene(option: SceneOption) = act(Cue.HAPPY) { repository.answerScene(option) }
+
     fun stake(amount: Int) = act(Cue.TAP) { repository.stake(amount) }
 
     /** The one purchase worth a fanfare: it is kept. */
@@ -265,7 +268,8 @@ class PetViewModel @Inject constructor(
      * Silent — no sound cue: the toast that triggers this already plays one,
      * and [act] would fire a second the moment the card is dismissed.
      */
-    fun markTrophiesAnnounced(ids: Set<String>) = act { preferences.markTrophiesAnnounced(ids) }
+    fun markTrophiesAnnounced(ids: Set<String>) =
+        act { preferences.markTrophiesAnnounced(ids, System.currentTimeMillis()) }
 
     /**
      * Writes the off-app copy of the save.

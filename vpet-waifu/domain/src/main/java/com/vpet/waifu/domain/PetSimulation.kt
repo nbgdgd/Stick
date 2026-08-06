@@ -45,7 +45,14 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         // the morning's progress, which is a real thing a phone crossing a
         // timezone can do to somebody halfway through their three jobs.
         if (nowMillis < snapshot.lastTickAt) return tended
-        return tendFinds(tendQuests(tended, nowMillis), nowMillis)
+        return tendScene(tendFinds(tendQuests(tended, nowMillis), nowMillis), nowMillis)
+    }
+
+    /** Rolls the day's scene over. A new day is a new question, unanswered. */
+    private fun tendScene(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
+        val day = Events.dayOf(nowMillis)
+        if (day == snapshot.sceneDay) return snapshot
+        return snapshot.copy(sceneDay = day, sceneAnswered = 0)
     }
 
     /**
@@ -1169,6 +1176,32 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
             // A snack found is a snack eaten; the others are simply pocketed.
             if (kind == FindKind.SNACK) it.withEmote(Emote.EATING, nowMillis, tuning.eatingEmoteMillis) else it
         }
+    }
+
+    /**
+     * Answers the day's scene.
+     *
+     * Applies whichever outcome was picked and closes the question until
+     * tomorrow. Both replies pay — see [Scenes] — so there is nothing here that
+     * needs to refuse a "wrong" answer, and the only guard is against answering
+     * the same day twice.
+     */
+    fun answerScene(snapshot: PetSnapshot, option: SceneOption, nowMillis: Long): PetSnapshot {
+        val current = advanceTo(snapshot, nowMillis)
+        val scene = current.sceneToday ?: return current
+        val outcome = Scenes.outcomeOf(scene, option, current.level)
+        return current.copy(
+            progress = current.progress.plus(money = outcome.money, exp = outcome.exp),
+            totalEarned = current.totalEarned + outcome.money.coerceAtLeast(0),
+            stats = current.stats.adjusted(energyBy = outcome.energy, moodBy = outcome.mood),
+            sceneAnswered = if (option == SceneOption.FIRST) 1 else 2,
+            lastInteractionAt = nowMillis,
+        ).let { if (outcome.bond > 0) it.plusBond(outcome.bond, nowMillis) else it }
+            .withEmote(
+                if (outcome.mood > 0f) Emote.LOVED else Emote.CELEBRATING,
+                nowMillis,
+                tuning.lovedEmoteMillis,
+            )
     }
 
     /**

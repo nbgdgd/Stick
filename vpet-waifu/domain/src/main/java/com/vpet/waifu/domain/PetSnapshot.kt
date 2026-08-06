@@ -152,6 +152,9 @@ data class PetSnapshot(
     val findReadyAt: Long = 0L,
     /** When each chore was last done, by id. */
     val choreDoneAt: Map<String, Long> = emptyMap(),
+    /** The day today's scene belongs to, and which reply was given (0 = none). */
+    val sceneDay: Long = 0L,
+    val sceneAnswered: Int = 0,
 ) {
     val isSleeping: Boolean get() = activity == PetActivity.SLEEPING
 
@@ -200,6 +203,9 @@ data class PetSnapshot(
 
     fun hasEffect(kind: EffectKind, nowMillis: Long): Boolean =
         effects.any { it.kind == kind && it.isActive(nowMillis) }
+
+    /** Today's small moment, if it has not been answered yet — see [Scenes]. */
+    val sceneToday: SceneKind? get() = if (sceneAnswered == 0) Scenes.forDay(sceneDay) else null
 
     /** Today's three jobs — see [Quests]. Derived from the day, never stored. */
     fun questsToday(): List<DailyQuest> = Quests.forDay(questDay, level)

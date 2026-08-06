@@ -249,6 +249,17 @@ class PetViewModel @Inject constructor(
     fun setPetSkin(id: String) = act(Cue.FANFARE) { preferences.setPetSkin(id) }
 
     /**
+     * Which shelf the shop is on, remembered across sessions.
+     *
+     * A preference rather than screen state on purpose: somebody saving for a
+     * theme opens the shop on the themes six times running, and remembering it
+     * only for the life of one process would miss exactly that case.
+     */
+    fun setShopShelf(id: String) = act(Cue.TAP) { preferences.setShopCategory(id) }
+
+    fun setShopSort(id: String) = act(Cue.TAP) { preferences.setShopSort(id) }
+
+    /**
      * Writes the off-app copy of the save.
      *
      * Called when the app goes to the background, which is both the moment the

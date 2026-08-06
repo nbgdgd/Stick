@@ -93,6 +93,8 @@ import com.vpet.waifu.ui.home.HomeScreen
 import com.vpet.waifu.ui.profile.ProfileScreen
 import com.vpet.waifu.ui.settings.SettingsScreen
 import com.vpet.waifu.ui.shop.ShopScreen
+import com.vpet.waifu.ui.shop.ShopShelf
+import com.vpet.waifu.ui.shop.ShopSort
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 
@@ -263,6 +265,10 @@ fun VPetApp(
                     onWear = viewModel::wear,
                     onApplyTheme = viewModel::applyTheme,
                     onCategoryTap = viewModel::categoryTap,
+                    shelf = ShopShelf.of(state.settings.shopCategory),
+                    sort = ShopSort.of(state.settings.shopSort),
+                    onSelectShelf = { viewModel.setShopShelf(it.name) },
+                    onSelectSort = { viewModel.setShopSort(it.name) },
                 )
                 Tab.GAME -> GameScreen(
                     snapshot = snapshot,

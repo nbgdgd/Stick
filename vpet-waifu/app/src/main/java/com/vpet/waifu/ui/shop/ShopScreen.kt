@@ -17,9 +17,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -38,19 +43,23 @@ import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Weekend
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
@@ -90,6 +99,87 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
+ * One shelf of the shop.
+ *
+ * The catalogue outgrew a single scroll: eight sections, sticky headers, and
+ * the themes — the things somebody is actually saving for — at the very bottom
+ * behind everything they already own. Chips rather than a dropdown because a
+ * dropdown is two taps to do the thing the screen is for.
+ *
+ * Ordered the way a player thinks about them: what she needs now, then what
+ * she is given, then the risky ones, then the things that are kept.
+ */
+enum class ShopShelf(
+    @StringRes val titleRes: Int,
+    val icon: ImageVector,
+    val tint: Color,
+) {
+    FOOD(R.string.section_food, Icons.Rounded.RamenDining, Color(0xFFF2A65A)),
+    BOOSTS(R.string.section_boosts, Icons.Rounded.RocketLaunch, Color(0xFFE6710B)),
+    GIFTS(R.string.section_gifts, Icons.Rounded.CardGiftcard, Color(0xFFF477B8)),
+    PILLS(R.string.section_pills, Icons.Rounded.Medication, Color(0xFFE8756A)),
+    CARE(R.string.section_comfort, Icons.Rounded.Weekend, Color(0xFF7FD1E8)),
+    ROOM(R.string.section_room, Icons.Rounded.Chair, Color(0xFF7FD1E8)),
+    GEAR(R.string.section_gear, Icons.Rounded.Handyman, Color(0xFFF0C860)),
+    OUTFITS(R.string.section_outfits, Icons.Rounded.Checkroom, Color(0xFFB39CE8)),
+    THEMES(R.string.section_themes, Icons.Rounded.Weekend, Color(0xFFE8A15C)),
+    ;
+
+    /** The consumables shelf, or null for the shelves of permanent things. */
+    val items: List<ShopItem>?
+        get() = when (this) {
+            FOOD -> Shop.FOOD
+            BOOSTS -> Shop.BOOSTS
+            GIFTS -> Shop.GIFTS
+            PILLS -> Shop.PILLS
+            CARE -> Shop.CARE
+            else -> null
+        }
+
+    val upgrades: List<Upgrade>?
+        get() = when (this) {
+            ROOM -> Upgrades.ROOM
+            GEAR -> Upgrades.GEAR
+            OUTFITS -> Upgrades.OUTFITS
+            THEMES -> Upgrades.THEMES
+            else -> null
+        }
+
+    companion object {
+        fun of(id: String?): ShopShelf = entries.firstOrNull { it.name == id } ?: FOOD
+    }
+}
+
+/**
+ * How a shelf is ordered.
+ *
+ * [VALUE] is the one worth having and the one that needs explaining: it ranks
+ * by stat points per coin, which is the sum a player would do in their head and
+ * usually does not. It is meaningless for the cosmetics, so those shelves only
+ * offer the other two.
+ */
+enum class ShopSort(@StringRes val labelRes: Int) {
+    DEFAULT(R.string.sort_default),
+    PRICE(R.string.sort_price),
+    VALUE(R.string.sort_value),
+    ;
+
+    companion object {
+        fun of(id: String?): ShopSort = entries.firstOrNull { it.name == id } ?: DEFAULT
+    }
+}
+
+/** Stat points per coin — the arithmetic behind [ShopSort.VALUE]. */
+private fun ShopItem.valuePerCoin(): Float {
+    if (price <= 0) return Float.MAX_VALUE
+    val stats = hunger.coerceAtLeast(0f) + energy.coerceAtLeast(0f) + mood.coerceAtLeast(0f)
+    // A boost carries no stats at all, so it is ranked by how long it runs;
+    // otherwise the whole shelf would sort as a single tie at zero.
+    val timed = effectMinutes.toFloat() * 0.6f
+    return (stats + timed + money.coerceAtLeast(0) * 0.35f) / price
+}
+
+/**
  * The shop. Buying applies the item immediately — there is no inventory, so the
  * loop stays "earn, spend, watch her react" instead of "manage a bag".
  */
@@ -106,72 +196,121 @@ fun ShopScreen(
     onApplyTheme: (String) -> Unit,
     onCategoryTap: () -> Unit,
     modifier: Modifier = Modifier,
+    shelf: ShopShelf = ShopShelf.FOOD,
+    sort: ShopSort = ShopSort.DEFAULT,
+    onSelectShelf: (ShopShelf) -> Unit = {},
+    onSelectSort: (ShopSort) -> Unit = {},
 ) {
     // Every category header and every item tile is also a place to pat her:
     // a tap is worth a point or two of mood, a click and a puff of hearts. She
     // has to be free to notice, so it is off while she is asleep or on a shift.
     val patting = snapshot.acceptsPat
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
+    val recommended = remember(snapshot, nowMillis, shelf) { recommendedIn(shelf, snapshot, nowMillis) }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             ScreenTitle(stringResource(R.string.tab_shop)) {
                 MoneyPill(amount = wallet, settled = walletSettled)
             }
         }
 
-        // One banner instead of the same red line on every food card: why the
-        // food shelf is closed, said once, at the top, with the reopen time.
-        if (!snapshot.acceptsInteraction) {
-            item { BusyBanner(snapshot) }
+        ShelfChips(selected = shelf, onSelect = onSelectShelf)
+
+        // The sort row is only offered where sorting means something. On the
+        // outfits shelf every item is the same purchase at a different price,
+        // and a control that reorders six pictures is noise.
+        val sorts = sortsFor(shelf)
+        if (sorts.size > 1) {
+            SortRow(sorts = sorts, selected = sort, onSelect = onSelectSort)
         }
 
-        section(R.string.section_food, Icons.Rounded.RamenDining, Color(0xFFF2A65A), Shop.FOOD, snapshot, nowMillis, onBuy, onCategoryTap, patting)
-        section(R.string.section_gifts, Icons.Rounded.CardGiftcard, Color(0xFFF477B8), Shop.GIFTS, snapshot, nowMillis, onBuy, onCategoryTap, patting)
-        section(R.string.section_pills, Icons.Rounded.Medication, Color(0xFFE8756A), Shop.PILLS, snapshot, nowMillis, onBuy, onCategoryTap, patting)
-        item {
-            Text(
-                text = stringResource(R.string.pills_warning),
-                style = MaterialTheme.typography.bodySmall,
-                color = Accents.TextDim,
-            )
-        }
-        // The one shelf that stays open while she is on a shift — that is the
-        // entire point of it, so it sits right where a dragging shift sends you.
-        section(R.string.section_boosts, Icons.Rounded.RocketLaunch, Color(0xFFE6710B), Shop.BOOSTS, snapshot, nowMillis, onBuy, onCategoryTap, patting)
-        section(R.string.section_comfort, Icons.Rounded.Weekend, Color(0xFF7FD1E8), Shop.CARE, snapshot, nowMillis, onBuy, onCategoryTap, patting)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // One banner instead of the same red line on every food card: why
+            // the food shelf is closed, said once, with the reopen time. Only
+            // on the shelf it is about — it said nothing useful over the gear.
+            if (!snapshot.acceptsInteraction && shelf == ShopShelf.FOOD) {
+                item { BusyBanner(snapshot) }
+            }
 
-        // Everything above is eaten within the hour. Everything below is kept,
-        // which is what makes the money worth earning in the first place.
-        upgrades(R.string.section_room, Icons.Rounded.Chair, Color(0xFF7FD1E8), Upgrades.ROOM, snapshot, onBuyUpgrade, onWear, onCategoryTap, patting)
-        upgrades(R.string.section_gear, Icons.Rounded.Handyman, Color(0xFFF0C860), Upgrades.GEAR, snapshot, onBuyUpgrade, onWear, onCategoryTap, patting)
-        upgrades(R.string.section_outfits, Icons.Rounded.Checkroom, Color(0xFFB39CE8), Upgrades.OUTFITS, snapshot, onBuyUpgrade, onWear, onCategoryTap, patting)
-        upgrades(R.string.section_themes, Icons.Rounded.Weekend, Color(0xFFE8A15C), Upgrades.THEMES, snapshot, onBuyUpgrade, onApplyTheme, onCategoryTap, patting)
+            shelf.items?.let { items ->
+                items(sorted(items, sort), key = { it.id }) { item ->
+                    ShopCard(
+                        item = item,
+                        snapshot = snapshot,
+                        nowMillis = nowMillis,
+                        onBuy = onBuy,
+                        onCategoryTap = onCategoryTap,
+                        patting = patting,
+                        recommended = item.id == recommended,
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+                if (shelf == ShopShelf.PILLS) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.pills_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Accents.TextDim,
+                        )
+                    }
+                }
+            }
+
+            shelf.upgrades?.let { list ->
+                val wearing: (String) -> Unit =
+                    if (shelf == ShopShelf.THEMES) onApplyTheme else onWear
+                items(sortedUpgrades(list, sort), key = { it.id }) { upgrade ->
+                    UpgradeCard(
+                        upgrade, snapshot, onBuyUpgrade, wearing, onCategoryTap, patting,
+                        recommended = upgrade.id == recommended,
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+            }
+        }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-private fun LazyListScope.upgrades(
-    titleRes: Int,
-    icon: ImageVector,
-    tint: Color,
-    items: List<Upgrade>,
-    snapshot: PetSnapshot,
-    onBuy: (Upgrade) -> Unit,
-    onWear: (String) -> Unit,
-    onCategoryTap: () -> Unit,
-    patting: Boolean,
-) {
-    stickyHeader {
-        Box(modifier = Modifier.fillMaxWidth().background(Surfaces.Screen)) {
-            SectionHeaderRow(icon, tint, titleRes, onCategoryTap, patting)
-        }
+/** Which orderings make sense on [shelf] — see [ShopSort.VALUE]. */
+private fun sortsFor(shelf: ShopShelf): List<ShopSort> = when (shelf) {
+    ShopShelf.OUTFITS, ShopShelf.THEMES -> listOf(ShopSort.DEFAULT, ShopSort.PRICE)
+    else -> ShopSort.entries
+}
+
+private fun sorted(items: List<ShopItem>, sort: ShopSort): List<ShopItem> = when (sort) {
+    ShopSort.DEFAULT -> items
+    ShopSort.PRICE -> items.sortedBy { it.price }
+    ShopSort.VALUE -> items.sortedByDescending { it.valuePerCoin() }
+}
+
+private fun sortedUpgrades(items: List<Upgrade>, sort: ShopSort): List<Upgrade> = when (sort) {
+    ShopSort.PRICE -> items.sortedBy { it.price }
+    else -> items
+}
+
+/**
+ * The one thing on this shelf worth pointing at.
+ *
+ * Deliberately at most one per shelf, and only when it can actually be bought:
+ * a badge on something unaffordable is an advert, not advice. Consumables are
+ * ranked by the same value-per-coin the sort uses; the permanent shelves point
+ * at the cheapest thing not yet owned, because there the question is never
+ * "which is efficient" but "what can I afford next".
+ */
+private fun recommendedIn(shelf: ShopShelf, snapshot: PetSnapshot, nowMillis: Long): String? {
+    shelf.items?.let { items ->
+        return items.filter { snapshot.canBuy(it, nowMillis) }
+            .maxByOrNull { it.valuePerCoin() }
+            ?.id
     }
-    items(items, key = { it.id }) { upgrade ->
-        UpgradeCard(upgrade, snapshot, onBuy, onWear, onCategoryTap, patting, modifier = Modifier.animateItem())
-    }
+    return shelf.upgrades
+        ?.filter { !snapshot.owns(it.id) && snapshot.canBuy(it, nowMillis) }
+        ?.minByOrNull { it.price }
+        ?.id
 }
 
 /**
@@ -189,6 +328,7 @@ private fun UpgradeCard(
     onWear: (String) -> Unit,
     onCategoryTap: () -> Unit,
     patting: Boolean,
+    recommended: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val owned = snapshot.owns(upgrade.id)
@@ -221,11 +361,7 @@ private fun UpgradeCard(
                 Spacer(Modifier.width(14.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(upgradeNameRes(upgrade.id)),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Accents.Text,
-                    )
+                    CardTitle(stringResource(upgradeNameRes(upgrade.id)), recommended)
                     Spacer(Modifier.height(7.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         EffectChip(
@@ -329,46 +465,143 @@ private fun BusyBanner(snapshot: PetSnapshot) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-private fun LazyListScope.section(
-    titleRes: Int,
-    icon: ImageVector,
-    tint: Color,
-    items: List<ShopItem>,
-    snapshot: PetSnapshot,
-    nowMillis: Long,
-    onBuy: (ShopItem) -> Unit,
-    onCategoryTap: () -> Unit,
-    patting: Boolean,
-) {
-    // Sticky, on an opaque strip: while a section scrolls, its name stays
-    // pinned so the list always says where you are.
-    stickyHeader {
-        Box(modifier = Modifier.fillMaxWidth().background(Surfaces.Screen)) {
-            SectionHeaderRow(icon, tint, titleRes, onCategoryTap, patting)
-        }
-    }
-    items(items, key = { it.id }) { item ->
-        // Cards slide into place when a level-up unlocks one mid-list.
-        ShopCard(item, snapshot, nowMillis, onBuy, onCategoryTap, patting, modifier = Modifier.animateItem())
+/**
+ * The shelf picker.
+ *
+ * Scrolls horizontally because nine chips do not fit on a phone and wrapping
+ * them into three rows would cost a third of the screen the shop is for. The
+ * selected one carries the shelf's own colour, which is the same colour its
+ * cards use — so the chip and the list below it are visibly the same thing.
+ */
+/**
+ * The one card on this shelf worth pointing at.
+ *
+ * A star and a word, not a glow: the shop is a grid of coloured tiles already,
+ * and one more pulsing thing in it reads as decoration rather than as advice.
+ * Only ever on one card — see [recommendedIn] — because a list where three
+ * things are recommended has recommended nothing.
+ */
+@Composable
+private fun RecommendedTag() {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(7.dp))
+            .background(StatColors.Money.copy(alpha = 0.16f))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Star,
+            contentDescription = null,
+            tint = StatColors.Money,
+            modifier = Modifier.size(11.dp),
+        )
+        Spacer(Modifier.width(3.dp))
+        Text(
+            text = stringResource(R.string.shop_recommended),
+            style = MaterialTheme.typography.labelSmall,
+            color = StatColors.Money,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
     }
 }
 
 @Composable
-private fun SectionHeaderRow(
-    icon: ImageVector,
-    tint: Color,
-    titleRes: Int,
-    onCategoryTap: () -> Unit,
-    patting: Boolean,
-) {
-    SectionHeader(
-        icon = icon,
-        title = stringResource(titleRes),
-        tint = tint,
-        onTap = onCategoryTap,
-        tapEnabled = patting,
-    )
+private fun CardTitle(title: String, recommended: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = Accents.Text,
+        )
+        if (recommended) {
+            Spacer(Modifier.width(8.dp))
+            RecommendedTag()
+        }
+    }
+}
+
+@Composable
+private fun ShelfChips(selected: ShopShelf, onSelect: (ShopShelf) -> Unit) {
+    val state = rememberLazyListState()
+    // Scroll the picker to whatever is selected, so a shelf restored from the
+    // last session is not off the right-hand edge on open.
+    LaunchedEffect(selected) { state.animateScrollToItem(selected.ordinal) }
+    LazyRow(
+        state = state,
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(ShopShelf.entries, key = { it.name }) { shelf ->
+            val chosen = shelf == selected
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(if (chosen) shelf.tint.copy(alpha = 0.20f) else Surfaces.Tile)
+                    .border(
+                        1.dp,
+                        if (chosen) shelf.tint else Surfaces.CardBorder,
+                        RoundedCornerShape(20.dp),
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onSelect(shelf) },
+                    )
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = shelf.icon,
+                    contentDescription = null,
+                    tint = if (chosen) shelf.tint else Accents.TextDim,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = stringResource(shelf.titleRes),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (chosen) Accents.Text else Accents.TextDim,
+                    fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SortRow(sorts: List<ShopSort>, selected: ShopSort, onSelect: (ShopSort) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.SwapVert,
+            contentDescription = null,
+            tint = Accents.TextDim,
+            modifier = Modifier.size(15.dp),
+        )
+        sorts.forEach { sort ->
+            val chosen = sort == selected
+            Text(
+                text = stringResource(sort.labelRes),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (chosen) Accents.Bright else Accents.TextDim,
+                fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onSelect(sort) },
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        }
+    }
 }
 
 @Composable
@@ -379,6 +612,7 @@ private fun ShopCard(
     onBuy: (ShopItem) -> Unit,
     onCategoryTap: () -> Unit,
     patting: Boolean,
+    recommended: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val unlocked = item.isUnlocked(snapshot.level)
@@ -406,11 +640,7 @@ private fun ShopCard(
                 Spacer(Modifier.width(14.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(shopItemNameRes(item.id)),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Accents.Text,
-                    )
+                    CardTitle(stringResource(shopItemNameRes(item.id)), recommended)
                     Spacer(Modifier.height(7.dp))
                     EffectChips(item)
                     // States a card still has to explain itself: an effect that

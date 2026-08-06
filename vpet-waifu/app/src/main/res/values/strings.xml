@@ -466,4 +466,8 @@
     <string name="game_first_today">First round today — bonus ×1.5</string>
     <string name="effect_running_discount">Everything in the shop is 20% off</string>
     <string name="effect_running_stasis">Hunger and energy are frozen</string>
+    <string name="sort_default">Default</string>
+    <string name="sort_price">Price</string>
+    <string name="sort_value">Value</string>
+    <string name="shop_recommended">Recommended</string>
 </resources>

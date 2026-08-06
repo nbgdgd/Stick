@@ -32,6 +32,17 @@ data class PetSettings(
     val notificationsEnabled: Boolean = true,
     /** The last instant the player actually looked at the app. */
     val lastSeenAt: Long = 0L,
+    /**
+     * The shop shelf the player was last looking at.
+     *
+     * A preference rather than screen state: the shop is now a set of
+     * categories, and someone who is saving for a theme opens it on the themes
+     * six times in a row. Remembering it for the length of one process would
+     * miss exactly that — the interesting case is the *next* session.
+     */
+    val shopCategory: String = "",
+    /** …and how that shelf is sorted. */
+    val shopSort: String = "",
 )
 
 /**
@@ -55,6 +66,8 @@ class PetPreferences @Inject constructor(
             hapticsEnabled = it[HAPTICS] ?: true,
             notificationsEnabled = it[NOTIFICATIONS] ?: true,
             lastSeenAt = it[LAST_SEEN_AT] ?: 0L,
+            shopCategory = it[SHOP_CATEGORY] ?: "",
+            shopSort = it[SHOP_SORT] ?: "",
         )
     }
 
@@ -95,6 +108,15 @@ class PetPreferences @Inject constructor(
         context.dataStore.edit { it[LAST_SEEN_AT] = millis }
     }
 
+    /** Which shelf the shop opens on, and how it is sorted. */
+    suspend fun setShopCategory(id: String) {
+        context.dataStore.edit { it[SHOP_CATEGORY] = id }
+    }
+
+    suspend fun setShopSort(id: String) {
+        context.dataStore.edit { it[SHOP_SORT] = id }
+    }
+
     companion object {
         const val MAX_NAME_LENGTH = 16
 
@@ -106,5 +128,7 @@ class PetPreferences @Inject constructor(
         private val HAPTICS = booleanPreferencesKey("haptics_enabled")
         private val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
         private val LAST_SEEN_AT = longPreferencesKey("last_seen_at")
+        private val SHOP_CATEGORY = stringPreferencesKey("shop_category")
+        private val SHOP_SORT = stringPreferencesKey("shop_sort")
     }
 }

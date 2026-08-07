@@ -75,9 +75,15 @@ fun ChooseSkinScreen(
             .fillMaxSize()
             .background(Surfaces.Screen)
             .systemBarsPadding()
+            // Scrollable so a small screen in landscape can still reach the
+            // button, but the content is centred when there is room.
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        // Centred rather than top-aligned: the screen is short and a column of
+        // content pinned to the top of a tall phone leaves two thirds of it
+        // empty, which reads as a page that failed to load.
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = stringResource(R.string.onboard_title),

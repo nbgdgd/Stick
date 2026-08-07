@@ -4,6 +4,12 @@ echo ============================================
 echo  VPet Waifu - RuStore signing key export
 echo ============================================
 echo.
+echo NOTE: the --encryptionkey below belongs to the RuStore window it was
+echo       created in. RuStore issues a NEW key every time that window is
+echo       recreated - it changed once already. Check the key on the page
+echo       against the one here BEFORE running this, and replace it if they
+echo       differ, or the upload is rejected.
+echo.
 echo Password for BOTH prompts (copy it now):
 echo.
 echo    8t5pq61Y8PdxePGe1bQp

@@ -21,6 +21,7 @@ import com.vpet.waifu.domain.PetTuning
 import com.vpet.waifu.domain.Upgrades
 import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.ui.home.HomeScreen
+import com.vpet.waifu.ui.onboarding.ChooseSkinScreen
 import com.vpet.waifu.ui.profile.ProfileScreen
 import com.vpet.waifu.ui.shop.ShopScreen
 import com.vpet.waifu.ui.activities.ActivitiesScreen
@@ -166,6 +167,10 @@ class StoreShotTest {
                     skin = PetSkin.of(id, null),
                 )
             }
+        }
+
+        shoot("00-choose") {
+            ChooseSkinScreen(onChosen = {})
         }
 
         shoot("04-her") {

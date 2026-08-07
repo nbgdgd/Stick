@@ -27,6 +27,16 @@ data class PetSettings(
      * a sprite pack installed under assets/pets/.
      */
     val petSkin: String = "",
+    /**
+     * Whether the player has been asked who they are adopting.
+     *
+     * Separate from [petSkin] because "" is a real, meaningful value — it is
+     * the redrawn rig — so it cannot double as "not asked yet". An upgrading
+     * save has this false and a history behind it; the app checks the save is
+     * actually untouched before putting a first-run screen in front of
+     * somebody who is forty hours in.
+     */
+    val skinChosen: Boolean = false,
     val soundEnabled: Boolean = true,
     val musicEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
@@ -81,6 +91,7 @@ class PetPreferences @Inject constructor(
             bubbleEnabled = it[BUBBLE_ENABLED] ?: false,
             petName = (it[PET_NAME] ?: "").take(MAX_NAME_LENGTH),
             petSkin = it[PET_SKIN] ?: "",
+            skinChosen = it[SKIN_CHOSEN] ?: false,
             soundEnabled = it[SOUND] ?: true,
             musicEnabled = it[MUSIC] ?: true,
             hapticsEnabled = it[HAPTICS] ?: true,
@@ -107,6 +118,14 @@ class PetPreferences @Inject constructor(
     /** Which character is drawn: "" for the vector rig, or a sprite pack id. */
     suspend fun setPetSkin(id: String) {
         context.dataStore.edit { it[PET_SKIN] = id }
+    }
+
+    /** Records the first-run choice, which also retires the first-run screen. */
+    suspend fun chooseSkin(id: String) {
+        context.dataStore.edit {
+            it[PET_SKIN] = id
+            it[SKIN_CHOSEN] = true
+        }
     }
 
     suspend fun setSoundEnabled(enabled: Boolean) {
@@ -159,6 +178,7 @@ class PetPreferences @Inject constructor(
         private val BUBBLE_ENABLED = booleanPreferencesKey("bubble_enabled")
         private val PET_NAME = stringPreferencesKey("pet_name")
         private val PET_SKIN = stringPreferencesKey("pet_skin")
+        private val SKIN_CHOSEN = booleanPreferencesKey("skin_chosen")
         private val SOUND = booleanPreferencesKey("sound_enabled")
         private val MUSIC = booleanPreferencesKey("music_enabled")
         private val HAPTICS = booleanPreferencesKey("haptics_enabled")

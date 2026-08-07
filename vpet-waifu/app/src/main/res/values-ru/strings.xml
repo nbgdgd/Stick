@@ -562,4 +562,11 @@
     <string name="game_sick">Она болеет — сначала лекарство.</string>
     <string name="game_asleep">Она спит.</string>
     <string name="game_while_she_works">Её нет дома — сыграй, пока ждёшь.</string>
+    <string name="onboard_title">Кого забираешь домой?</string>
+    <string name="onboard_subtitle">Вам с ней жить. Посмотри на обеих.</string>
+    <string name="onboard_classic_blurb">Мягче, круглее, фиолетовые хвостики</string>
+    <string name="onboard_modern_blurb">Выше, острее, с чёткой обводкой</string>
+    <string name="onboard_pack_blurb">Установленный спрайт-пак</string>
+    <string name="onboard_start">Забрать домой</string>
+    <string name="onboard_changeable">Передумать можно в любой момент — в настройках.</string>
 </resources>

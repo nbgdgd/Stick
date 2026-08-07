@@ -251,6 +251,9 @@ class PetViewModel @Inject constructor(
     /** Swapping the character is a big enough change to be worth a fanfare. */
     fun setPetSkin(id: String) = act(Cue.FANFARE) { preferences.setPetSkin(id) }
 
+    /** The first-run pick. Also retires the screen it was made on. */
+    fun chooseSkin(id: String) = act(Cue.FANFARE) { preferences.chooseSkin(id) }
+
     /**
      * Which shelf the shop is on, remembered across sessions.
      *

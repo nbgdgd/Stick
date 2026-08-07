@@ -46,6 +46,38 @@ android {
         }
     }
 
+/**
+ * The one thing that must never reach a store.
+ *
+ * `assets/pets/` holds sprite packs, and the pack used to develop this is a
+ * character somebody else owns. It is gitignored, so a clean checkout is
+ * clean — but a *developer's* tree is not, and the release APK is built from
+ * that tree. "Remember to move the folder before you publish" is not a
+ * safeguard, it is a thing to forget once.
+ *
+ * So the release build refuses to run while anything is in there. Debug and
+ * preview are untouched: testing with a pack is the whole reason it exists.
+ */
+val checkNoBundledPacks = tasks.register("checkNoBundledPacks") {
+    val packs = layout.projectDirectory.dir("src/main/assets/pets")
+    doLast {
+        val present = packs.asFile.listFiles()?.filter { it.isDirectory }.orEmpty()
+        if (present.isNotEmpty()) {
+            throw GradleException(
+                buildString {
+                    appendLine("Release build refused: sprite packs are in the tree.")
+                    present.forEach { appendLine("  src/main/assets/pets/" + it.name) }
+                    appendLine()
+                    appendLine("These are development-only assets and at least one of them is")
+                    appendLine("a character the project does not own. Move them out before")
+                    appendLine("building anything for publication:")
+                    appendLine("  mv app/src/main/assets/pets ~/vpet-packs-parked")
+                },
+            )
+        }
+    }
+}
+
     buildTypes {
         debug {
             // Debug and release shared one applicationId, so the phone treated
@@ -170,4 +202,13 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.espresso.core)
+}
+
+// The guard runs before anything release-shaped is packaged. Wired by name
+// rather than by variant API so it covers the bundle as well as the APK —
+// itch.io takes the APK, a store takes the bundle, and both come from here.
+afterEvaluate {
+    listOf("packageRelease", "bundleRelease").forEach { name ->
+        tasks.findByName(name)?.dependsOn("checkNoBundledPacks")
+    }
 }

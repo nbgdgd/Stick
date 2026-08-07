@@ -562,4 +562,11 @@
     <string name="game_sick">She is ill — medicine first.</string>
     <string name="game_asleep">She is asleep.</string>
     <string name="game_while_she_works">She is out — play a round while you wait.</string>
+    <string name="onboard_title">Who are you adopting?</string>
+    <string name="onboard_subtitle">You will be living with her. Have a look at both.</string>
+    <string name="onboard_classic_blurb">Softer, rounder, violet twin tails</string>
+    <string name="onboard_modern_blurb">Taller, sharper, inked lines</string>
+    <string name="onboard_pack_blurb">An installed sprite pack</string>
+    <string name="onboard_start">Take her home</string>
+    <string name="onboard_changeable">You can change your mind later in Settings.</string>
 </resources>

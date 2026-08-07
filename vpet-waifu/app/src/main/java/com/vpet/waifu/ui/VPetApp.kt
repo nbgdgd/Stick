@@ -101,6 +101,7 @@ import com.vpet.waifu.ui.home.HomeScreen
 import com.vpet.waifu.ui.profile.ProfileScreen
 import com.vpet.waifu.ui.settings.SettingsScreen
 import com.vpet.waifu.ui.earn.EarnScreen
+import com.vpet.waifu.ui.onboarding.ChooseSkinScreen
 import com.vpet.waifu.ui.shop.ShopScreen
 import com.vpet.waifu.ui.shop.ShopShelf
 import com.vpet.waifu.ui.shop.ShopSort
@@ -221,6 +222,15 @@ fun VPetApp(
         else -> MusicTrack.forState(snapshot.state(nowMillis, viewModel.tuning))
     }
     LaunchedEffect(musicTrack) { viewModel.setMusicScene(musicTrack) }
+
+    // Before anything else, on a save that has never been played: who are you
+    // adopting? Gated on the save being genuinely untouched as well as on the
+    // flag, so an upgrade from a build that predates this screen does not put
+    // a character picker in front of somebody forty hours in.
+    if (!state.settings.skinChosen && snapshot.isFresh) {
+        ChooseSkinScreen(onChosen = viewModel::chooseSkin)
+        return
+    }
 
     CompositionLocalProvider(LocalRefusal provides viewModel::refused) {
     Scaffold(

@@ -429,6 +429,7 @@ fun VPetApp(
                 onNotificationsChange = viewModel::setNotificationsEnabled,
                 onNameChange = viewModel::setPetName,
                 onSkinChange = viewModel::setPetSkin,
+                onLanguageChange = viewModel::setLanguage,
                 onExportSave = viewModel::exportSave,
                 onImportSave = viewModel::importSave,
                 onBack = { showSettings = false },

@@ -36,6 +36,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +68,7 @@ import java.util.Date
 import java.util.Locale
 import com.vpet.waifu.R
 import com.vpet.waifu.data.PetPreferences
+import com.vpet.waifu.data.AppLanguage
 import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.ui.components.PanelCard
 import com.vpet.waifu.ui.components.PrimaryButton
@@ -89,6 +94,7 @@ fun SettingsScreen(
     onNotificationsChange: (Boolean) -> Unit,
     onNameChange: (String) -> Unit,
     onSkinChange: (String) -> Unit,
+    onLanguageChange: (String) -> Unit,
     onExportSave: (OutputStream, (Boolean) -> Unit) -> Unit,
     onImportSave: (InputStream, (Boolean) -> Unit) -> Unit,
     onBack: () -> Unit,
@@ -215,6 +221,8 @@ fun SettingsScreen(
             }
 
             SkinCard(settings.petSkin, onSkinChange)
+
+            LanguageCard(settings.language, onLanguageChange)
 
             SaveCard(onExportSave, onImportSave)
 
@@ -498,6 +506,71 @@ private fun SkinCard(selected: String, onSelect: (String) -> Unit) {
             }
         }
     }
+}
+
+
+/**
+ * Which language the app speaks.
+ *
+ * Android has a per-app language picker of its own, but only from 13 onwards
+ * and this app runs from 8 — so most of the people who would use it could not
+ * reach it. Following the phone stays the default: an app that picks a language
+ * on first launch is an app guessing at something the person already answered
+ * when they set up their phone.
+ *
+ * Changing it recreates the screen, because a Context's locale is fixed when
+ * the Context is made. The warning line says so rather than letting a screen
+ * blink for no visible reason.
+ */
+@Composable
+private fun LanguageCard(selected: String, onSelect: (String) -> Unit) {
+    val activity = LocalContext.current.findActivity()
+    PanelCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.language_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = Accents.Text,
+            )
+            Text(
+                text = stringResource(R.string.language_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = Accents.TextMuted,
+            )
+            AppLanguage.entries.forEach { language ->
+                SkinRow(
+                    label = stringResource(language.labelRes()),
+                    selected = AppLanguage.of(selected) == language,
+                    onClick = {
+                        if (AppLanguage.of(selected) != language) {
+                            onSelect(language.tag)
+                            // Recreated rather than left to the next cold
+                            // start: a language switch that does nothing you
+                            // can see reads as a switch that did not work.
+                            activity?.recreate()
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** The Activity behind a Compose Context, however deeply it is wrapped. */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+@StringRes
+private fun AppLanguage.labelRes(): Int = when (this) {
+    AppLanguage.SYSTEM -> R.string.language_system
+    AppLanguage.RUSSIAN -> R.string.language_ru
+    AppLanguage.ENGLISH -> R.string.language_en
 }
 
 @Composable

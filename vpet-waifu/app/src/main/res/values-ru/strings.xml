@@ -569,4 +569,18 @@
     <string name="onboard_pack_blurb">Установленный спрайт-пак</string>
     <string name="onboard_start">Забрать домой</string>
     <string name="onboard_changeable">Передумать можно в любой момент — в настройках.</string>
+    <string name="buff_why_haste">Смена идёт вдвое быстрее — каждая минута считается за две.</string>
+    <string name="buff_why_overtime">Зарплата ×1,5, пока идёт.</string>
+    <string name="buff_why_focus">Опыт от учёбы ×1,5, пока идёт.</string>
+    <string name="buff_why_second_wind">Энергия тратится вдвое медленнее.</string>
+    <string name="buff_why_good_vibes">Настроение растёт само, пока идёт.</string>
+    <string name="buff_why_discount">Всё в магазине на 20%% дешевле.</string>
+    <string name="buff_why_stasis">Голод и энергия не падают вообще.</string>
+    <string name="buff_why_hunger_surge">Расплата: голод падает в 2,5 раза быстрее.</string>
+    <string name="buff_why_exhaustion">Расплата: энергия падает в 1,6 раза быстрее.</string>
+    <string name="language_title">Язык</string>
+    <string name="language_hint">При смене экран перезапустится.</string>
+    <string name="language_system">Как на телефоне</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_en">English</string>
 </resources>

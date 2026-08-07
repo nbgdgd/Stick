@@ -1,6 +1,7 @@
 package com.vpet.waifu
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
@@ -19,6 +20,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.vpet.waifu.data.AppLanguage
+import com.vpet.waifu.data.PetPreferences
 import com.vpet.waifu.service.OverlayPermission
 import com.vpet.waifu.service.PetOverlayService
 import com.vpet.waifu.ui.PetViewModel
@@ -32,6 +35,19 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val viewModel: PetViewModel by viewModels()
+
+    /**
+     * The language is applied here or not at all.
+     *
+     * A Context's locale is fixed when it is created, so this is the last
+     * moment it can be chosen — anything later leaves the first composition
+     * reading the wrong strings file. The stored value is read blocking for
+     * the same reason: there is nowhere to suspend this early.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        val language = AppLanguage.of(PetPreferences.languageBlocking(newBase))
+        super.attachBaseContext(AppLanguage.wrap(newBase, language))
+    }
 
     /**
      * `SYSTEM_ALERT_WINDOW` is granted in a settings screen, not a dialog, so

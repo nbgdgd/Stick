@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Sell
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -108,7 +110,7 @@ fun BuffStrip(
         explaining?.let { kind ->
             Spacer(Modifier.height(6.dp))
             Text(
-                text = buffExplanation(kind),
+                text = stringResource(kind.explanationRes()),
                 style = MaterialTheme.typography.bodySmall,
                 color = Accents.TextDim,
             )
@@ -219,22 +221,16 @@ private fun EffectKind.pillIcon(): ImageVector = when (this) {
         Icons.Rounded.WarningAmber
 }
 
-/**
- * What it does, in numbers.
- *
- * Hard-coded Russian rather than string resources because each line quotes a
- * constant from [com.vpet.waifu.domain.PetTuning], and a translated string that
- * drifts from the tuning it describes is worse than no string at all. When the
- * app grows a second language these move, together with the numbers.
- */
-private fun buffExplanation(kind: EffectKind): String = when (kind) {
-    EffectKind.HASTE -> "Смена идёт вдвое быстрее — каждая минута считается за две."
-    EffectKind.OVERTIME -> "Зарплата ×1,5, пока идёт."
-    EffectKind.FOCUS -> "Опыт от учёбы ×1,5, пока идёт."
-    EffectKind.SECOND_WIND -> "Энергия тратится вдвое медленнее."
-    EffectKind.GOOD_VIBES -> "Настроение растёт само, пока идёт."
-    EffectKind.DISCOUNT -> "Всё в магазине на 20% дешевле."
-    EffectKind.STASIS -> "Голод и энергия не падают вообще."
-    EffectKind.HUNGER_SURGE -> "Расплата: голод падает в 2,5 раза быстрее."
-    EffectKind.EXHAUSTION -> "Расплата: энергия падает в 1,6 раза быстрее."
+/** What it does, in numbers. */
+@StringRes
+private fun EffectKind.explanationRes(): Int = when (this) {
+    EffectKind.HASTE -> R.string.buff_why_haste
+    EffectKind.OVERTIME -> R.string.buff_why_overtime
+    EffectKind.FOCUS -> R.string.buff_why_focus
+    EffectKind.SECOND_WIND -> R.string.buff_why_second_wind
+    EffectKind.GOOD_VIBES -> R.string.buff_why_good_vibes
+    EffectKind.DISCOUNT -> R.string.buff_why_discount
+    EffectKind.STASIS -> R.string.buff_why_stasis
+    EffectKind.HUNGER_SURGE -> R.string.buff_why_hunger_surge
+    EffectKind.EXHAUSTION -> R.string.buff_why_exhaustion
 }

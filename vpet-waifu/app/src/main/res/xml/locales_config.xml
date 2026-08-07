@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the app speaks, for Android 13's own per-app language picker.
+
+     The in-app switch is what most people will use — this app runs from
+     Android 8 and the system picker only exists from 13 — but declaring the
+     list means the two agree rather than compete, and somebody on a new phone
+     finds it where they expect to. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="ru" />
+</locale-config>

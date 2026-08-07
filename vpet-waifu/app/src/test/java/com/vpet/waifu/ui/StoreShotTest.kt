@@ -87,7 +87,13 @@ class StoreShotTest {
     @Test
     fun `render the store screenshots`() {
         if (System.getProperty("storeshots") == null) return
-        shoot("01-home") {
+        listOf("ru", "en").forEach { lang -> renderAll(lang) }
+    }
+
+    /** Every shot, in one language. Names are prefixed so both sets survive. */
+    private fun renderAll(lang: String) {
+        fun name(n: String) = "$lang-$n"
+        shoot(name("01-home"), lang) {
             HomeScreen(
                 snapshot = snapshot,
                 simulation = simulation,
@@ -101,7 +107,7 @@ class StoreShotTest {
                 onDismissEvent = {}, onBuy = {}, onAcknowledgeStory = {}, onAcknowledgeDaily = {}, onSeen = {},
             )
         }
-        shoot("02-work") {
+        shoot(name("02-work"), lang) {
             ActivitiesScreen(
                 snapshot = snapshot,
                 simulation = simulation,
@@ -112,7 +118,7 @@ class StoreShotTest {
                 onStart = {}, onCancel = {}, onCategoryTap = {},
             )
         }
-        shoot("03-shop") {
+        shoot(name("03-shop"), lang) {
             ShopScreen(
                 snapshot = snapshot,
                 nowMillis = now,
@@ -127,7 +133,7 @@ class StoreShotTest {
             androidx.test.core.app.ApplicationProvider.getApplicationContext(),
             "anya",
         )?.let { pack ->
-            shoot("05-sprite") {
+            shoot(name("05-sprite"), lang) {
                 HomeScreen(
                     snapshot = snapshot,
                     simulation = simulation,
@@ -150,8 +156,8 @@ class StoreShotTest {
         listOf(
             "06-modern" to "",
             "07-classic" to "classic",
-        ).forEach { (name, id) ->
-            shoot(name) {
+        ).forEach { (shotName, id) ->
+            shoot("$lang-$shotName", lang) {
                 HomeScreen(
                     snapshot = snapshot,
                     simulation = simulation,
@@ -169,11 +175,11 @@ class StoreShotTest {
             }
         }
 
-        shoot("00-choose") {
+        shoot(name("00-choose"), lang) {
             ChooseSkinScreen(onChosen = {})
         }
 
-        shoot("04-her") {
+        shoot(name("04-her"), lang) {
             ProfileScreen(
                 snapshot = snapshot,
                 petName = "Юки",
@@ -183,9 +189,23 @@ class StoreShotTest {
         }
     }
 
-    private fun shoot(name: String, content: @Composable () -> Unit) {
+    /**
+     * The language a shot is rendered in.
+     *
+     * The store page is bilingual, so the screenshots have to be. Robolectric
+     * takes the locale from the qualifier, which is set per class — so this
+     * flips the Configuration on the activity's resources instead, which is
+     * the same thing the app's own language switch does.
+     */
+    private fun shoot(name: String, locale: String? = null, content: @Composable () -> Unit) {
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val activity = controller.get()
+        if (locale != null) {
+            val config = android.content.res.Configuration(activity.resources.configuration)
+            config.setLocale(java.util.Locale.forLanguageTag(locale))
+            @Suppress("DEPRECATION")
+            activity.resources.updateConfiguration(config, activity.resources.displayMetrics)
+        }
         val view = ComposeView(activity).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {

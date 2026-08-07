@@ -11,7 +11,9 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,6 +39,8 @@ data class PetSettings(
      * somebody who is forty hours in.
      */
     val skinChosen: Boolean = false,
+    /** Which language the app speaks — see [AppLanguage]. Blank follows the phone. */
+    val language: String = "",
     val soundEnabled: Boolean = true,
     val musicEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
@@ -92,6 +96,7 @@ class PetPreferences @Inject constructor(
             petName = (it[PET_NAME] ?: "").take(MAX_NAME_LENGTH),
             petSkin = it[PET_SKIN] ?: "",
             skinChosen = it[SKIN_CHOSEN] ?: false,
+            language = it[LANGUAGE] ?: "",
             soundEnabled = it[SOUND] ?: true,
             musicEnabled = it[MUSIC] ?: true,
             hapticsEnabled = it[HAPTICS] ?: true,
@@ -118,6 +123,15 @@ class PetPreferences @Inject constructor(
     /** Which character is drawn: "" for the vector rig, or a sprite pack id. */
     suspend fun setPetSkin(id: String) {
         context.dataStore.edit { it[PET_SKIN] = id }
+    }
+
+    /**
+     * Sets the app's language. The caller recreates the activity: a Context is
+     * configured once, at attach time, and there is no way to re-language the
+     * one that is already running.
+     */
+    suspend fun setLanguage(tag: String) {
+        context.dataStore.edit { it[LANGUAGE] = tag }
     }
 
     /** Records the first-run choice, which also retires the first-run screen. */
@@ -179,6 +193,19 @@ class PetPreferences @Inject constructor(
         private val PET_NAME = stringPreferencesKey("pet_name")
         private val PET_SKIN = stringPreferencesKey("pet_skin")
         private val SKIN_CHOSEN = booleanPreferencesKey("skin_chosen")
+        private val LANGUAGE = stringPreferencesKey("language")
+
+        /**
+         * The language, read without a coroutine.
+         *
+         * `attachBaseContext` runs before the activity exists, let alone a
+         * scope to collect a Flow in, and the answer is needed *there* or the
+         * first frame comes out in the wrong language. Blocking on a DataStore
+         * read at that point is a few milliseconds off a cold start, once.
+         */
+        fun languageBlocking(context: Context): String = runBlocking {
+            runCatching { context.dataStore.data.first()[LANGUAGE] }.getOrNull() ?: ""
+        }
         private val SOUND = booleanPreferencesKey("sound_enabled")
         private val MUSIC = booleanPreferencesKey("music_enabled")
         private val HAPTICS = booleanPreferencesKey("haptics_enabled")

@@ -142,6 +142,16 @@ fun ExportScreen(
                         Text(stringResource(R.string.export_open_sticker_bot))
                     }
                 }
+
+                OutlinedButton(
+                    onClick = { viewModel.saveToGallery() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        if (state.savedToGallery) "Saved to gallery ✓"
+                        else stringResource(R.string.export_save_to_gallery),
+                    )
+                }
             }
         }
     }

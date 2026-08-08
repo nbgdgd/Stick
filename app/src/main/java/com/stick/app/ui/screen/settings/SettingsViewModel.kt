@@ -16,10 +16,17 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
+    private val sessionRepository: com.stick.app.data.repository.TikTokSessionRepository,
 ) : ViewModel() {
 
     val settings: StateFlow<UserSettings> = repository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UserSettings())
+
+    /** Whether a TikTok session is stored (drives the sign in / sign out row). */
+    val signedIn: StateFlow<Boolean> = sessionRepository.isSignedIn
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun signOut() = viewModelScope.launch { sessionRepository.clear() }
 
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { repository.setThemeMode(mode) }
     fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { repository.setDynamicColor(enabled) }

@@ -20,9 +20,21 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        // FFmpeg ships large native libraries per ABI. Limit to the two ABIs that
+        // cover essentially all real devices to keep the APK a sane size.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildTypes {
+        debug {
+            // Emulators are x86_64; including it here (debug only) makes the app
+            // installable on one for real end-to-end testing, without adding
+            // ~30 MB of native libraries to the shipped release build.
+            ndk { abiFilters += "x86_64" }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -87,9 +99,16 @@ dependencies {
     implementation(libs.coil.gif)
 
     // Media playback + transform (hardware-accelerated conversion pipeline)
-    implementation(libs.media3.exoplayer)
-    implementation(libs.media3.ui)
-    implementation(libs.media3.transformer)
+
+    // FFmpeg backend for frame-container encoders the platform codecs can't write
+    // (animated GIF/WebP/APNG). Bound in di/MediaModule.
+    implementation(libs.ffmpeg.kit)
+
+    // Animated-WebP frame decoding (TikTok .awebp stickers) for the export pipeline.
+    implementation(libs.fresco.animated.webp)
+    implementation(libs.fresco.animated.gif)
+    implementation(libs.fresco.animated.base)
+    implementation(libs.soloader)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

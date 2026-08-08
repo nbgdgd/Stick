@@ -17,7 +17,9 @@ object SizeEstimator {
 
     fun estimate(info: MediaInfo, options: ExportOptions): Long {
         val durationSec = max(info.durationMs, 1L) / 1000.0
-        val frames = max((options.fps * durationSec).roundToLong(), 1L)
+        val isStill = options.format == StickerFormat.PNG || options.format == StickerFormat.JPEG
+        // Still targets encode exactly one frame regardless of source duration/FPS.
+        val frames = if (isStill) 1L else max((options.fps * durationSec).roundToLong(), 1L)
         val pixels = options.widthPx.toLong() * options.heightPx.toLong()
 
         val bitsPerPixel = bitsPerPixel(options)
@@ -47,6 +49,8 @@ object SizeEstimator {
             StickerFormat.GIF -> 4.0            // palette-limited
             StickerFormat.WEBP_ANIMATED -> 1.2 * q
             StickerFormat.APNG -> 6.0 * q
+            StickerFormat.PNG -> 8.0            // lossless RGBA, well compressed
+            StickerFormat.JPEG -> 1.5 * q
             StickerFormat.TELEGRAM_TGS -> 0.05  // vector: nearly size-independent
             else -> 2.0 * q
         }

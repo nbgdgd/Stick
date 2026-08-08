@@ -4,70 +4,76 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * DTOs mirroring TikTok's web comment API
- * (`/api/comment/list/?aweme_id=…`).
+ * DTOs for TikTok's own web comment endpoint
+ * (`www.tiktok.com/api/comment/list/?aweme_id=…`).
  *
- * ⚠️ These shapes are **reverse-engineered and not contractually stable**.
- * TikTok changes field names and nesting without notice. They are confined to
- * this package on purpose: mapping to the stable domain model happens in exactly
- * one place ([com.stick.stickersource.tiktok.TikTokMapper]), so an API change is
- * a small, local edit here rather than an app-wide refactor.
+ * This endpoint returns comment JSON without request signing and, unlike the
+ * tikwm proxy, has no aggressive 1-request/second limit — so pagination is fast
+ * and finds far more comment stickers. Comment stickers/images live in
+ * `image_list[].origin_url`.
  *
- * Every field is optional/nullable so an unexpected payload degrades to "no
- * sticker found" instead of throwing.
+ * Shapes are undocumented; they are confined here and mapped in exactly one place
+ * ([com.stick.stickersource.tiktok.TikTokMapper]).
  */
 @Serializable
-data class CommentListDto(
-    @SerialName("comments") val comments: List<CommentDto> = emptyList(),
-    @SerialName("cursor") val cursor: Long = 0,
+data class CommentListResponse(
+    val comments: List<CommentDto> = emptyList(),
+    val cursor: Long = 0,
     @SerialName("has_more") val hasMore: Int = 0,
-    @SerialName("total") val total: Int = 0,
+    val total: Int = 0,
+    @SerialName("status_code") val statusCode: Int = 0,
+    @SerialName("status_msg") val statusMsg: String = "",
 )
 
 @Serializable
 data class CommentDto(
     @SerialName("cid") val id: String = "",
-    @SerialName("text") val text: String = "",
-    @SerialName("user") val user: UserDto? = null,
-    /**
-     * Animated comment stickers arrive here. Historically TikTok has used both
-     * `image_list` (generic images) and `sticker`; we read whichever is present.
-     */
+    val text: String = "",
+    val user: CommentUserDto? = null,
     @SerialName("image_list") val imageList: List<CommentImageDto> = emptyList(),
-    @SerialName("sticker") val sticker: StickerDto? = null,
+    /** Animated sticker-pack stickers (the ".awebp" ones) live here, NOT image_list. */
+    @SerialName("cmt_sticker_struct") val commentSticker: CommentStickerStruct? = null,
+    /** Some replies are inlined here; they can carry stickers too. */
+    @SerialName("reply_comment") val replyComment: List<CommentDto>? = null,
+    /** Number of replies; comment stickers often live in replies. */
+    @SerialName("reply_comment_total") val replyCount: Int = 0,
+)
+
+/** TikTok's animated comment-sticker (sticker pack) payload. */
+@Serializable
+data class CommentStickerStruct(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("animated_url") val animatedUrl: StickerUrlSet? = null,
+    @SerialName("static_url") val staticUrl: StickerUrlSet? = null,
 )
 
 @Serializable
-data class UserDto(
-    @SerialName("uid") val uid: String = "",
+data class StickerUrlSet(
+    @SerialName("high_resolution_url") val high: UrlListDto? = null,
+    @SerialName("mid_resolution_url") val mid: UrlListDto? = null,
+    @SerialName("low_resolution_url") val low: UrlListDto? = null,
+) {
+    val best: String? get() = high?.primary ?: mid?.primary ?: low?.primary
+}
+
+@Serializable
+data class CommentUserDto(
     @SerialName("nickname") val nickname: String = "",
 )
 
 @Serializable
 data class CommentImageDto(
-    /** Non-animated preview thumbnail. */
+    /** Full-resolution image/sticker. */
     @SerialName("origin_url") val originUrl: UrlListDto? = null,
-    /** The animated variant (WebP/GIF). Present for animated comment stickers. */
-    @SerialName("gif_url") val gifUrl: UrlListDto? = null,
+    /** Cropped/preview variant. */
+    @SerialName("crop_url") val cropUrl: UrlListDto? = null,
 )
 
-@Serializable
-data class StickerDto(
-    @SerialName("id") val id: String = "",
-    @SerialName("name") val name: String = "",
-    @SerialName("static_url") val staticUrl: UrlListDto? = null,
-    @SerialName("animate_url") val animateUrl: UrlListDto? = null,
-    @SerialName("width") val width: Int = 0,
-    @SerialName("height") val height: Int = 0,
-    @SerialName("keywords") val keywords: List<String> = emptyList(),
-)
-
-/** TikTok returns URLs as a candidate list; the first entry is the primary CDN. */
+/** TikTok returns URLs as a CDN candidate list; the first entry is primary. */
 @Serializable
 data class UrlListDto(
     @SerialName("url_list") val urlList: List<String> = emptyList(),
-    @SerialName("width") val width: Int = 0,
-    @SerialName("height") val height: Int = 0,
 ) {
-    val primary: String? get() = urlList.firstOrNull()
+    val primary: String? get() = urlList.firstOrNull { it.isNotBlank() }
 }

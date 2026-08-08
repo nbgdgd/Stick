@@ -42,6 +42,8 @@
     <string name="export_save">Save</string>
     <string name="export_send_telegram">Send to Telegram</string>
     <string name="export_open_sticker_bot">Open @Stickers bot</string>
+    <string name="export_save_to_gallery">Save to gallery</string>
+    <string name="library_save_to_gallery">Save to gallery</string>
 
     <!-- Settings -->
     <string name="settings_theme">Theme</string>

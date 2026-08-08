@@ -71,13 +71,17 @@ class CatalogViewModel @Inject constructor(
             return
         }
         _state.update { it.copy(isLoading = true, error = null) }
-        when (val result = source.searchCatalog(CatalogQuery(text = query))) {
-            is StickResult.Success -> _state.update {
-                it.copy(isLoading = false, results = result.value)
+        try {
+            when (val result = source.searchCatalog(CatalogQuery(text = query))) {
+                is StickResult.Success -> _state.update {
+                    it.copy(isLoading = false, results = result.value)
+                }
+                is StickResult.Failure -> _state.update {
+                    it.copy(isLoading = false, error = result.error.message)
+                }
             }
-            is StickResult.Failure -> _state.update {
-                it.copy(isLoading = false, error = result.error.message)
-            }
+        } catch (t: Throwable) {
+            _state.update { it.copy(isLoading = false, error = t.message ?: "Search failed") }
         }
     }
 

@@ -9,19 +9,26 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -42,8 +49,18 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Surface one-shot results ("Saved 5 to gallery") without blocking the UI.
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeMessage()
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -53,12 +70,31 @@ fun LibraryScreen(
                         Text(stringResource(R.string.nav_library))
                     }
                 },
+                navigationIcon = {
+                    if (state.inSelectionMode) {
+                        IconButton(onClick = { viewModel.clearSelection() }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Cancel selection")
+                        }
+                    }
+                },
                 actions = {
                     if (state.inSelectionMode) {
+                        IconButton(onClick = { viewModel.selectAllVisible() }) {
+                            Icon(Icons.Filled.SelectAll, contentDescription = "Select all")
+                        }
+                        IconButton(
+                            onClick = { viewModel.saveSelectedToGallery() },
+                            enabled = !state.isSaving,
+                        ) {
+                            Icon(Icons.Filled.Download, contentDescription = "Save to gallery")
+                        }
                         IconButton(onClick = { viewModel.deleteSelected() }) {
                             Icon(Icons.Filled.Delete, contentDescription = "Delete selected")
                         }
                     } else {
+                        IconButton(onClick = { viewModel.selectAllVisible() }) {
+                            Icon(Icons.Filled.SelectAll, contentDescription = "Select")
+                        }
                         IconButton(onClick = { viewModel.removeDuplicates() }) {
                             Icon(Icons.Filled.FilterList, contentDescription = "Remove duplicates")
                         }

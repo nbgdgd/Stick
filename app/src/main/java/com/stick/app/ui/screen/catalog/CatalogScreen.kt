@@ -47,7 +47,7 @@ fun CatalogScreen(
             TextField(
                 value = state.query,
                 onValueChange = viewModel::onQueryChange,
-                placeholder = { Text("Search TikTok stickers") },
+                placeholder = { Text("Search animated stickers") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
@@ -78,6 +78,10 @@ fun CatalogScreen(
                             onClick = { viewModel.save(sticker) },
                             onLongClick = { viewModel.save(sticker) },
                             onToggleFavorite = { viewModel.save(sticker) },
+                            // Tapping saves straight to the library; neither a
+                            // heart nor a tick box applies here.
+                            showFavorite = false,
+                            showSelection = false,
                         )
                     }
                 }

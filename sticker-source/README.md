@@ -24,27 +24,31 @@ app  ──▶  StickerSourceRegistry  ──▶  StickerSource (interface)
 
 ## Research: how do we obtain TikTok animated stickers?
 
-TikTok does **not** publish an official public API for comment stickers. Three
-technically viable acquisition paths were evaluated:
+TikTok does **not** publish an official public API for comment stickers, and its
+web endpoints (`/api/comment/list/`) require request signing (`X-Bogus` /
+`msToken`) — a plain client gets nothing back. Approaches evaluated:
 
-| Path | How | Trade-offs | Status here |
-|------|-----|-----------|-------------|
-| **Web comment API** (`/api/comment/list/`) | The same JSON endpoint tiktok.com calls to render a comment thread. Animated stickers appear under `sticker.animate_url` (or the legacy `image_list[].gif_url`). | Undocumented; needs browser-like headers and occasionally a signature param. Field names drift. | **Implemented** (`TikTokApi`, `TikTokMapper`). |
-| **Comment-sticker catalog** (`/api/comment/sticker/list/`) | The pool the comment composer picks from. Lets users browse/search stickers **without opening a video**. | Availability varies by region/app-version; may require the same signing. | **Implemented** with a local-filter fallback (see below). |
-| **App resource / traffic analysis** | Inspect the official app's bundled resources or captured traffic. | Highest maintenance, most fragile, ToS-sensitive. | **Not implemented** — documented as the escape hatch if both endpoints die. |
+| Path | Verdict |
+|------|---------|
+| **TikTok web comment API directly** | Requires `X-Bogus`/`msToken` signing; not viable without a signer. |
+| **tikwm.com proxy** (`/api/`, `/api/comment/list/`) | ✅ **Implemented.** Performs the signing server-side and returns plain JSON. Resolves full URLs *and* `vm.tiktok.com` short links, and exposes comment stickers under `comments[].images[]`. |
+| **App resource / traffic analysis** | Documented escape hatch; highest maintenance, not implemented. |
 
-### Signing (`X-Bogus` / `msToken`)
+### Current working backends
 
-Some TikTok endpoints require an anti-bot signature. That concern is deliberately
-isolated so it can be added without disturbing callers: put the logic in an
-OkHttp `Interceptor` inside [`TikTokSourceFactory`](src/main/java/com/stick/stickersource/tiktok/TikTokSourceFactory.kt).
-The rest of the module is unaffected.
+* **Comments** → `TikTokStickerSource` over `TikTokApi` (tikwm). Resolves a link to
+  an aweme id, then pages the comment list, emitting each `images[]` URL as a
+  `RemoteSticker`.
+* **Catalog search** → `GiphyStickerSource` over `GiphyApi`. TikTok has no public
+  sticker-catalog API, so keyword search is served by Giphy's animated stickers
+  (transparent WebP). Swappable like everything else — a signed TikTok catalog can
+  replace it later without touching the UI.
 
-### Catalog search fallback
+### If tikwm changes or dies
 
-If keyword search is unavailable, page the full catalog and filter on-device by
-`name`/`keywords`. Because search returns the domain `RemoteSticker` type, the
-fallback is invisible to the app.
+Because everything funnels through `StickerSource`, swapping the proxy is a change
+to `TikTokApi` + `TikTokMapper` (+ the DTOs in `tiktok/dto/`). Add signing, if you
+ever go direct to TikTok, as an OkHttp `Interceptor` in `TikTokSourceFactory`.
 
 ## Swapping the backend when TikTok changes
 

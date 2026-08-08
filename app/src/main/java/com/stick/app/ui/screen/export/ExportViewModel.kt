@@ -30,6 +30,7 @@ data class ExportUiState(
     val progress: Float = 0f,
     val outputPath: String? = null,
     val error: String? = null,
+    val savedToGallery: Boolean = false,
 )
 
 /**
@@ -69,6 +70,17 @@ class ExportViewModel @Inject constructor(
         recomputeEstimate()
     }
 
+    /** Copy the exported file into the device gallery (Pictures/Stick). */
+    fun saveToGallery() = viewModelScope.launch {
+        val path = _state.value.outputPath ?: return@launch
+        _state.update {
+            when (val r = com.stick.app.domain.GallerySaver.saveAll(context, listOf(File(path)))) {
+                is StickResult.Success -> it.copy(error = null, savedToGallery = true)
+                is StickResult.Failure -> it.copy(error = r.error.message)
+            }
+        }
+    }
+
     fun setFps(fps: Int) = updateOptions { it.copy(fps = fps) }
     fun setQuality(q: Int) = updateOptions { it.copy(quality = q) }
     fun setSize(px: Int) = updateOptions { it.copy(widthPx = px, heightPx = px) }
@@ -89,26 +101,31 @@ class ExportViewModel @Inject constructor(
     fun export() = viewModelScope.launch {
         val s = _state.value
         val sticker = s.sticker ?: return@launch
-        _state.update { it.copy(isExporting = true, progress = 0f, error = null) }
+        _state.update { it.copy(isExporting = true, progress = 0f, error = null, outputPath = null) }
 
-        val exportsDir = File(context.filesDir, "exports").apply { mkdirs() }
-        val output = File(exportsDir, "${sticker.id.substringAfterLast(':')}.${s.options.format.extension}")
-        val pipeline = EditPipeline(sourcePath = sticker.localPath)
+        try {
+            val exportsDir = File(context.filesDir, "exports").apply { mkdirs() }
+            val safeName = sticker.id.substringAfterLast(':').replace(Regex("[^A-Za-z0-9_-]"), "_")
+            val output = File(exportsDir, "$safeName.${s.options.format.extension}")
+            val pipeline = EditPipeline(sourcePath = sticker.localPath)
 
-        when (val result = converter.convert(pipeline, s.options, output.absolutePath) { p ->
-            _state.update { it.copy(progress = p) }
-        }) {
-            is StickResult.Success -> _state.update {
-                it.copy(
-                    isExporting = false,
-                    progress = 1f,
-                    outputPath = result.value.outputPath,
-                    estimatedSizeBytes = result.value.fileSizeBytes,
-                )
+            when (val result = converter.convert(pipeline, s.options, output.absolutePath) { p ->
+                _state.update { it.copy(progress = p) }
+            }) {
+                is StickResult.Success -> _state.update {
+                    it.copy(
+                        isExporting = false,
+                        progress = 1f,
+                        outputPath = result.value.outputPath,
+                        estimatedSizeBytes = result.value.fileSizeBytes,
+                    )
+                }
+                is StickResult.Failure -> _state.update {
+                    it.copy(isExporting = false, error = result.error.message)
+                }
             }
-            is StickResult.Failure -> _state.update {
-                it.copy(isExporting = false, error = result.error.message)
-            }
+        } catch (t: Throwable) {
+            _state.update { it.copy(isExporting = false, error = t.message ?: "Export failed") }
         }
     }
 }

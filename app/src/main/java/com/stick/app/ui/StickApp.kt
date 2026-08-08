@@ -25,6 +25,7 @@ import com.stick.app.ui.screen.editor.EditorScreen
 import com.stick.app.ui.screen.export.ExportScreen
 import com.stick.app.ui.screen.importer.ImportScreen
 import com.stick.app.ui.screen.library.LibraryScreen
+import com.stick.app.ui.screen.login.TikTokLoginScreen
 import com.stick.app.ui.screen.settings.SettingsScreen
 import com.stick.app.ui.screen.viewer.ViewerScreen
 
@@ -89,7 +90,15 @@ fun StickApp(initialSharedLink: String? = null) {
                     onOpenSticker = { navController.navigate(Routes.viewer(it)) },
                 )
             }
-            composable(Routes.SETTINGS) { SettingsScreen() }
+            composable(Routes.SETTINGS) {
+                SettingsScreen(onOpenLogin = { navController.navigate(Routes.LOGIN) })
+            }
+            composable(Routes.LOGIN) {
+                TikTokLoginScreen(
+                    onBack = { navController.popBackStack() },
+                    onSignedIn = { navController.popBackStack() },
+                )
+            }
 
             composable(
                 Routes.VIEWER,

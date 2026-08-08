@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.Upgrades
 
-@Database(entities = [PetStateEntity::class], version = 10, exportSchema = false)
+@Database(entities = [PetStateEntity::class], version = 11, exportSchema = false)
 abstract class PetDatabase : RoomDatabase() {
     abstract fun petStateDao(): PetStateDao
 
@@ -229,6 +229,28 @@ abstract class PetDatabase : RoomDatabase() {
         }
 
         /**
+         * The bet grows sizes, and the result becomes something to show.
+         *
+         * `sessionStakeTier` is null on every upgrading save, which the entity
+         * reads back as the smallest size — the odds the player agreed to when
+         * they placed the old bet were the friendly ones, and settling their
+         * in-flight shift at the all-in table would be taking money they never
+         * risked. The three outcome columns default to 0/null, which reads as
+         * "that shift had nothing riding on it", true of every finished shift
+         * in every existing save.
+         */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "sessionStakeTier TEXT",
+                    "outcomeStake INTEGER NOT NULL DEFAULT 0",
+                    "outcomeStakeReturned INTEGER NOT NULL DEFAULT 0",
+                    "outcomeStakeTier TEXT",
+                ).forEach { db.execSQL("ALTER TABLE pet_state ADD COLUMN $it") }
+            }
+        }
+
+        /**
          * The chain, in order, as one value.
          *
          * A migration that exists but is never handed to the builder is worse
@@ -247,6 +269,7 @@ abstract class PetDatabase : RoomDatabase() {
             MIGRATION_7_8,
             MIGRATION_8_9,
             MIGRATION_9_10,
+            MIGRATION_10_11,
         )
     }
 }

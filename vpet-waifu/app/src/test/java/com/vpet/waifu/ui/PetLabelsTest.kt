@@ -43,8 +43,12 @@ class PetLabelsTest {
 
     @Test
     fun `every upgrade has its own colour`() {
-        val kept = Upgrades.ALL.filter { it.kind != UpgradeKind.OUTFIT && it.id != Upgrades.DEFAULT_THEME }
-        val tints = kept.associate { it.id to upgradeTint(it.id) }
+        // By family: the tiers of one thing deliberately share its colour.
+        val kept = Upgrades.ALL
+            .filter { it.kind != UpgradeKind.OUTFIT && it.id != Upgrades.DEFAULT_THEME }
+            .map { it.family }
+            .distinct()
+        val tints = kept.associateWith { upgradeTint(it) }
 
         assertEquals("two upgrades share a colour: $tints", kept.size, tints.values.distinct().size)
     }
@@ -79,7 +83,9 @@ class PetLabelsTest {
             "shop" to Shop.ALL.map { it.id to shopItemTint(it.id) },
             "upgrades" to Upgrades.ALL
                 .filter { it.kind != UpgradeKind.OUTFIT && it.id != Upgrades.DEFAULT_THEME }
-                .map { it.id to upgradeTint(it.id) },
+                .map { it.family }
+                .distinct()
+                .map { it to upgradeTint(it) },
         )
 
         lists.forEach { (list, entries) ->

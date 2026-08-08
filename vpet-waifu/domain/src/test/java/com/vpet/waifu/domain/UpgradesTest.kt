@@ -165,4 +165,90 @@ class UpgradesTest {
         assertTrue(fresh.owns(Upgrades.DEFAULT_OUTFIT))
         assertEquals(0, Upgrades.byId(Upgrades.DEFAULT_OUTFIT)!!.price)
     }
+
+    // --- the ladder ----------------------------------------------------------
+
+    @Test
+    fun `every upgrade that does something has a ladder to climb`() {
+        Upgrades.MECHANICAL.forEach { family ->
+            val tiers = Upgrades.FAMILIES.getValue(family)
+            assertEquals("$family should have ${Upgrades.MAX_TIER} tiers", Upgrades.MAX_TIER, tiers.size)
+            assertEquals("$family tiers are out of order", (1..tiers.size).toList(), tiers.map { it.tier })
+            // The first tier keeps the id it always had, so a save that owns a
+            // fridge still owns a fridge.
+            assertEquals(family, tiers.first().id)
+        }
+    }
+
+    @Test
+    fun `each step costs sharply more and gives a little less`() {
+        Upgrades.MECHANICAL.forEach { family ->
+            val tiers = Upgrades.FAMILIES.getValue(family)
+            tiers.zipWithNext { cheaper, dearer ->
+                assertTrue(
+                    "$family ${dearer.id} costs ${dearer.price} against ${cheaper.price}",
+                    dearer.price >= cheaper.price * 3,
+                )
+                assertTrue(
+                    "$family ${dearer.id} unlocks before ${cheaper.id}",
+                    dearer.requiredLevel >= cheaper.requiredLevel,
+                )
+            }
+            // The last step must still be worth the money it asks for.
+            assertNotEquals(UpgradeEffect.NONE, tiers.last().effect)
+        }
+    }
+
+    @Test
+    fun `a ladder cannot be climbed out of order`() {
+        val second = Upgrades.byId("fridge_2")!!
+        val loaded = rich(second.price * 10, exp = Progression.expForLevel(30))
+
+        assertFalse("the second fridge without the first", loaded.canBuy(second))
+        assertEquals(PurchaseBlock.PREREQUISITE, loaded.blockedBy(second))
+
+        val withFirst = sim.buyUpgrade(loaded, Upgrades.byId("fridge")!!, T0)
+        assertTrue(withFirst.canBuy(second))
+        assertEquals(1, Upgrades.tierOwned(withFirst.owned, "fridge"))
+        assertEquals(second, Upgrades.nextTier(withFirst.owned, "fridge"))
+    }
+
+    @Test
+    fun `the tiers stack, and stacking beats any one of them`() {
+        val family = "laptop"
+        val tiers = Upgrades.FAMILIES.getValue(family)
+        val everything = tiers.map { it.id }.toSet()
+
+        val whole = Upgrades.effectOfFamily(everything, family).pay
+        assertTrue("all five tiers pay $whole", whole > tiers.first().effect.pay)
+        // …but nowhere near what repeating the first tier five times would give,
+        // which is the runaway the shrinking steps exist to prevent.
+        assertTrue("all five tiers pay $whole", whole < 2.5f)
+    }
+
+    @Test
+    fun `finishing everything is the work of months, not a weekend`() {
+        // Measured against the fastest money in the game rather than against
+        // wages: the arcade is what a determined player actually grinds, and a
+        // ceiling only the wage-earner cannot reach is not a ceiling.
+        val arcadePerHour = 12_000
+        val hours = Upgrades.totalCost / arcadePerHour
+
+        assertTrue(
+            "everything costs ${Upgrades.totalCost}, about $hours hours of the arcade",
+            hours >= 200,
+        )
+    }
+
+    @Test
+    fun `the top of each ladder is out of reach of a single shift`() {
+        val bestShift = Occupations.WORK.maxOf { it.payout }
+        Upgrades.MECHANICAL.forEach { family ->
+            val top = Upgrades.FAMILIES.getValue(family).last()
+            assertTrue(
+                "${top.id} is only ${top.price / bestShift} shifts",
+                top.price / bestShift >= 500,
+            )
+        }
+    }
 }

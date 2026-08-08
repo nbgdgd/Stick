@@ -90,6 +90,7 @@ import com.vpet.waifu.ui.components.LocalRefusal
 import com.vpet.waifu.ui.bondNameRes
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PrimaryButton
+import com.vpet.waifu.ui.components.StakeResult
 import com.vpet.waifu.ui.components.TrophyToast
 import com.vpet.waifu.ui.components.rememberHeartTapState
 import com.vpet.waifu.ui.theme.Accents
@@ -288,6 +289,7 @@ fun VPetApp(
                     onCancelOccupation = viewModel::cancelOccupation,
                     onDismissEvent = viewModel::acknowledgeEvent,
                     onBuy = viewModel::buy,
+                    onBuyUpgrade = viewModel::buyUpgrade,
                     onAcknowledgeStory = viewModel::acknowledgeStory,
                     onAnswerScene = viewModel::answerScene,
                     onStake = viewModel::stake,
@@ -635,6 +637,10 @@ private fun OutcomeDialog(outcome: ActivityOutcome, onDismiss: () -> Unit) {
                         EffectChip(icon = Icons.Rounded.Star, text = "+${outcome.exp}", tint = StatColors.Exp)
                     }
                 }
+                // Money that was riding on it, before the coaching line: a
+                // bet resolving is the loudest thing that can happen on this
+                // card and it should not be a footnote under a hint.
+                StakeResult(outcome)
                 if (outcome.quality == OutcomeQuality.BAD) {
                     Text(
                         text = stringResource(

@@ -1,35 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The themed-icon layer. The launcher throws the colours away and
-     tints the alpha, so this has to read as her from shape alone.
-     Redrawn with the character: the long fall of hair and its pointed
-     hem, the head, the ahoge, the shoulders — the twin tails it used to
-     rely on are no longer part of her silhouette. -->
+<!-- The themed-icon layer. The launcher throws the colours away and tints the
+     alpha, so this has to read as her from shape alone — which means it is the
+     one layer that cannot be the rendered picture, and the one that has to be
+     redrawn whenever the character changes.
+
+     Redrawn now for the girl the rest of the icon shows: the round head, the
+     two tails falling wide of it, the ahoge, the shoulders. Her whole
+     silhouette is the tails; a version without them is a circle with a hair
+     flick on top, which is every themed icon on the home screen. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Hair: the whole outline, head included, with a pointed hem. -->
+
+    <!-- The left tail: high at the head, falling wide and tapering to a point. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,20 C36,20 25,33 25,52 C25,66 26,76 27,86 L34,79 L40,88 L47,79 L54,88 L61,79 L68,88 L74,79 L81,86 C82,76 83,66 83,52 C83,33 72,20 54,20 Z" />
-    <!-- The face, punched out of the hair so the two read apart when the
-         launcher flattens everything to one tint. -->
+        android:pathData="M36,36 C25,38 20,50 21,62 C22,72 26,80 31,84 C35,80 37,70 37,60 C37,50 37,42 36,36 Z" />
+    <!-- …and its mirror. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M72,36 C83,38 88,50 87,62 C86,72 82,80 77,84 C73,80 71,70 71,60 C71,50 71,42 72,36 Z" />
+
+    <!-- Head and hair as one mass, the fringe hanging square across the brow. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,20 C39,20 31,31 31,46 C31,60 40,70 54,70 C68,70 77,60 77,46 C77,31 69,20 54,20 Z" />
+
+    <!-- The face, punched back out so the head does not read as a solid blob
+         once the launcher flattens everything to one tint. -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
         android:strokeWidth="0"
-        android:pathData="M54,26 C43,26 36,33 36,45 C36,56 42,66 54,66 C66,66 72,56 72,45 C72,33 65,26 54,26 Z" />
+        android:pathData="M54,34 C46,34 41,40 41,48 C41,57 47,64 54,64 C61,64 67,57 67,48 C67,40 62,34 54,34 Z" />
+
     <!-- Shoulders. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,68 C42,68 32,75 30,92 L78,92 C76,75 66,68 54,68 Z" />
+        android:pathData="M54,68 C43,68 34,76 32,92 L76,92 C74,76 65,68 54,68 Z" />
+
     <!-- The ahoge — the one piece of her that is pure silhouette. -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="3.4"
+        android:strokeWidth="3.2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M55,21 C56,12 64,9 66,16" />
+        android:pathData="M53,21 C53,12 60,8 63,14" />
 </vector>

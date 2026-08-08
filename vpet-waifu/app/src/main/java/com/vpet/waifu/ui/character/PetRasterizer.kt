@@ -179,8 +179,9 @@ object PetRasterizer {
         widthPx: Int,
         heightPx: Int,
         frameCount: Int,
+        workProp: Prop? = null,
     ): List<ByteArray> {
-        val clip = pack.clipFor(state)
+        val clip = pack.clipFor(state, workProp)
         val source = pack.sheet.asAndroidBitmap()
         // The same scale the stage draws her at, margin included, or she is a
         // different size in the widget than in the app.
@@ -191,7 +192,7 @@ object PetRasterizer {
         return (0 until frameCount).map { index ->
             // Sample the clip evenly across the widget's own loop length, so a
             // six-frame clip and a three-frame one both fill the same period.
-            val cell = clip.row * pack.columns + clip.from +
+            val cell = clip.start +
                 (index * clip.count / frameCount).coerceAtMost(clip.count - 1)
             val col = cell % pack.columns
             val row = cell / pack.columns

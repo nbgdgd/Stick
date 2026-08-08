@@ -177,6 +177,15 @@ data class ActivitySession(
     val checkpointsPaid: Int = 0,
     /** Money staked on this shift going well — see [Stakes]. */
     val stake: Int = 0,
+    /**
+     * Which size that stake was, which is what fixes its odds and its payout.
+     *
+     * Kept beside the amount rather than derived from it: the amount is a
+     * fraction of the wallet *at the moment it was placed*, and the wallet has
+     * moved by the time the shift ends. Without this, settling a bet would have
+     * to guess which bet it was settling.
+     */
+    val stakeTier: StakeTier? = null,
 ) {
     fun remainingMillis(nowMillis: Long): Long = (endsAt - nowMillis).coerceAtLeast(0)
 
@@ -196,4 +205,16 @@ data class ActivityOutcome(
     val quality: OutcomeQuality,
     val cancelled: Boolean,
     val completedAt: Long,
-)
+    /** What was riding on it, 0 if nothing was. */
+    val stake: Int = 0,
+    /** What the bet paid back — 0 means it lost, and the stake is gone. */
+    val stakeReturned: Int = 0,
+    /** Which size it was, for the wording of the result. */
+    val stakeTier: StakeTier? = null,
+) {
+    val hadStake: Boolean get() = stake > 0
+    val stakeWon: Boolean get() = stakeReturned > 0
+
+    /** What the bet did to the wallet, positive or negative. */
+    val stakeNet: Int get() = stakeReturned - stake
+}

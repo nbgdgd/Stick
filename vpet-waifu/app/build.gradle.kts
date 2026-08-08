@@ -47,20 +47,26 @@ android {
     }
 
 /**
- * The one thing that must never reach a store.
+ * The one thing that must never reach a store *by accident*.
  *
- * `assets/pets/` holds sprite packs, and the pack used to develop this is a
- * character somebody else owns. It is gitignored, so a clean checkout is
- * clean — but a *developer's* tree is not, and the release APK is built from
- * that tree. "Remember to move the folder before you publish" is not a
- * safeguard, it is a thing to forget once.
+ * `assets/pets/` holds sprite packs, and at least one of them is a character
+ * somebody else owns. The packs live in the repo — the app is built and played
+ * with them, and a pack nobody can check out is a pack nobody can fix — so the
+ * question is no longer whether they are in the tree. It is whether the person
+ * cutting a store build knows one is going into it.
  *
- * So the release build refuses to run while anything is in there. Debug and
- * preview are untouched: testing with a pack is the whole reason it exists.
+ * So `packageRelease` and `bundleRelease` still refuse while a pack is present,
+ * and now say how to proceed: either move it out, or pass `-PbundlePacks=1` and
+ * mean it. Forgetting is still impossible; deciding is still allowed. Debug and
+ * preview are untouched — playing with a pack is the whole reason it exists.
  */
+val bundlePacksAllowed = providers.gradleProperty("bundlePacks").isPresent
+
 val checkNoBundledPacks = tasks.register("checkNoBundledPacks") {
     val packs = layout.projectDirectory.dir("src/main/assets/pets")
+    val allowed = bundlePacksAllowed
     doLast {
+        if (allowed) return@doLast
         val present = packs.asFile.listFiles()?.filter { it.isDirectory }.orEmpty()
         if (present.isNotEmpty()) {
             throw GradleException(
@@ -68,10 +74,11 @@ val checkNoBundledPacks = tasks.register("checkNoBundledPacks") {
                     appendLine("Release build refused: sprite packs are in the tree.")
                     present.forEach { appendLine("  src/main/assets/pets/" + it.name) }
                     appendLine()
-                    appendLine("These are development-only assets and at least one of them is")
-                    appendLine("a character the project does not own. Move them out before")
-                    appendLine("building anything for publication:")
+                    appendLine("At least one of these is a character the project does not own,")
+                    appendLine("and a pack in assets/ ships. Either take it out of this build:")
                     appendLine("  mv app/src/main/assets/pets ~/vpet-packs-parked")
+                    appendLine("or, if you hold the rights to publish it, say so out loud:")
+                    appendLine("  ./gradlew :vpet-waifu:app:assembleRelease -PbundlePacks=1")
                 },
             )
         }

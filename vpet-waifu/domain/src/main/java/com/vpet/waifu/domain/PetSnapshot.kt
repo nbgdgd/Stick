@@ -4,7 +4,15 @@ package com.vpet.waifu.domain
 enum class PetActivity { AWAKE, SLEEPING, WORKING, STUDYING, PLAYING }
 
 /** Why a shop item is greyed out. */
-enum class PurchaseBlock { LEVEL, MONEY, BUSY, STILL_PAYING, NOT_SICK, ALREADY_TODAY }
+enum class PurchaseBlock {
+    LEVEL, MONEY, BUSY, STILL_PAYING, NOT_SICK, ALREADY_TODAY,
+
+    /** Already hers — for an upgrade family, the last tier is finished. */
+    OWNED,
+
+    /** The cheaper tier of the same thing has not been bought yet. */
+    PREREQUISITE,
+}
 
 /** A short-lived reaction that overrides the idle animation. */
 enum class Emote { EATING, LOVED, CELEBRATING }
@@ -307,7 +315,27 @@ data class PetSnapshot(
 
     fun canBuy(upgrade: Upgrade, nowMillis: Long = 0L): Boolean =
         !owns(upgrade.id) && upgrade.isUnlocked(level) &&
+            // Tiers are climbed, not chosen: the second fridge is a better
+            // fridge, and buying it without the first would leave the shop
+            // showing "level 2 of 5" over an effect that only counts one step.
+            upgrade.requires.let { it == null || owns(it) } &&
             progress.canAfford(priceOf(upgrade, nowMillis))
+
+    /**
+     * Why an affordable-looking upgrade still cannot be bought.
+     *
+     * Split out from [canBuy] because a disabled button with no reason on it is
+     * the single most common way a shop becomes confusing — the player is left
+     * to guess between "too poor", "too low a level" and "buy the other one
+     * first", and two of those three are things they could act on right now.
+     */
+    fun blockedBy(upgrade: Upgrade, nowMillis: Long = 0L): PurchaseBlock? = when {
+        owns(upgrade.id) -> PurchaseBlock.OWNED
+        !upgrade.isUnlocked(level) -> PurchaseBlock.LEVEL
+        upgrade.requires?.let { !owns(it) } == true -> PurchaseBlock.PREREQUISITE
+        !progress.canAfford(priceOf(upgrade, nowMillis)) -> PurchaseBlock.MONEY
+        else -> null
+    }
 
     /** Everything her purchases, today's event, her path and your history add up to. */
     fun modifiers(): UpgradeEffect =

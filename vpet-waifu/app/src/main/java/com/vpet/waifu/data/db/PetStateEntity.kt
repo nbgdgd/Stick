@@ -13,6 +13,7 @@ import com.vpet.waifu.domain.PetActivity
 import com.vpet.waifu.domain.PetProgress
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PetStats
+import com.vpet.waifu.domain.StakeTier
 import com.vpet.waifu.domain.EventKind
 import com.vpet.waifu.domain.Focus
 import com.vpet.waifu.domain.Journal
@@ -70,6 +71,9 @@ data class PetStateEntity(
     val outcomeQuality: String? = null,
     val outcomeCancelled: Boolean = false,
     val outcomeAt: Long = 0,
+    val outcomeStake: Int = 0,
+    val outcomeStakeReturned: Int = 0,
+    val outcomeStakeTier: String? = null,
     val emote: String? = null,
     val emoteUntil: Long = 0,
     /** The tip jar: when it was last settled, and the fraction of a coin left over. */
@@ -142,6 +146,7 @@ data class PetStateEntity(
     /** The checkpoints already handed over, and the money riding on the shift. */
     val sessionCheckpointsPaid: Int = 0,
     val sessionStake: Int = 0,
+    val sessionStakeTier: String? = null,
     /** The day today's scene belongs to, and which reply was given. */
     val sceneDay: Long = 0,
     val sceneAnswered: Int = 0,
@@ -169,6 +174,12 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
             paidExp = sessionPaidExp,
             checkpointsPaid = sessionCheckpointsPaid.coerceAtLeast(0),
             stake = sessionStake.coerceAtLeast(0),
+            // A save written before the sizes existed carries an amount and no
+            // size. Reading it as the friendliest one is the only honest
+            // default: the player agreed to those odds, not to worse ones.
+            stakeTier = sessionStakeTier
+                ?.let { tier -> StakeTier.entries.firstOrNull { it.name == tier } }
+                ?: if (sessionStake > 0) StakeTier.SMALL else null,
         )
     },
     effects = decodeEffects(effects),
@@ -181,6 +192,11 @@ fun PetStateEntity.toSnapshot(): PetSnapshot = PetSnapshot(
             quality = enumOr(outcomeQuality, OutcomeQuality.GOOD),
             cancelled = outcomeCancelled,
             completedAt = outcomeAt,
+            stake = outcomeStake.coerceAtLeast(0),
+            stakeReturned = outcomeStakeReturned.coerceAtLeast(0),
+            stakeTier = outcomeStakeTier?.let { tier ->
+                StakeTier.entries.firstOrNull { it.name == tier }
+            },
         )
     },
     emote = emote?.let { enumOrNull<Emote>(it) },
@@ -264,6 +280,7 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     sessionPaidExp = session?.paidExp ?: 0,
     sessionCheckpointsPaid = session?.checkpointsPaid ?: 0,
     sessionStake = session?.stake ?: 0,
+    sessionStakeTier = session?.stakeTier?.name,
     effects = encodeEffects(effects),
     outcomeOccupationId = lastOutcome?.occupationId,
     outcomeKind = lastOutcome?.kind?.name,
@@ -271,6 +288,9 @@ fun PetSnapshot.toEntity(): PetStateEntity = PetStateEntity(
     outcomeExp = lastOutcome?.exp ?: 0,
     outcomeQuality = lastOutcome?.quality?.name,
     outcomeCancelled = lastOutcome?.cancelled ?: false,
+    outcomeStake = lastOutcome?.stake ?: 0,
+    outcomeStakeReturned = lastOutcome?.stakeReturned ?: 0,
+    outcomeStakeTier = lastOutcome?.stakeTier?.name,
     outcomeAt = lastOutcome?.completedAt ?: 0,
     emote = emote?.name,
     emoteUntil = emoteUntil,

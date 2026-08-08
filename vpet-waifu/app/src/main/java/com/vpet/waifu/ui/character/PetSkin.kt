@@ -114,9 +114,26 @@ fun PetFigure(
     // and a caller that forgets the argument should not be able to cause that.
     palette: PetPalette = if (skin == PetSkin.Classic) PetPalette.Classic else PetPalette.Default,
     workProp: Prop? = null,
+    /**
+     * Whether this is a portrait of her rather than her standing in a room.
+     *
+     * Only a sheet can tell the difference — a rig letterboxes its own field
+     * either way — but the caller should not have to know which of the three
+     * characters it happens to be showing.
+     */
+    portrait: Boolean = false,
 ) {
     when (skin) {
-        is PetSkin.Sheet -> SpritePet(pack = skin.pack, state = state, modifier = modifier)
+        is PetSkin.Sheet -> SpritePet(
+            pack = skin.pack,
+            state = state,
+            modifier = modifier,
+            // A sheet has no arms to pose, but it may have been drawn once per
+            // job — so the prop that would have gone in the rig's hands is what
+            // picks the café clip over the generic one.
+            workProp = workProp,
+            fillBox = portrait,
+        )
         PetSkin.Classic -> {
             val seconds = rememberPetPhaseSeconds()
             Canvas(modifier) {

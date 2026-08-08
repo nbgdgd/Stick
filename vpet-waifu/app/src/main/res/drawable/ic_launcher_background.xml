@@ -1,22 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Deep and near-flat on purpose. The bright violet disc this replaces
-     sat directly behind her hair at 1.33:1, so the top of her head
-     disappeared into it. -->
+<!-- The field she stands on, cut from the same picture as the store icon:
+     a plum top falling to near-black, sampled from the cover rather than
+     picked to match it, with a wide violet glow behind where her head lands.
+
+     The glow is doing real work rather than decorating. Her hair is violet and
+     the background is violet, and at the size a launcher actually draws this —
+     48dp on a crowded home screen — a violet silhouette on a violet field is a
+     smudge. Lifting the middle of the field is what keeps her outline.
+
+     The two gold sparkles are the same mark the app puts on anything meant to
+     feel special; they sit outside the 66dp safe zone on purpose, so a round
+     mask crops them and a squircle keeps them. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#14121E"
-        android:pathData="M0,0 L108,0 L108,108 L0,108 Z" />
-    <path
-        android:fillColor="#221C3A"
-        android:pathData="M7,54 a47,47 0 1,0 94,0 a47,47 0 1,0 -94,0 Z" />
+
+    <path android:pathData="M0,0 L108,0 L108,108 L0,108 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="0"
+                android:endX="54"
+                android:endY="108"
+                android:type="linear">
+                <item android:offset="0" android:color="#231B3B" />
+                <item android:offset="1" android:color="#141521" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <path android:pathData="M54,47 m-42,0 a42,42 0 1,0 84,0 a42,42 0 1,0 -84,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="54"
+                android:centerY="47"
+                android:gradientRadius="42"
+                android:type="radial">
+                <item android:offset="0" android:color="#4C7C3AED" />
+                <item android:offset="1" android:color="#007C3AED" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
     <path
         android:fillColor="#FFC46B"
-        android:pathData="M77,28 C77.38,30.04 77.96,30.62 80,31 C77.96,31.38 77.38,31.96 77,34 C76.62,31.96 76.04,31.38 74,31 C76.04,30.62 76.62,30.04 77,28 Z" />
+        android:pathData="M17,19 C17.4,21.2 18,21.8 20.2,22.2 C18,22.6 17.4,23.2 17,25.4 C16.6,23.2 16,22.6 13.8,22.2 C16,21.8 16.6,21.2 17,19 Z" />
     <path
         android:fillColor="#FFC46B"
-        android:pathData="M31,28.8 C31.28,30.3 31.7,30.72 33.2,31 C31.7,31.28 31.28,31.7 31,33.2 C30.72,31.7 30.3,31.28 28.8,31 C30.3,30.72 30.72,30.3 31,28.8 Z" />
+        android:pathData="M91,15 C91.3,16.6 91.7,17 93.3,17.3 C91.7,17.6 91.3,18 91,19.6 C90.7,18 90.3,17.6 88.7,17.3 C90.3,17 90.7,16.6 91,15 Z" />
 </vector>

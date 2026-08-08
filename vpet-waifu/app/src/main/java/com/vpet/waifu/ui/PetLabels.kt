@@ -181,9 +181,20 @@ fun occupationArtRes(id: String): Int = when (id) {
     else -> R.drawable.art_cafe
 }
 
+/**
+ * Which thing an upgrade id is a tier of.
+ *
+ * Every label below is keyed by this rather than by the id, because the second
+ * fridge is a fridge: it wants the same name, the same picture and the same
+ * colour as the first, with a level beside it. Drawing five separate fridges
+ * would be five drawings of one object, and a shop listing them separately
+ * would read as five appliances rather than one being improved.
+ */
+private fun upgradeFamilyOf(id: String): String = Upgrades.byId(id)?.family ?: id
+
 /** Room and gear have portraits; outfits are shown as their own swatches. */
 @DrawableRes
-fun upgradeArtRes(id: String): Int? = when (id) {
+fun upgradeArtRes(id: String): Int? = when (upgradeFamilyOf(id)) {
     "fridge" -> R.drawable.art_fridge
     "bed" -> R.drawable.art_bed
     "console" -> R.drawable.art_console
@@ -247,7 +258,7 @@ fun shopItemTint(id: String): Color = when (id) {
     else -> Color(0xFFB9A8DC)
 }
 
-fun upgradeTint(id: String): Color = when (id) {
+fun upgradeTint(id: String): Color = when (upgradeFamilyOf(id)) {
     "fridge" -> Color(0xFF5ADCE8)
     "bed" -> Color(0xFFA96FE8)
     "console" -> Color(0xFFF477B8)
@@ -264,7 +275,7 @@ fun upgradeTint(id: String): Color = when (id) {
 }
 
 @StringRes
-fun upgradeNameRes(id: String): Int = when (id) {
+fun upgradeNameRes(id: String): Int = when (upgradeFamilyOf(id)) {
     "fridge" -> R.string.upgrade_fridge
     "bed" -> R.string.upgrade_bed
     "console" -> R.string.upgrade_console
@@ -285,7 +296,7 @@ fun upgradeNameRes(id: String): Int = when (id) {
     else -> R.string.upgrade_outfit_gold
 }
 
-fun upgradeIcon(id: String): ImageVector = when (id) {
+fun upgradeIcon(id: String): ImageVector = when (upgradeFamilyOf(id)) {
     "fridge" -> Icons.Rounded.Kitchen
     "bed" -> Icons.Rounded.Bed
     "console" -> Icons.Rounded.SportsEsports

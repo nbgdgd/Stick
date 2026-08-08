@@ -1,4 +1,3 @@
 
-# A sprite pack of a licensed character: fine to build locally, must never
-# be published. See docs/sprite-packs.md.
-app/src/main/assets/pets/anya/
+# Sprite packs live in the repo now (see docs/sprite-packs.md); the release
+# build still refuses to bundle one unless you ask for it by name.

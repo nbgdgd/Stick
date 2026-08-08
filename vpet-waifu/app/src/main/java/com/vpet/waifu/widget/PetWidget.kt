@@ -129,6 +129,9 @@ class PetWidget : GlanceAppWidget() {
                     widthPx = (stageWidthDp * density).roundToInt().coerceAtMost(MAX_ROOM_PX),
                     heightPx = (stageHeightDp * density).roundToInt().coerceAtMost(MAX_ROOM_PX),
                     frameCount = FRAME_COUNT,
+                    // Already in the cache key above, so a shift starting or
+                    // ending re-renders the loop rather than serving the last.
+                    workProp = workProp,
                 )
             } else {
                 renderFrames(state, tempo, stageWidthDp, stageHeightDp, density, snapshot.outfit, workProp, classic)

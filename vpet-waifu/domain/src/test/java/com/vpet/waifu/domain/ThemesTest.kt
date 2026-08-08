@@ -72,14 +72,21 @@ class ThemesTest {
     }
 
     @Test
-    fun `they are the last thing left to want`() {
+    fun `they are the last thing left to want that does nothing`() {
         val themes = Upgrades.THEMES.filter { it.price > 0 }
-        val everythingElse = Upgrades.ALL.filterNot { it.kind == UpgradeKind.THEME }.maxOf { it.price }
+        // Measured against the *entry* price of the things that do something,
+        // not against their ceiling. The mechanical ladder now runs to seven
+        // figures, so nothing cosmetic will ever be the dearest object in the
+        // game again — what still has to be true is that redecorating is a
+        // serious purchase rather than pocket change beside a first upgrade.
+        val firstTiers = Upgrades.ALL
+            .filter { it.kind != UpgradeKind.THEME && it.tier == 1 && it.price > 0 }
+            .maxOf { it.price }
 
         assertTrue(
-            "a theme should out-price the old ceiling of $everythingElse",
+            "a theme should out-price the dearest first tier of ${'$'}firstTiers",
             themes.minOf { it.price } < themes.maxOf { it.price } &&
-                themes.maxOf { it.price } > everythingElse * 3,
+                themes.maxOf { it.price } > firstTiers * 3,
         )
         assertEquals(listOf(8, 14, 20), themes.map { it.requiredLevel })
     }

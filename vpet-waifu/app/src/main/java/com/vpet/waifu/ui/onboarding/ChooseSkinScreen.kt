@@ -193,6 +193,11 @@ private fun SkinChoice(
                 skin = skin,
                 state = PetState.HAPPY,
                 modifier = Modifier.fillMaxSize(),
+                // A card is a portrait. Without this a sprite pack honours the
+                // margin it needs on the stage and comes out half the size of
+                // the two rigs beside it, stuck to the bottom edge — which
+                // reads as "this one is broken", not "this one is different".
+                portrait = true,
             )
         }
         Spacer(Modifier.height(8.dp))

@@ -36,6 +36,19 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 SOURCE = os.path.join(ROOT, "app", "build", "store-shots", "icon-figure.png")
 OUT_DIR = os.path.join(ROOT, "store", "icons")
 LEGACY_512 = os.path.join(ROOT, "store", "icon-512.png")
+RES_DIR = os.path.join(ROOT, "app", "src", "main", "res")
+
+# The adaptive launcher icon's foreground, one file per density bucket. The
+# canvas is the full 108dp; the character is drawn inside the 66dp the mask is
+# guaranteed not to eat, whatever shape the launcher cuts.
+LAUNCHER_BUCKETS = {
+    "mdpi": 108,
+    "hdpi": 162,
+    "xhdpi": 216,
+    "xxhdpi": 324,
+    "xxxhdpi": 432,
+}
+SAFE_ZONE = 66.0 / 108.0
 
 MASTER = 2048
 
@@ -138,6 +151,36 @@ def framed():
     return icon.convert("RGB")
 
 
+def launcher_foreground():
+    """The character alone on transparency, framed for the adaptive mask.
+
+    The same crop as the store icon, so the icon on the phone and the icon on
+    the listing are one picture — but with the background left out, because the
+    launcher supplies its own layer and parallaxes the two against each other.
+    """
+    fig = figure()
+    unit = fig.width / ART_W
+    portrait = fig.crop((
+        round(CROP_X0 * unit), round(CROP_Y0 * unit),
+        round(CROP_X1 * unit), round(CROP_Y1 * unit),
+    ))
+
+    for bucket, size in LAUNCHER_BUCKETS.items():
+        inner = max(1, int(round(size * SAFE_ZONE)))
+        canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        # Rendered at four times the target and stepped down, for the same
+        # reason the store sizes are: at 108px her mouth is a third of a pixel.
+        scaled = portrait.resize((inner * 4, inner * 4), Image.LANCZOS) \
+                         .resize((inner, inner), Image.LANCZOS)
+        offset = (size - inner) // 2
+        canvas.paste(scaled, (offset, offset), scaled)
+        out_dir = os.path.join(RES_DIR, "mipmap-%s" % bucket)
+        os.makedirs(out_dir, exist_ok=True)
+        path = os.path.join(out_dir, "ic_launcher_foreground.png")
+        canvas.save(path, optimize=True)
+        print("res/mipmap-%s/ic_launcher_foreground.png" % bucket)
+
+
 def main():
     icon = framed()
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -148,6 +191,7 @@ def main():
     # The 512 also stays where the listing notes already point at it.
     icon.resize((512, 512), Image.LANCZOS).save(LEGACY_512, optimize=True)
     print("store/icon-512.png")
+    launcher_foreground()
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ import com.vpet.waifu.domain.Occupation
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.SceneOption
+import com.vpet.waifu.domain.StakeTier
 import com.vpet.waifu.domain.ShopItem
 import com.vpet.waifu.domain.Upgrade
 import kotlinx.coroutines.flow.Flow
@@ -112,8 +113,8 @@ class PetRepository @Inject constructor(
         simulation.answerScene(current, option, now)
     }
 
-    suspend fun stake(amount: Int): PetSnapshot = mutate { current, now ->
-        simulation.stake(current, amount, now)
+    suspend fun stake(tier: StakeTier): PetSnapshot = mutate { current, now ->
+        simulation.stake(current, tier, now)
     }
 
     suspend fun startPlaying(): PetSnapshot = mutate(simulation::startPlaying)

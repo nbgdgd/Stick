@@ -45,22 +45,68 @@ import kotlin.math.roundToInt
  *   "defaultFps": 8,
  *   "clips": {
  *     "IDLE":     { "row": 0, "from": 0, "count": 6, "fps": 6 },
- *     "SLEEPING": { "row": 5, "from": 5, "count": 3, "fps": 3 }
- *   }
+ *     "SLEEPING": { "start": 45, "count": 3, "durations": [500, 500, 750] }
+ *   },
+ *   "occupations": { "cafe": { "start": 0, "count": 8, "fps": 6.25 } },
+ *   "props":       { "PILLOW": { "start": 95, "count": 6, "fps": 4 } }
  * }
  * ```
  *
  * Only `IDLE` is required; any state without a clip of its own falls back to
  * it, so a two-row sheet is a legal pack and a nine-row one is a luxurious
  * version of the same thing.
+ *
+ * A cell is addressed by `start`, its index across the whole grid, so a clip
+ * may run off the end of one row and into the next and the packer is free to
+ * lay frames down back to back. `row` and `from` still work and mean
+ * `row * columns + from`, because the first pack shipped written that way.
+ *
+ * `durations` gives each frame its own length in milliseconds, and is there
+ * because almost every clip an artist draws holds its last frame — five frames
+ * at 200ms and one at 450 is a breath. Averaged into one fps that breath
+ * becomes a twitch. Where every frame really is the same length, `fps` says so
+ * more briefly and means exactly the same thing.
+ *
+ * `occupations` and `props` are the same clips keyed by what she is *doing*
+ * rather than how she is feeling: `WORKING` is a girl at work, but `cafe` is a
+ * girl carrying a tray. A job with no clip of its own falls back to `WORKING`
+ * or `STUDYING`, which falls back to `IDLE`, so a pack can answer as much or as
+ * little of this as its artist drew.
  */
 data class SpriteClip(
-    val row: Int,
-    val from: Int,
+    /** Index of the first cell across the whole grid, rows run together. */
+    val start: Int,
     val count: Int,
     val fps: Float,
     val loop: Boolean = true,
-)
+    /**
+     * Per-frame lengths in milliseconds, or null to use [fps] throughout.
+     *
+     * Always either null or exactly [count] long — [SpritePacks] drops a
+     * mismatched list rather than trusting it, because a timeline shorter than
+     * its clip freezes on the last frame it can explain.
+     */
+    val durationsMs: List<Int>? = null,
+) {
+    /** How many frames past [start] is showing at [seconds] into the clip. */
+    fun offsetAt(seconds: Float): Int {
+        if (count <= 1) return 0
+        val timeline = durationsMs
+        if (timeline == null) {
+            val step = (seconds * fps).toInt()
+            return if (loop) step.mod(count) else min(step, count - 1)
+        }
+        val total = timeline.sum().toLong()
+        if (total <= 0L) return 0
+        val millis = (seconds * 1000f).toLong()
+        var t = if (loop) millis.mod(total) else min(millis, total - 1L)
+        timeline.forEachIndexed { index, length ->
+            t -= length
+            if (t < 0L) return index
+        }
+        return count - 1
+    }
+}
 
 data class SpritePack(
     val id: String,
@@ -70,6 +116,17 @@ data class SpritePack(
     val frameHeight: Int,
     val columns: Int,
     val clips: Map<PetState, SpriteClip>,
+    /**
+     * Clips keyed by the prop the job puts in her hands.
+     *
+     * The prop is the one thing about a shift that every surface already knows
+     * — the stage, the widget and the overlay all receive it so the rig can be
+     * handed a tray or a microphone — so a sheet can answer the same question
+     * without a single new argument being threaded anywhere. [SpritePacks]
+     * resolves the manifest's job ids into props at load, which means the
+     * mapping lives in exactly one place and cannot drift from [workPropFor].
+     */
+    val jobs: Map<Prop, SpriteClip>,
     val idle: SpriteClip,
     /**
      * Whether the room behind her should be quantised to her own pixel grid.
@@ -94,20 +151,23 @@ data class SpritePack(
      */
     val fit: Float,
 ) {
-    /** The clip for a state, or the idle loop if the pack does not draw it. */
-    fun clipFor(state: PetState): SpriteClip = clips[state] ?: idle
+    /**
+     * The clip for what she is doing, falling back until something answers.
+     *
+     * What she is *doing* wins over what she is: a girl on the café shift is
+     * carrying a tray whether or not the shift has cheered her up, and the
+     * cheer is already on her face in that clip. Below that the chain is the
+     * job's own animation, then the generic one for work or study, then the
+     * state, then idle — so a pack that drew nothing but an idle loop is still
+     * a legal pack that never shows an empty stage.
+     */
+    fun clipFor(state: PetState, prop: Prop? = null): SpriteClip =
+        prop?.let { jobs[it] } ?: clips[state] ?: idle
 
-    /** Which cell of the grid is showing at [seconds] for [state]. */
-    fun frameIndex(state: PetState, seconds: Float): Int {
-        val clip = clipFor(state)
-        if (clip.count <= 1) return clip.row * columns + clip.from
-        val step = (seconds * clip.fps).toInt()
-        val offset = if (clip.loop) {
-            step.mod(clip.count)
-        } else {
-            min(step, clip.count - 1)
-        }
-        return clip.row * columns + clip.from + offset
+    /** Which cell of the grid is showing at [seconds]. */
+    fun frameIndex(state: PetState, prop: Prop?, seconds: Float): Int {
+        val clip = clipFor(state, prop)
+        return clip.start + clip.offsetAt(seconds)
     }
 }
 
@@ -158,18 +218,51 @@ object SpritePacks {
         val columns = grid.getInt("columns")
         val defaultFps = manifest.optDouble("defaultFps", 8.0).toFloat()
 
+        fun clipOf(c: JSONObject): SpriteClip {
+            val count = c.optInt("count", 1).coerceAtLeast(1)
+            val durations = c.optJSONArray("durations")
+                ?.let { array -> List(array.length()) { array.optInt(it) } }
+                // A timeline that does not describe every frame is worse than
+                // none: it would hold on whichever frame it ran out at.
+                ?.takeIf { it.size == count && it.all { ms -> ms > 0 } }
+            return SpriteClip(
+                start = if (c.has("start")) {
+                    c.getInt("start")
+                } else {
+                    c.optInt("row") * columns + c.optInt("from", 0)
+                },
+                count = count,
+                fps = c.optDouble("fps", defaultFps.toDouble()).toFloat(),
+                loop = c.optBoolean("loop", true),
+                durationsMs = durations,
+            )
+        }
+
         val clipsJson = manifest.optJSONObject("clips") ?: JSONObject()
         val clips = mutableMapOf<PetState, SpriteClip>()
         clipsJson.keys().forEach { key ->
             val state = runCatching { PetState.valueOf(key) }.getOrNull() ?: return@forEach
-            val c = clipsJson.getJSONObject(key)
-            clips[state] = SpriteClip(
-                row = c.getInt("row"),
-                from = c.optInt("from", 0),
-                count = c.optInt("count", 1).coerceAtLeast(1),
-                fps = c.optDouble("fps", defaultFps.toDouble()).toFloat(),
-                loop = c.optBoolean("loop", true),
-            )
+            clips[state] = clipOf(clipsJson.getJSONObject(key))
+        }
+
+        // Jobs arrive named the way the game names them — "cafe", "idol" — and
+        // are stored against the prop that job hands her, which is what the
+        // renderers actually carry. Going through `workPropFor` rather than a
+        // table of our own means a job that changes its prop changes here too.
+        val jobs = mutableMapOf<Prop, SpriteClip>()
+        manifest.optJSONObject("occupations")?.let { json ->
+            json.keys().forEach { jobId ->
+                val prop = workPropFor(jobId) ?: return@forEach
+                jobs[prop] = clipOf(json.getJSONObject(jobId))
+            }
+        }
+        // ...and anything else she holds is named by the prop directly, which
+        // is how the bed gets its own way of sleeping.
+        manifest.optJSONObject("props")?.let { json ->
+            json.keys().forEach { name ->
+                val prop = runCatching { Prop.valueOf(name) }.getOrNull() ?: return@forEach
+                jobs[prop] = clipOf(json.getJSONObject(name))
+            }
         }
 
         return SpritePack(
@@ -180,9 +273,10 @@ object SpritePacks {
             frameHeight = frame.getInt("height"),
             columns = columns,
             clips = clips,
+            jobs = jobs,
             // A pack with no IDLE clip still has a first cell, and one frame of
             // something is a great deal better than an empty stage.
-            idle = clips[PetState.IDLE] ?: SpriteClip(row = 0, from = 0, count = 1, fps = defaultFps),
+            idle = clips[PetState.IDLE] ?: SpriteClip(start = 0, count = 1, fps = defaultFps),
             pixelateRoom = manifest.optBoolean("pixelateRoom", true),
             fit = manifest.optDouble("fit", DEFAULT_FIT.toDouble()).toFloat().coerceIn(0.1f, 1f),
         )
@@ -204,6 +298,18 @@ fun SpritePet(
     pack: SpritePack,
     state: PetState,
     modifier: Modifier = Modifier,
+    /** What the job put in her hands, if she is on one. */
+    workProp: Prop? = null,
+    /**
+     * Whether to drop the pack's stage margin and fill the box instead.
+     *
+     * The margin exists so a tightly cropped cell comes out the same size as
+     * the drawn rig when both are standing in the same room. A card that is a
+     * *portrait* of her has no room and no rig to agree with, and honouring the
+     * margin there just leaves her small and stuck to the bottom edge — which
+     * is exactly how the character picker used to show every pack.
+     */
+    fillBox: Boolean = false,
 ) {
     // Unthrottled: a frame here is one blit of one crop, and the clip's own fps
     // decides how often the picture actually changes. Throttling this only made
@@ -212,14 +318,18 @@ fun SpritePet(
     val srcSize = remember(pack) { IntSize(pack.frameWidth, pack.frameHeight) }
 
     Canvas(modifier) {
-        val index = pack.frameIndex(state, seconds.floatValue)
+        val index = pack.frameIndex(state, workProp, seconds.floatValue)
         val col = index % pack.columns
         val row = index / pack.columns
 
         // Fit the frame to the box without distorting it, the way the rig's own
         // ART_WIDTH/ART_HEIGHT letterboxing does — less the pack's own margin,
         // so a tightly cropped cell does not swallow the room behind her.
-        val scale = pack.pixelScale(size.width, size.height)
+        val scale = if (fillBox) {
+            min(size.width / pack.frameWidth, size.height / pack.frameHeight)
+        } else {
+            pack.pixelScale(size.width, size.height)
+        }
         val w = (pack.frameWidth * scale).roundToInt()
         val h = (pack.frameHeight * scale).roundToInt()
 
@@ -229,7 +339,9 @@ fun SpritePet(
             srcSize = srcSize,
             dstOffset = IntOffset(
                 ((size.width - w) / 2f).roundToInt(),
-                (size.height - h).roundToInt(),
+                // Standing on the floor of her box normally, centred when she
+                // is filling a card and there is no floor to stand on.
+                if (fillBox) ((size.height - h) / 2f).roundToInt() else (size.height - h).roundToInt(),
             ),
             dstSize = IntSize(w, h),
             // These sheets are drawn at a fixed small size and then blown up to

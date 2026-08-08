@@ -18,6 +18,7 @@ import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.SceneOption
 import com.vpet.waifu.domain.PetTuning
+import com.vpet.waifu.domain.StakeTier
 import com.vpet.waifu.domain.ShopItem
 import com.vpet.waifu.domain.Upgrade
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -167,7 +168,7 @@ class PetViewModel @Inject constructor(
 
     fun answerScene(option: SceneOption) = act(Cue.HAPPY) { repository.answerScene(option) }
 
-    fun stake(amount: Int) = act(Cue.TAP) { repository.stake(amount) }
+    fun stake(tier: StakeTier) = act(Cue.TAP) { repository.stake(tier) }
 
     /** The one purchase worth a fanfare: it is kept. */
     fun buyUpgrade(upgrade: Upgrade) = act(Cue.FANFARE) { repository.buyUpgrade(upgrade) }

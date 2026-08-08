@@ -838,11 +838,25 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
         val isWork = occupation.kind == OccupationKind.WORK
         val quality = if (cancelled) OutcomeQuality.POOR else qualityFor(snapshot.stats.mood)
 
-        // The stake comes back, up or down, on the same verdict that decided
-        // the wage. Walking out early counts as a bad shift: otherwise the
-        // stake would be a free option you could cancel out of the moment her
-        // mood dipped.
-        val returned = (session?.stake ?: 0).let { if (it > 0) Stakes.settle(it, quality) else 0 }
+        // The bet settles on the same verdict that decided the wage, at the
+        // odds the chosen size carries. Walking out early counts as a bad
+        // shift: otherwise the stake would be a free option you could cancel
+        // out of the moment her mood dipped.
+        //
+        // It either pays or it does not. There is no partial return — that
+        // softening is what made the old stake a formality rather than a bet.
+        val staked = session?.stake ?: 0
+        val stakeTier = session?.stakeTier ?: StakeTier.SMALL
+        val returned = if (staked > 0) {
+            Stakes.settle(
+                amount = staked,
+                tier = stakeTier,
+                quality = quality,
+                roll = Stakes.rollOf(session?.startedAt ?: atMillis, staked),
+            )
+        } else {
+            0
+        }
 
         return snapshot.copy(
             progress = snapshot.progress.plus(money = remainderPay + returned, exp = remainderExp),
@@ -860,6 +874,9 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
                 quality = quality,
                 cancelled = cancelled,
                 completedAt = atMillis,
+                stake = staked,
+                stakeReturned = returned,
+                stakeTier = if (staked > 0) stakeTier else null,
             ),
             journal = Journal.append(
                 snapshot.journal,
@@ -1210,15 +1227,18 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
      * Taken out of the wallet immediately — that is the cost, and it has to be
      * felt at the moment of the decision rather than at the end of the shift.
      */
-    fun stake(snapshot: PetSnapshot, amount: Int, nowMillis: Long): PetSnapshot {
+    fun stake(snapshot: PetSnapshot, tier: StakeTier, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
         val session = current.session ?: return current
         if (!current.isBusy || session.stake > 0) return current
-        val staked = amount.coerceIn(0, Stakes.maxStake(current))
+        // Recomputed here rather than trusted from the caller: the wallet may
+        // have moved between the screen drawing the button and the tap landing,
+        // and a bet for more money than she has is not a bet the house takes.
+        val staked = Stakes.amountFor(current, tier)
         if (staked <= 0) return current
         return current.copy(
             progress = current.progress.plus(money = -staked),
-            session = session.copy(stake = staked),
+            session = session.copy(stake = staked, stakeTier = tier),
             lastInteractionAt = nowMillis,
         )
     }

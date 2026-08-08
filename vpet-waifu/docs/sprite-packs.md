@@ -34,12 +34,18 @@ app/src/main/assets/pets/
   "displayName": "Her name",
   "spritesheetPath": "spritesheet.webp",
   "frame":  { "width": 192, "height": 208 },
-  "grid":   { "columns": 8, "rows": 9 },
+  "grid":   { "columns": 8, "rows": 16 },
   "defaultFps": 8,
   "clips": {
-    "IDLE":     { "row": 0, "from": 0, "count": 6, "fps": 5 },
+    "IDLE":     { "start": 37, "count": 6, "durations": [200, 200, 200, 200, 200, 450] },
     "WORKING":  { "row": 1, "from": 0, "count": 8, "fps": 9 },
-    "SLEEPING": { "row": 5, "from": 5, "count": 3, "fps": 2, "loop": true }
+    "SLEEPING": { "start": 91, "count": 4, "fps": 2, "loop": true }
+  },
+  "occupations": {
+    "cafe": { "start": 0, "count": 8, "fps": 6.25 }
+  },
+  "props": {
+    "PILLOW": { "start": 95, "count": 6, "fps": 4 }
   }
 }
 ```
@@ -49,12 +55,25 @@ app/src/main/assets/pets/
 | `frame` | the size of one cell, in pixels |
 | `grid` | how many cells across and down the sheet is |
 | `clips` | which cells play for which state |
-| `row` | zero-based row of the grid |
-| `from` | first cell within that row |
+| `occupations` | which cells play for which job — see below |
+| `props` | which cells play for something she is holding |
+| `start` | the clip's first cell, counted across the whole grid |
+| `row`, `from` | the same thing the long way round: `row * columns + from` |
 | `count` | how many cells the clip runs for |
 | `fps` | frames a second for this clip; falls back to `defaultFps` |
+| `durations` | per-frame lengths in ms; overrides `fps`, must be `count` long |
 | `loop` | `true` repeats, `false` holds the last frame |
 | `fit` | how much of its box the frame fills, 0..1 (default 0.62) |
+
+Cells are addressed by `start`, an index across the whole grid, so a clip may
+run off the end of one row and into the next. That lets a packer lay frames
+down back to back instead of padding every clip out to a row. `row`/`from`
+still work and mean exactly `row * columns + from`.
+
+`durations` exists because almost every clip an artist draws holds its last
+frame — five frames at 200ms and one at 450 is a breath. Averaged into one fps
+that breath becomes a twitch. Where every frame really is the same length,
+`fps` says so more briefly and means the same thing.
 
 State names are the values of `com.vpet.waifu.domain.PetState`: `IDLE`,
 `HAPPY`, `HUNGRY`, `TIRED`, `SLEEPING`, `EATING`, `LOVED`, `WORKING`,
@@ -63,6 +82,29 @@ State names are the values of `com.vpet.waifu.domain.PetState`: `IDLE`,
 Only `IDLE` is required. Any state without a clip of its own falls back to it,
 so a two-row sheet is a legal pack and a nine-row one is a luxurious version of
 the same thing.
+
+## One animation per job
+
+The rig hands her a tray at the café, a microphone on the idol stage and a
+book stack at university. A sheet can answer the same way, if its artist drew
+it: name a clip after the job and it replaces the generic `WORKING` or
+`STUDYING` loop while she is on that shift.
+
+```json
+"occupations": {
+  "cafe": { "start": 0, "count": 8, "fps": 6.25 },
+  "idol": { "start": 43, "count": 8, "fps": 8.33 }
+}
+```
+
+Job ids are `cafe`, `shop`, `office`, `idol`, `school`, `course` and
+`university` — the ids in `Occupations`. A job with no clip of its own falls
+back to `WORKING`/`STUDYING`, which falls back to `IDLE`, so a pack can answer
+as much or as little of this as it likes.
+
+`props` is the same idea keyed by something she is holding rather than
+somewhere she is. Only one exists today: `PILLOW`, which is how she sleeps once
+the player has bought her a bed.
 
 ## Sizing her against the room
 
@@ -80,12 +122,10 @@ cells carry their own margin, lower it if she still crowds the stage.
   has its clothes painted into every frame, so buying one changes nothing.
   Either hide the outfit sections while a pack is selected, or draw a separate
   sheet per outfit and treat them as separate packs.
-- **Job props and workplaces.** The seven jobs put a tray, a laptop, a
-  microphone, a bag, a notebook, a book stack or a lecture in her hands,
-  positioned off the rig's own hand joint — and each draws its own set behind
-  her, the café counter, the stage truss, the classroom. All of it is part of
-  the rig. A pack works and studies in her room, and the room keeps its full
-  dressing while she does, since there is no set arriving to make space for.
+- **Workplaces.** Each job draws its own set behind the rig — the café
+  counter, the stage truss, the classroom. That is part of the rig. A pack
+  works and studies in her room, and the room keeps its full dressing while she
+  does, since there is no set arriving to make space for.
 - **Resolution.** Frames are drawn with nearest-neighbour filtering, so the
   linework stays crisp rather than turning to mush — but a sheet much below
   200 px a frame will still look coarse blown up to a phone-sized stage.
@@ -140,5 +180,32 @@ studio that made the character, not to the site that redistributed it. Use a
 pack you commissioned, generated as an original character, or hold a written
 commercial licence for.
 
-A pack left in `assets/` *will* ship: nothing strips it at build time. Remove
-any pack you do not have the right to distribute before cutting a release.
+A pack left in `assets/` *will* ship: nothing strips it at build time. So
+`packageRelease` and `bundleRelease` refuse to run while there is one in the
+tree, and tell you your two options — move it out:
+
+```bash
+mv app/src/main/assets/pets ~/vpet-packs-parked
+```
+
+or, if you hold the rights to publish it, say so out loud:
+
+```bash
+./gradlew :vpet-waifu:app:assembleRelease -PbundlePacks=1
+```
+
+Debug and preview builds are untouched: playing with a pack is the whole reason
+packs exist.
+
+## Building a pack from GIFs
+
+`tools/pets/build_pack.py` turns a folder of GIF animations into a sheet and a
+manifest — one clip per file, named after the state or the job it plays for. It
+keys out a magenta background the encoder failed to mark transparent, keeps the
+artist's per-frame timing, and refuses to write the same frames twice. Run it
+after the art changes:
+
+```bash
+python3 tools/pets/build_pack.py            # reads previews.7z at the repo root
+python3 tools/pets/build_pack.py --gifs dir # or a folder of loose .gif files
+```

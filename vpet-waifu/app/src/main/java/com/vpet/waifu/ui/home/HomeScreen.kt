@@ -97,7 +97,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vpet.waifu.R
-import com.vpet.waifu.domain.Stakes
 import androidx.compose.material.icons.rounded.Casino
 import com.vpet.waifu.domain.Shifts
 import androidx.compose.animation.expandVertically
@@ -127,6 +126,8 @@ import com.vpet.waifu.data.PetSettings
 import com.vpet.waifu.domain.Dialogue
 import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.OutcomeQuality
+import com.vpet.waifu.domain.StakeTier
+import com.vpet.waifu.domain.Upgrade
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.SceneOption
 import com.vpet.waifu.domain.Anniversaries
@@ -160,6 +161,8 @@ import com.vpet.waifu.ui.components.LevelRing
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.IconTile
+import com.vpet.waifu.ui.components.StakeBoard
+import com.vpet.waifu.ui.components.UpgradeBoard
 import com.vpet.waifu.ui.components.PanelCard
 import com.vpet.waifu.ui.components.PetStage
 import com.vpet.waifu.ui.components.PrimaryButton
@@ -216,11 +219,12 @@ fun HomeScreen(
     onCancelOccupation: () -> Unit,
     onDismissEvent: () -> Unit,
     onBuy: (ShopItem) -> Unit,
+    onBuyUpgrade: (Upgrade) -> Unit = {},
     onAcknowledgeStory: () -> Unit,
     onAcknowledgeDaily: () -> Unit,
     onSeen: () -> Unit,
     onAnswerScene: (SceneOption) -> Unit = {},
-    onStake: (Int) -> Unit = {},
+    onStake: (StakeTier) -> Unit = {},
     skin: PetSkin = PetSkin.Modern,
     modifier: Modifier = Modifier,
 ) {
@@ -443,6 +447,11 @@ fun HomeScreen(
         }
 
         ActiveBoosts(snapshot, nowMillis)
+
+        // What her money is for. Closed, it is one line; open, it is the whole
+        // ladder — and either way it sits below the things that are happening
+        // rather than over them.
+        UpgradeBoard(snapshot = snapshot, nowMillis = nowMillis, onBuy = onBuyUpgrade)
 
         // One suggestion, or none. Below the things that are *happening* and
         // above the gauges, because it is a reading of those gauges.
@@ -705,64 +714,6 @@ private fun shiftNarrationRes(occupationId: String, progress: Float): Int {
 }
 
 
-/**
- * Money on the shift going well.
- *
- * Offered once, at the start, and then replaced by what is riding on it. It has
- * to be a decision made *before* the outcome is knowable, or it is not a bet —
- * so the row disappears the moment it is taken, and there is no way to add to
- * it or pull out.
- *
- * Three fixed amounts rather than a slider: a slider invites optimising a
- * number, and the interesting question here is "how confident am I", not "what
- * is the exact right stake".
- */
-@Composable
-private fun StakeRow(snapshot: PetSnapshot, onStake: (Int) -> Unit) {
-    val session = snapshot.session ?: return
-    val cap = Stakes.maxStake(snapshot)
-
-    if (session.stake > 0) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Rounded.Casino,
-                contentDescription = null,
-                tint = StatColors.Money,
-                modifier = Modifier.size(16.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = stringResource(
-                    R.string.stake_riding,
-                    session.stake,
-                    (session.stake * Stakes.WIN_RATE).toInt(),
-                    (session.stake * Stakes.LOSS_RATE).toInt(),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = Accents.TextDim,
-            )
-        }
-        return
-    }
-    if (cap <= 0) return
-
-    Column {
-        Text(
-            text = stringResource(R.string.stake_offer),
-            style = MaterialTheme.typography.bodySmall,
-            color = Accents.TextDim,
-        )
-        Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Quarter, half, the lot — of what she is allowed to stake, not of
-            // the wallet, so the cap is what the buttons are a fraction of.
-            listOf(cap / 4, cap / 2, cap).distinct().filter { it > 0 }.forEach { amount ->
-                OutlineButton(text = "$amount ¥", onClick = { onStake(amount) })
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SessionCard(
@@ -770,7 +721,7 @@ private fun SessionCard(
     simulation: PetSimulation,
     nowMillis: Long,
     onCancel: () -> Unit,
-    onStake: (Int) -> Unit,
+    onStake: (StakeTier) -> Unit,
 ) {
     val session = snapshot.session ?: return
     val occupation = snapshot.occupation ?: return
@@ -914,7 +865,7 @@ private fun SessionCard(
                 )
             }
             Spacer(Modifier.height(10.dp))
-            StakeRow(snapshot, onStake)
+            StakeBoard(snapshot = snapshot, quality = quality, onStake = onStake)
             Spacer(Modifier.height(14.dp))
             // Full width and on its own line: beside the title it fought the
             // job name for space and both ended up truncated.

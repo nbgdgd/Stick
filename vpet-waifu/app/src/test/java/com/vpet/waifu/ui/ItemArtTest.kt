@@ -45,10 +45,24 @@ class ItemArtTest {
         // The default room is the one thing here nobody buys, so it is the one
         // thing without a picture; everything else — including the six outfits
         // that used to share a single coat hanger — carries its own.
+        //
+        // One picture per *family*, not per tier: a second fridge is the same
+        // fridge, improved, and drawing five of them would be five drawings of
+        // one object. What the test still forbids is two different things
+        // sharing a picture.
         val bought = Upgrades.ALL.filter { it.id != Upgrades.DEFAULT_THEME }
-        val arts = bought.map { upgradeArtRes(it.id) }
-        arts.forEach { assertNotNull("purchasable upgrade without art", it) }
-        assertEquals("two upgrades share a portrait", bought.size, arts.toSet().size)
+        bought.forEach { assertNotNull("purchasable upgrade without art", upgradeArtRes(it.id)) }
+
+        val families = bought.map { it.family }.distinct()
+        assertEquals(
+            "two upgrades share a portrait",
+            families.size,
+            families.map { upgradeArtRes(it) }.toSet().size,
+        )
+        // …and every tier of one family answers with the family's own picture.
+        bought.forEach {
+            assertEquals("${'$'}{it.id} strayed from its family", upgradeArtRes(it.family), upgradeArtRes(it.id))
+        }
         assertNull(upgradeArtRes(Upgrades.DEFAULT_THEME))
     }
 }

@@ -156,49 +156,71 @@ class DowntimeTest {
     // --- money on the outcome ------------------------------------------------
 
     @Test
-    fun `a stake is taken now and settled on how the shift went`() {
+    fun `a stake is taken now and settled when the shift ends`() {
         val working = sim.startOccupation(snapshot(), shift, T0)
-        val staked = sim.stake(working, 400, T0)
+        val expected = Stakes.amountFor(working, StakeTier.MEDIUM)
+        val staked = sim.stake(working, StakeTier.MEDIUM, T0)
 
         // Taken immediately: that is the cost, and it has to be felt at the
         // moment of the decision.
-        assertEquals(working.progress.money - 400, staked.progress.money)
-        assertEquals(400, staked.session?.stake)
+        assertEquals(working.progress.money - expected, staked.progress.money)
+        assertEquals(expected, staked.session?.stake)
+        assertEquals(StakeTier.MEDIUM, staked.session?.stakeTier)
 
         val end = T0 + (shift.durationMinutes + 2) * MINUTE
         val done = sim.advanceTo(staked, end)
         assertEquals(PetActivity.AWAKE, done.activity)
 
-        val quality = done.lastOutcome!!.quality
-        assertTrue("a cared-for shift should go well", Stakes.wins(quality))
+        // The outcome carries the whole bet, won or lost, so the screen that
+        // announces the shift can announce what it did to the wallet.
+        val outcome = done.lastOutcome!!
+        assertEquals(expected, outcome.stake)
+        assertEquals(StakeTier.MEDIUM, outcome.stakeTier)
+        if (outcome.stakeWon) {
+            assertEquals(StakeTier.MEDIUM.winnings(expected), outcome.stakeReturned)
+        } else {
+            assertEquals(0, outcome.stakeReturned)
+        }
     }
 
     @Test
-    fun `a stake cannot exceed the cap or be placed twice`() {
-        val working = sim.startOccupation(snapshot(), shift, T0)
-        val cap = Stakes.maxStake(working)
+    fun `a bet is never more than the wallet, and never placed twice`() {
+        val broke = sim.startOccupation(snapshot(money = 40), shift, T0)
+        // Going all in with forty yen stakes forty yen, not a fraction of some
+        // level-scaled cap she cannot cover.
+        val allIn = sim.stake(broke, StakeTier.ALL_IN, T0)
+        assertEquals(40, allIn.session?.stake)
+        assertEquals(0, allIn.progress.money)
 
-        val over = sim.stake(working, cap * 10, T0)
-        assertEquals(cap, over.session?.stake)
-
-        // A second stake on the same shift is refused outright.
-        val again = sim.stake(over, 100, T0)
-        assertEquals(cap, again.session?.stake)
-        assertEquals(over.progress.money, again.progress.money)
+        // A second bet on the same shift is refused outright.
+        val again = sim.stake(allIn, StakeTier.SMALL, T0)
+        assertEquals(40, again.session?.stake)
+        assertEquals(allIn.progress.money, again.progress.money)
     }
 
     @Test
-    fun `walking out of a shift loses the stake`() {
+    fun `a losing bet returns nothing at all`() {
         val working = sim.startOccupation(snapshot(), shift, T0)
-        val staked = sim.stake(working, 400, T0)
+        val amount = Stakes.amountFor(working, StakeTier.LARGE)
+        // The roll is fixed by the session, so the losing branch is reachable
+        // deterministically rather than by hoping.
+        assertEquals(0, Stakes.settle(amount, StakeTier.LARGE, OutcomeQuality.GREAT, roll = 0.999f))
+    }
+
+    @Test
+    fun `walking out of a shift settles the bet at the worst odds`() {
+        val working = sim.startOccupation(snapshot(), shift, T0)
+        val staked = sim.stake(working, StakeTier.SMALL, T0)
+        val amount = staked.session!!.stake
         val quit = sim.cancelOccupation(staked, T0 + 5 * MINUTE)
 
         assertEquals(OutcomeQuality.POOR, quit.lastOutcome?.quality)
-        // The stake comes back short — that is what stops it being a free
-        // option you can cancel out of the moment her mood dips.
+        // Whatever it pays, it can never pay more than it would have on a shift
+        // she finished — otherwise walking out would be the way to win.
         assertTrue(
-            "returned ${quit.progress.money} vs staked-out ${staked.progress.money}",
-            quit.progress.money < staked.progress.money + 400,
+            "quitting returned ${quit.lastOutcome?.stakeReturned} on a stake of $amount",
+            quit.lastOutcome!!.stakeReturned == 0 ||
+                quit.lastOutcome!!.stakeReturned == StakeTier.SMALL.winnings(amount),
         )
     }
 

@@ -160,6 +160,10 @@ object SaveCodec {
         put("choreDoneAt", entity.choreDoneAt)
         put("sessionCheckpointsPaid", entity.sessionCheckpointsPaid)
         put("sessionStake", entity.sessionStake)
+        putOrNull("sessionStakeTier", entity.sessionStakeTier)
+        put("outcomeStake", entity.outcomeStake)
+        put("outcomeStakeReturned", entity.outcomeStakeReturned)
+        putOrNull("outcomeStakeTier", entity.outcomeStakeTier)
         put("sceneDay", entity.sceneDay)
         put("sceneAnswered", entity.sceneAnswered)
     }
@@ -251,6 +255,10 @@ object SaveCodec {
         choreDoneAt = save.optString("choreDoneAt"),
         sessionCheckpointsPaid = save.optInt("sessionCheckpointsPaid"),
         sessionStake = save.optInt("sessionStake"),
+        sessionStakeTier = save.stringOrNull("sessionStakeTier"),
+        outcomeStake = save.optInt("outcomeStake"),
+        outcomeStakeReturned = save.optInt("outcomeStakeReturned"),
+        outcomeStakeTier = save.stringOrNull("outcomeStakeTier"),
         sceneDay = save.optLong("sceneDay"),
         sceneAnswered = save.optInt("sceneAnswered"),
     )

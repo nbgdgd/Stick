@@ -1,0 +1,203 @@
+{
+  "id": "anya",
+  "displayName": "Anya",
+  "spritesheetPath": "spritesheet.webp",
+  "frame": {
+    "width": 192,
+    "height": 208
+  },
+  "grid": {
+    "columns": 8,
+    "rows": 16
+  },
+  "defaultFps": 8,
+  "pixelateRoom": true,
+  "clips": {
+    "IDLE": {
+      "start": 37,
+      "count": 6,
+      "durations": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        450
+      ]
+    },
+    "HAPPY": {
+      "start": 27,
+      "count": 4,
+      "durations": [
+        160,
+        160,
+        160,
+        410
+      ]
+    },
+    "HUNGRY": {
+      "start": 31,
+      "count": 6,
+      "durations": [
+        250,
+        250,
+        250,
+        250,
+        250,
+        500
+      ]
+    },
+    "TIRED": {
+      "start": 107,
+      "count": 2,
+      "durations": [
+        500,
+        750
+      ]
+    },
+    "SLEEPING": {
+      "start": 91,
+      "count": 4,
+      "durations": [
+        500,
+        500,
+        500,
+        750
+      ]
+    },
+    "EATING": {
+      "start": 21,
+      "count": 6,
+      "durations": [
+        160,
+        160,
+        160,
+        160,
+        160,
+        410
+      ]
+    },
+    "LOVED": {
+      "start": 51,
+      "count": 6,
+      "durations": [
+        160,
+        160,
+        160,
+        160,
+        160,
+        410
+      ]
+    },
+    "WORKING": {
+      "start": 117,
+      "count": 8,
+      "durations": [
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        390
+      ]
+    },
+    "STUDYING": {
+      "start": 101,
+      "count": 6,
+      "durations": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        450
+      ]
+    },
+    "PLAYING": {
+      "start": 65,
+      "count": 8,
+      "durations": [
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        370
+      ]
+    },
+    "CELEBRATING": {
+      "start": 8,
+      "count": 5,
+      "durations": [
+        140,
+        140,
+        140,
+        140,
+        390
+      ]
+    },
+    "SICK": {
+      "start": 89,
+      "count": 2,
+      "durations": [
+        500,
+        750
+      ]
+    }
+  },
+  "occupations": {
+    "cafe": {
+      "start": 0,
+      "count": 8,
+      "fps": 6.25
+    },
+    "shop": {
+      "start": 81,
+      "count": 8,
+      "fps": 6.25
+    },
+    "office": {
+      "start": 57,
+      "count": 8,
+      "fps": 7.143
+    },
+    "idol": {
+      "start": 43,
+      "count": 8,
+      "fps": 8.333
+    },
+    "school": {
+      "start": 73,
+      "count": 8,
+      "fps": 5.0
+    },
+    "course": {
+      "start": 13,
+      "count": 8,
+      "fps": 6.25
+    },
+    "university": {
+      "start": 109,
+      "count": 8,
+      "fps": 5.0
+    }
+  },
+  "props": {
+    "PILLOW": {
+      "start": 95,
+      "count": 6,
+      "durations": [
+        300,
+        300,
+        500,
+        500,
+        500,
+        750
+      ]
+    }
+  }
+}

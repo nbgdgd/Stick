@@ -48,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vpet.waifu.R
+import com.vpet.waifu.domain.EffectKind
 import com.vpet.waifu.domain.PetSnapshot
 import com.vpet.waifu.domain.PurchaseBlock
 import com.vpet.waifu.domain.Upgrade
@@ -107,10 +108,18 @@ fun UpgradeBoard(
     var expanded by rememberSaveable { mutableStateOf(startExpanded) }
     var section by rememberSaveable { mutableStateOf(UpgradeKind.ROOM.name) }
 
-    val families = remember(snapshot.owned, snapshot.progress.money, snapshot.level) {
+    val families = remember(
+        snapshot.owned,
+        snapshot.progress.money,
+        snapshot.level,
+        // A running discount changes every price on the board, and it starts
+        // and stops on a clock rather than on anything the player owns.
+        snapshot.hasEffect(EffectKind.DISCOUNT, nowMillis),
+    ) {
         Upgrades.MECHANICAL.map { family -> familyState(snapshot, family, nowMillis) }
     }
-    val affordable = families.count { it.block == null }
+    // Finished families are not "available" — they have nothing left to sell.
+    val affordable = families.count { it.next != null && it.block == null }
     val ownedTiers = families.sumOf { it.tier }
     val totalTiers = families.sumOf { it.of }
 
@@ -168,7 +177,13 @@ fun UpgradeList(
     onBuy: (Upgrade) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val families = remember(snapshot.owned, snapshot.progress.money, snapshot.level, kind) {
+    val families = remember(
+        snapshot.owned,
+        snapshot.progress.money,
+        snapshot.level,
+        kind,
+        snapshot.hasEffect(EffectKind.DISCOUNT, nowMillis),
+    ) {
         Upgrades.MECHANICAL
             .map { familyState(snapshot, it, nowMillis) }
             .filter { it.kind == kind }

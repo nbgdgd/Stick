@@ -805,7 +805,13 @@ class PetSimulation(val tuning: PetTuning = PetTuning()) {
     fun cancelOccupation(snapshot: PetSnapshot, nowMillis: Long): PetSnapshot {
         val current = advanceTo(snapshot, nowMillis)
         current.session ?: return current
+        // A session naming a job the catalogue no longer has cannot be settled
+        // — there is no wage to work out and no outcome to judge. It is thrown
+        // away, but the money on it is given back rather than kept: the house
+        // does not get to pocket a bet it failed to run, and with the sizes the
+        // table offers now that could be the player's whole wallet.
         val occupation = current.occupation ?: return current.copy(
+            progress = current.progress.plus(money = current.session?.stake ?: 0),
             session = null,
             activity = PetActivity.AWAKE,
         )

@@ -81,6 +81,7 @@ import com.vpet.waifu.ui.components.LevelBadge
 import com.vpet.waifu.ui.components.MoneyPill
 import com.vpet.waifu.ui.components.OutlineButton
 import com.vpet.waifu.ui.components.PanelCard
+import com.vpet.waifu.ui.components.UpgradeList
 import com.vpet.waifu.ui.components.ScreenTitle
 import com.vpet.waifu.ui.components.SectionHeader
 import com.vpet.waifu.ui.formatMinutes
@@ -139,12 +140,19 @@ enum class ShopShelf(
             else -> null
         }
 
+    /** The wardrobe shelves, which are still one card per thing. */
     val upgrades: List<Upgrade>?
         get() = when (this) {
-            ROOM -> Upgrades.ROOM
-            GEAR -> Upgrades.GEAR
             OUTFITS -> Upgrades.OUTFITS
             THEMES -> Upgrades.THEMES
+            else -> null
+        }
+
+    /** The shelves that are a ladder of levels rather than a list of things. */
+    val tieredKind: UpgradeKind?
+        get() = when (this) {
+            ROOM -> UpgradeKind.ROOM
+            GEAR -> UpgradeKind.GEAR
             else -> null
         }
 
@@ -286,6 +294,20 @@ fun ShopScreen(
                 }
             }
 
+            // Room and gear are ladders now, not lists: one row per thing,
+            // carrying the level it is at and what the next one costs. A card
+            // per upgrade would have meant five cards called "fridge".
+            shelf.tieredKind?.let { kind ->
+                item {
+                    UpgradeList(
+                        snapshot = snapshot,
+                        nowMillis = nowMillis,
+                        kind = kind,
+                        onBuy = onBuyUpgrade,
+                    )
+                }
+            }
+
             shelf.upgrades?.let { list ->
                 val wearing: (String) -> Unit =
                     if (shelf == ShopShelf.THEMES) onApplyTheme else onWear
@@ -304,6 +326,8 @@ fun ShopScreen(
 /** Which orderings make sense on [shelf] — see [ShopSort.VALUE]. */
 private fun sortsFor(shelf: ShopShelf): List<ShopSort> = when (shelf) {
     ShopShelf.OUTFITS, ShopShelf.THEMES -> listOf(ShopSort.DEFAULT, ShopSort.PRICE)
+    // A ladder has one order, the order you climb it in.
+    ShopShelf.ROOM, ShopShelf.GEAR -> listOf(ShopSort.DEFAULT)
     else -> ShopSort.entries
 }
 

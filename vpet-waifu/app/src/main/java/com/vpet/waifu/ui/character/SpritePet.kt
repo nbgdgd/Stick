@@ -193,10 +193,25 @@ object SpritePacks {
     private const val DEFAULT_FIT = 0.62f
     private val cache = mutableMapOf<String, SpritePack?>()
 
-    /** The ids of every pack the app can offer, cheapest possible call. */
+    /**
+     * The ids of every pack the app can offer.
+     *
+     * Not simply the listing of `assets/pets/`. What counts as a pack is a
+     * directory with a manifest in it, and asking that question directly is
+     * both the honest test and the portable one: `AssetManager.list` returns
+     * immediate children on a device and whole paths under Robolectric, so a
+     * listing taken at face value offers the player a character called
+     * "anya/spritesheet.webp" on one of the two. It also means a stray file
+     * dropped in the folder is ignored rather than offered as a broken choice.
+     */
     fun installedIds(context: Context): List<String> =
         runCatching { context.assets.list(ROOT)?.toList().orEmpty() }
             .getOrDefault(emptyList())
+            .map { it.substringBefore('/') }
+            .distinct()
+            .filter { id ->
+                runCatching { context.assets.open("$ROOT/$id/pet.json").close() }.isSuccess
+            }
             .sorted()
 
     /** A pack by id, decoded once. Null if it is missing or malformed. */

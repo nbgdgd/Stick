@@ -145,6 +145,23 @@ class StakesTest {
     }
 
     @Test
+    fun `a bet on a job that no longer exists comes back`() {
+        // A save carrying an occupationId the catalogue has since dropped
+        // cannot be settled — there is no wage and no outcome. The session goes,
+        // but the money on it is returned rather than quietly kept.
+        val working = sim.startOccupation(snapshot(4_000), shift, T)
+        val staked = sim.stake(working, StakeTier.ALL_IN, T)
+        val orphaned = staked.copy(session = staked.session!!.copy(occupationId = "moon_base"))
+
+        val ended = sim.cancelOccupation(orphaned, T + 60_000L)
+        assertEquals(null, ended.session)
+        assertTrue(
+            "a wallet of ${ended.progress.money} against a stake of ${staked.session!!.stake}",
+            ended.progress.money >= staked.session!!.stake,
+        )
+    }
+
+    @Test
     fun `a hammered table drains a fortune`() {
         // Two hundred shifts, every one of them going great, betting medium
         // every time. If this ever comes out ahead the casino has become an

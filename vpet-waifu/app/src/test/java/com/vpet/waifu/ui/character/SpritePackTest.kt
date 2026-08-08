@@ -40,9 +40,17 @@ class SpritePackTest {
     }
 
     @Test
+    fun `the pack is offered as a choice`() {
+        // The picker builds its cards from this list, so a pack that decodes
+        // but is not enumerated is a character nobody can select.
+        val ids = SpritePacks.installedIds(ApplicationProvider.getApplicationContext())
+        assertTrue("installed packs were $ids", "anya" in ids)
+    }
+
+    @Test
     fun `she has a clip for every mood the game can put her in`() {
         val pack = pack!!
-        PetState.entries.forEach { state ->
+        PetState.entries.filter { it != PetState.IDLE }.forEach { state ->
             assertNotEquals(
                 "$state falls back to the idle loop",
                 pack.idle,

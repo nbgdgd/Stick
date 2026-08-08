@@ -22,19 +22,16 @@ import com.vpet.waifu.domain.OccupationKind
 import com.vpet.waifu.domain.Occupations
 import com.vpet.waifu.domain.OutcomeQuality
 import com.vpet.waifu.domain.PetProgress
+import com.vpet.waifu.domain.Progression
 import com.vpet.waifu.domain.PetSimulation
 import com.vpet.waifu.domain.PetSnapshot
-import com.vpet.waifu.domain.PetState
 import com.vpet.waifu.domain.PetStats
 import com.vpet.waifu.domain.StakeTier
 import com.vpet.waifu.domain.Upgrades
 import com.vpet.waifu.ui.character.PetSkin
-import com.vpet.waifu.ui.character.SpritePacks
-import com.vpet.waifu.ui.components.PetStage
 import com.vpet.waifu.ui.components.StakeBoard
 import com.vpet.waifu.ui.components.StakeResult
 import com.vpet.waifu.ui.components.UpgradeBoard
-import com.vpet.waifu.ui.character.workPropFor
 import com.vpet.waifu.ui.onboarding.ChooseSkinScreen
 import com.vpet.waifu.ui.theme.Surfaces
 import com.vpet.waifu.ui.theme.VPetTheme
@@ -100,6 +97,17 @@ class ChangeShotTest {
             }
         }
 
+        // The other half of the panel's job: a wallet that cannot reach the
+        // next level, and a level she has not earned yet.
+        val early = snapshot(money = 900, owned = setOf("fridge")).copy(
+            progress = PetProgress(money = 900, exp = Progression.expForLevel(6)),
+        )
+        shoot("chg-02b-upgrades-blocked", height = 900) {
+            Box(Modifier.fillMaxWidth().padding(16.dp)) {
+                ExpandedUpgradeBoard(early, now)
+            }
+        }
+
         // The betting table, and the wallet it is a fraction of.
         val working = simulation.startOccupation(
             snapshot(money = 12_400),
@@ -123,33 +131,6 @@ class ChangeShotTest {
         ).forEach { (name, result) ->
             shoot(name, height = 220) {
                 Box(Modifier.fillMaxWidth().padding(16.dp)) { StakeResult(result) }
-            }
-        }
-
-        // Anya, if she is installed: the stage in four of her clips, so the
-        // per-job animations can be seen to be different pictures rather than
-        // the generic loop with a different caption.
-        SpritePacks.load(
-            androidx.test.core.app.ApplicationProvider.getApplicationContext(),
-            "anya",
-        )?.let { pack ->
-            listOf(
-                "chg-06-anya-idle" to (PetState.IDLE to null),
-                "chg-07-anya-cafe" to (PetState.WORKING to "cafe"),
-                "chg-08-anya-idol" to (PetState.WORKING to "idol"),
-                "chg-09-anya-university" to (PetState.STUDYING to "university"),
-                "chg-10-anya-sleeping" to (PetState.SLEEPING to null),
-            ).forEach { (name, spec) ->
-                val (state, job) = spec
-                shoot(name, height = 340) {
-                    PetStage(
-                        state = state,
-                        skin = PetSkin.Sheet(pack),
-                        workProp = workPropFor(job),
-                        night = state == PetState.SLEEPING,
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    )
-                }
             }
         }
 
@@ -205,15 +186,25 @@ class ChangeShotTest {
 
     private fun launcherIcon(name: String, size: Int) {
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
-        val drawable = ResourcesCompat.getDrawable(
-            controller.get().resources,
-            R.mipmap.ic_launcher,
-            null,
-        )!!
-        drawable.setBounds(0, 0, size, size)
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        drawable.draw(Canvas(bitmap))
-        write(name, bitmap)
+        val resources = controller.get().resources
+
+        // The composed icon, and each layer on its own. Robolectric's
+        // adaptive-icon shim is not the launcher, so the composite here is
+        // indicative at best — the layers are the part worth trusting, and if
+        // one of them is blank or the wrong colour it is this project's fault
+        // rather than the harness's.
+        listOf(
+            name to R.mipmap.ic_launcher,
+            "$name-back" to R.drawable.ic_launcher_background,
+            "$name-fore" to R.mipmap.ic_launcher_foreground,
+            "$name-mono" to R.drawable.ic_launcher_monochrome,
+        ).forEach { (shot, id) ->
+            val drawable = ResourcesCompat.getDrawable(resources, id, null)!!
+            drawable.setBounds(0, 0, size, size)
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            drawable.draw(Canvas(bitmap))
+            write(shot, bitmap)
+        }
         controller.destroy()
     }
 

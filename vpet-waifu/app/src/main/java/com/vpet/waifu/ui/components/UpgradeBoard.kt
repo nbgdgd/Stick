@@ -152,6 +152,41 @@ fun UpgradeBoard(
     }
 }
 
+/**
+ * The same rows, for a surface that has already said what they are.
+ *
+ * The shop's room and gear shelves used to be one card per upgrade, which with
+ * tiers would have become five cards called "fridge". They are these rows now
+ * instead — the shelf chip above them is the heading, so the board's own header
+ * and category chips would be saying it a second time.
+ */
+@Composable
+fun UpgradeList(
+    snapshot: PetSnapshot,
+    nowMillis: Long,
+    kind: UpgradeKind,
+    onBuy: (Upgrade) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val families = remember(snapshot.owned, snapshot.progress.money, snapshot.level, kind) {
+        Upgrades.MECHANICAL
+            .map { familyState(snapshot, it, nowMillis) }
+            .filter { it.kind == kind }
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        families.forEach { state ->
+            UpgradeRow(state = state, onBuy = onBuy)
+            Spacer(Modifier.height(10.dp))
+        }
+        Text(
+            text = stringResource(R.string.upgrades_footnote),
+            style = MaterialTheme.typography.labelSmall,
+            color = Accents.TextDim,
+        )
+    }
+}
+
 @Composable
 private fun BoardHeader(
     affordable: Int,
